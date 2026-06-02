@@ -109,6 +109,27 @@
   const errEl = document.getElementById('error')
   const btn = document.getElementById('submit')
 
+  // Google Places autocomplete → capture coordinates so web bookings land on
+  // the dispatch maps. initMA is the Maps JS callback (see script tag below).
+  let pickupCoords = null, dropCoords = null
+  form.pickup_address.addEventListener('input', () => { pickupCoords = null })
+  form.dropoff_address.addEventListener('input', () => { dropCoords = null })
+  window.initMA = function () {
+    const opts = { fields: ['formatted_address', 'geometry'], componentRestrictions: { country: 'za' } }
+    const pa = new google.maps.places.Autocomplete(form.pickup_address, opts)
+    pa.addListener('place_changed', () => {
+      const p = pa.getPlace(), l = p.geometry && p.geometry.location
+      pickupCoords = l ? { lat: l.lat(), lng: l.lng() } : null
+      if (p.formatted_address) form.pickup_address.value = p.formatted_address
+    })
+    const da = new google.maps.places.Autocomplete(form.dropoff_address, opts)
+    da.addListener('place_changed', () => {
+      const p = da.getPlace(), l = p.geometry && p.geometry.location
+      dropCoords = l ? { lat: l.lat(), lng: l.lng() } : null
+      if (p.formatted_address) form.dropoff_address.value = p.formatted_address
+    })
+  }
+
   form.addEventListener('submit', async (e) => {
     e.preventDefault()
     errEl.classList.add('hidden')
@@ -116,6 +137,8 @@
     const fd = new FormData(form)
     const payload = Object.fromEntries(fd.entries())
     payload.service_type = service
+    if (pickupCoords) { payload.pickup_lat = pickupCoords.lat; payload.pickup_lng = pickupCoords.lng }
+    if (dropCoords) { payload.dropoff_lat = dropCoords.lat; payload.dropoff_lng = dropCoords.lng }
     try {
       const res = await fetch(FN_URL, {
         method: 'POST',
@@ -136,5 +159,6 @@
     }
   })
 </script>
+<script async src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAtZvXbiV8BhpC_6dENVYrxoNWdPJlwNiM&libraries=places&loading=async&callback=initMA"></script>
 </body>
 </html>
