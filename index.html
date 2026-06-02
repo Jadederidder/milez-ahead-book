@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Milez Ahead — Book Your Trip</title>
+<meta name="description" content="Milez Ahead · Executive Travel Concierge. Book your chauffeured trip online." />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root { --teal:#007880; --navy:#0e1e3a; --gold:#c0b070; --lime:#8bc53f; }
+  body { font-family: 'Outfit', ui-sans-serif, system-ui, sans-serif; }
+  .field { width:100%; border:1px solid #d8dee9; border-radius:.625rem; padding:.65rem .85rem; font-size:.95rem; outline:none; transition:border-color .15s, box-shadow .15s; }
+  .field:focus { border-color: var(--teal); box-shadow:0 0 0 3px rgba(0,120,128,.12); }
+  .lbl { display:block; font-size:.75rem; font-weight:600; color:#475569; margin-bottom:.3rem; }
+</style>
+</head>
+<body class="min-h-screen bg-slate-50 text-slate-800">
+
+  <!-- Hero -->
+  <header class="relative overflow-hidden" style="background:linear-gradient(135deg,#0e1e3a 0%,#007880 100%);">
+    <div class="mx-auto max-w-3xl px-6 py-12 text-center text-white">
+      <div class="inline-flex items-center gap-3">
+        <span class="flex size-11 items-center justify-center rounded-xl bg-white/10 text-xl font-extrabold tracking-tight">M</span>
+        <span class="text-2xl font-extrabold tracking-tight">MILEZ <span style="color:var(--gold)">AHEAD</span></span>
+      </div>
+      <h1 class="mt-6 text-3xl font-bold sm:text-4xl">Book your trip</h1>
+      <p class="mt-2 text-sm text-white/80">Executive Travel Concierge · chauffeured, monitored end-to-end.</p>
+    </div>
+  </header>
+
+  <main class="mx-auto -mt-6 max-w-3xl px-4 pb-16">
+    <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-xl sm:p-8">
+
+      <!-- Success state -->
+      <div id="success" class="hidden text-center">
+        <div class="mx-auto flex size-14 items-center justify-center rounded-full" style="background:rgba(139,197,63,.15)">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#6fae34" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        </div>
+        <h2 class="mt-4 text-xl font-bold text-slate-900">Booking received</h2>
+        <p class="mt-1 text-sm text-slate-500">Your reference is <span id="ref" class="font-semibold" style="color:var(--teal)"></span>.</p>
+        <p class="mt-3 text-sm text-slate-600">A Milez Ahead controller will confirm your driver and vehicle shortly. Keep your phone handy.</p>
+        <button onclick="location.reload()" class="mt-6 rounded-lg px-5 py-2.5 text-sm font-semibold text-white" style="background:var(--navy)">Book another trip</button>
+      </div>
+
+      <!-- Form -->
+      <form id="form" class="space-y-5">
+        <div>
+          <span class="lbl">Service</span>
+          <div class="grid grid-cols-3 gap-2" id="service">
+            <button type="button" data-v="airport" class="svc rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium">Airport</button>
+            <button type="button" data-v="drive_home" class="svc rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium">Drive home</button>
+            <button type="button" data-v="manage_booking" class="svc rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium">Private</button>
+          </div>
+        </div>
+
+        <div class="grid gap-4 sm:grid-cols-2">
+          <label><span class="lbl">Full name *</span><input name="full_name" class="field" required placeholder="Jane Doe" /></label>
+          <label><span class="lbl">Mobile *</span><input name="phone" class="field" required placeholder="082 123 4567" /></label>
+        </div>
+        <label class="block"><span class="lbl">Email</span><input name="email" type="email" class="field" placeholder="you@email.com" /></label>
+
+        <div class="grid gap-4 sm:grid-cols-2">
+          <label><span class="lbl">Date *</span><input name="trip_date" type="date" class="field" required /></label>
+          <label><span class="lbl">Pickup time</span><input name="pickup_time" type="time" class="field" /></label>
+        </div>
+
+        <label class="block"><span class="lbl">Pickup address *</span><input name="pickup_address" class="field" required placeholder="Where should we collect you?" /></label>
+        <label class="block"><span class="lbl">Drop-off address *</span><input name="dropoff_address" class="field" required placeholder="Where are you going?" /></label>
+
+        <div class="grid gap-4 sm:grid-cols-3">
+          <label><span class="lbl">Passengers</span><input name="passengers" type="number" min="1" value="1" class="field" /></label>
+          <label><span class="lbl">Luggage</span><input name="luggage" type="number" min="0" value="0" class="field" /></label>
+          <label><span class="lbl">Flight no.</span><input name="flight_number" class="field" placeholder="e.g. BA6321" /></label>
+        </div>
+
+        <label class="block"><span class="lbl">Notes for the driver</span><textarea name="notes" rows="2" class="field" placeholder="Anything we should know?"></textarea></label>
+
+        <div id="error" class="hidden rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700"></div>
+
+        <button id="submit" type="submit" class="w-full rounded-xl py-3.5 text-base font-bold text-white shadow-lg transition hover:brightness-105" style="background:var(--lime)">
+          Request my trip
+        </button>
+        <p class="text-center text-xs text-slate-400">Your trip is monitored end-to-end by the Milez Ahead Control Room.</p>
+      </form>
+    </div>
+    <p class="mt-6 text-center text-xs text-slate-400">© Milez Ahead · Executive Travel Concierge</p>
+  </main>
+
+<script>
+  const FN_URL = 'https://izslchhcavckowatgbel.supabase.co/functions/v1/book-trip'
+  const ANON = 'sb_publishable_ITCnCcqKXF56UearfrSBYg_SXy3QtE8'
+
+  let service = 'airport'
+  const svcBtns = [...document.querySelectorAll('.svc')]
+  function paint() {
+    svcBtns.forEach(b => {
+      const on = b.dataset.v === service
+      b.style.background = on ? '#007880' : ''
+      b.style.color = on ? '#fff' : ''
+      b.style.borderColor = on ? '#007880' : '#cbd5e1'
+    })
+  }
+  svcBtns.forEach(b => b.addEventListener('click', () => { service = b.dataset.v; paint() }))
+  paint()
+
+  const form = document.getElementById('form')
+  const errEl = document.getElementById('error')
+  const btn = document.getElementById('submit')
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault()
+    errEl.classList.add('hidden')
+    btn.disabled = true; btn.textContent = 'Sending…'
+    const fd = new FormData(form)
+    const payload = Object.fromEntries(fd.entries())
+    payload.service_type = service
+    try {
+      const res = await fetch(FN_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': ANON, 'Authorization': 'Bearer ' + ANON },
+        body: JSON.stringify(payload),
+      })
+      const data = await res.json()
+      if (!res.ok || data.error) throw new Error(data.error || 'Something went wrong. Please try again.')
+      document.getElementById('ref').textContent = data.ref
+      form.classList.add('hidden')
+      document.getElementById('success').classList.remove('hidden')
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    } catch (err) {
+      errEl.textContent = err.message
+      errEl.classList.remove('hidden')
+    } finally {
+      btn.disabled = false; btn.textContent = 'Request my trip'
+    }
+  })
+</script>
+</body>
+</html>
