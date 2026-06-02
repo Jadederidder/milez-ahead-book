@@ -60,6 +60,7 @@
           <label><span class="lbl">Mobile *</span><input name="phone" class="field" required placeholder="082 123 4567" autocomplete="tel" /></label>
         </div>
         <p id="welcome" class="hidden -mt-2 flex items-center gap-1.5 text-xs font-medium text-emerald-600"></p>
+        <div id="recent" class="hidden rounded-xl border border-slate-200 bg-slate-50/60 p-3"></div>
         <label class="block"><span class="lbl">Email</span><input name="email" type="email" class="field" placeholder="you@email.com" /></label>
         <label class="block">
           <span class="lbl">Policy / membership number <span class="font-normal text-slate-400">— members only</span></span>
@@ -115,17 +116,43 @@
   const errEl = document.getElementById('error')
   const btn = document.getElementById('submit')
   const welcome = document.getElementById('welcome')
+  const recent = document.getElementById('recent')
+  const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
+  const SVC_LABEL = { airport: 'Airport', drive_home: 'Drive home', manage_booking: 'Private' }
 
-  // Recognise a returning client as they type their cell number, and prefill
-  // their name + policy from the system.
+  // Recognise a returning client as they type their cell number, prefill their
+  // name + policy, and offer one-tap rebook of recent trips.
   let lookupTimer
   function showWelcome(name) {
     if (name) { welcome.textContent = '✓ Welcome back, ' + name + ' — we’ve filled in your details.'; welcome.classList.remove('hidden') }
     else { welcome.classList.add('hidden') }
   }
+  function rebook(t) {
+    service = ['airport', 'drive_home', 'manage_booking'].includes(t.service_type) ? t.service_type : 'airport'
+    paint()
+    form.pickup_address.value = t.pickup_address || ''; pickupCoords = null
+    form.dropoff_address.value = t.dropoff_address || ''; dropCoords = null
+    if (t.passengers) form.passengers.value = t.passengers
+    if (t.luggage != null) form.luggage.value = t.luggage
+    form.trip_date.focus()
+    form.trip_date.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
+  function renderRecent(trips) {
+    if (!trips || !trips.length) { recent.classList.add('hidden'); recent.innerHTML = ''; return }
+    recent.innerHTML = '<div class="lbl">Your recent trips — tap Rebook to reuse</div>' + trips.map((t, i) =>
+      `<div class="mt-1.5 flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2">
+        <div class="min-w-0 flex-1">
+          <div class="truncate text-xs font-medium text-slate-700">${esc(t.pickup_address)} → ${esc(t.dropoff_address)}</div>
+          <div class="text-[11px] text-slate-400">${esc(t.trip_date)} · ${esc(SVC_LABEL[t.service_type] || t.service_type)}</div>
+        </div>
+        <button type="button" data-i="${i}" class="rebook shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold text-white" style="background:var(--teal)">Rebook</button>
+      </div>`).join('')
+    recent.classList.remove('hidden')
+    recent.querySelectorAll('.rebook').forEach((btn) => btn.addEventListener('click', () => rebook(trips[+btn.dataset.i])))
+  }
   async function lookupClient() {
     const phone = form.phone.value.replace(/\s/g, '')
-    if (phone.length < 9) { showWelcome(null); return }
+    if (phone.length < 9) { showWelcome(null); renderRecent([]); return }
     try {
       const res = await fetch(FN_URL, {
         method: 'POST',
@@ -137,7 +164,8 @@
         if (d.full_name && !form.full_name.value) form.full_name.value = d.full_name
         if (d.policy_number && !form.policy_number.value) form.policy_number.value = d.policy_number
         showWelcome(d.full_name)
-      } else { showWelcome(null) }
+        renderRecent(d.trips)
+      } else { showWelcome(null); renderRecent([]) }
     } catch { /* non-fatal */ }
   }
   form.phone.addEventListener('blur', lookupClient)
