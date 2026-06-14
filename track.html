@@ -60,7 +60,7 @@ const EDGE='https://izslchhcavckowatgbel.supabase.co/functions/v1/track';
 const TOKEN=new URLSearchParams(location.search).get('token')||'';
 // Set MAPS_KEY to a Google Maps JS API browser key (restricted to this domain)
 // to embed the live map. While empty, the page falls back to the "open in Maps" link.
-const MAPS_KEY='';
+const MAPS_KEY='AIzaSyAtZvXbiV8BhpC_6dENVYrxoNWdPJlwNiM';
 const fmt=t=>t?new Date(t).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):'';
 const esc=s=>(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 let _map,_dirR,_drvMarker,_routeDrawn,_mapsReady,_last;
