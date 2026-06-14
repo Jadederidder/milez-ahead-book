@@ -71,6 +71,24 @@
   a.btn.ghost{background:#fff;color:var(--navy);border:1.5px solid rgba(0,0,0,.12)}
   .foot{text-align:center;color:#a3a3b5;font-size:11px;margin-top:14px}
   .cancel{background:#fff3f1;border-color:#f3c7c0}.cancel .headline{color:#c0392b}
+  .etachip{display:inline-block;background:var(--teal);color:#fff;font-weight:800;font-size:12px;padding:4px 12px;border-radius:999px;margin-top:11px;letter-spacing:.02em}
+  .badges{display:flex;flex-wrap:wrap;gap:7px;margin-top:13px;padding-top:12px;border-top:1px solid rgba(0,0,0,.05)}
+  .badge{display:inline-flex;align-items:center;gap:5px;background:#eef6f0;color:#0a7d4b;font-size:11px;font-weight:700;padding:4px 10px;border-radius:8px}
+  .dvbtns{display:flex;gap:9px;margin-top:12px}
+  .dvbtns a{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;text-decoration:none;font-weight:700;font-size:13px;padding:11px;border-radius:12px}
+  .dvbtns a.call{background:var(--teal);color:#fff}
+  .dvbtns a.share{background:#fff;color:var(--navy);border:1.5px solid rgba(0,0,0,.12)}
+  .sosbtn{display:block;width:100%;background:#fff;color:#c0392b;border:1.5px solid #f0cdc6;font-weight:700;font-size:13px;padding:12px;border-radius:13px;margin-top:6px;cursor:pointer}
+  .sosbtn:active{background:#fff3f1}
+  .modal{position:fixed;inset:0;background:rgba(20,20,35,.55);display:none;align-items:center;justify-content:center;padding:24px;z-index:50}
+  .modal.show{display:flex}
+  .sheet{background:#fff;border-radius:18px;padding:22px;max-width:380px;width:100%;box-shadow:0 12px 40px rgba(0,0,0,.25)}
+  .sheet h3{margin:0 0 8px;font-size:18px}
+  .sheet p{margin:0 0 18px;color:#5a5a70;font-size:14px;line-height:1.45}
+  .sheet .acts{display:flex;gap:10px}
+  .sheet .acts button{flex:1;font-weight:700;font-size:14px;padding:12px;border-radius:12px;border:none;cursor:pointer}
+  .sheet .acts .go{background:#c0392b;color:#fff}
+  .sheet .acts .no{background:#eee;color:var(--navy)}
 </style>
 </head>
 <body>
@@ -81,15 +99,20 @@
   <div id="app"><div class="card"><div class="headline">Loading your trip…</div></div></div>
   <div class="foot">Powered by Milez Ahead · Executive &amp; medical transport</div>
 </div>
+<div id="sosModal" class="modal"><div class="sheet">
+  <div id="sosBody"><h3>Alert the control room?</h3><p>We’ll immediately notify our team with your trip details and your driver’s live location. Only use this if you feel unsafe.</p></div>
+  <div id="sosActs" class="acts"><button class="no" onclick="closeSos()">Cancel</button><button id="sosGo" class="go" onclick="sosConfirm()">Yes, alert them</button></div>
+</div></div>
 <script>
 const EDGE='https://izslchhcavckowatgbel.supabase.co/functions/v1/track';
+const SOS_EDGE='https://izslchhcavckowatgbel.supabase.co/functions/v1/track-sos';
 const TOKEN=new URLSearchParams(location.search).get('token')||'';
 // Set MAPS_KEY to a Google Maps JS API browser key (restricted to this domain)
 // to embed the live map. While empty, the page falls back to the "open in Maps" link.
 const MAPS_KEY='AIzaSyAtZvXbiV8BhpC_6dENVYrxoNWdPJlwNiM';
 const fmt=t=>t?new Date(t).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):'';
 const esc=s=>(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-let _map,_dirR,_drvMarker,_routeDrawn,_mapsReady,_last;
+let _map,_dirR,_drvMarker,_routeDrawn,_mapsReady,_last,_eta=null;
 function loadMaps(){ if(!MAPS_KEY) return; const s=document.createElement('script'); s.async=true; s.src='https://maps.googleapis.com/maps/api/js?key='+MAPS_KEY; s.onload=()=>{_mapsReady=true; if(_last)drawMap(_last);}; document.head.appendChild(s); }
 function drawMap(d){
   if(!MAPS_KEY||!_mapsReady||!d) return;
@@ -101,6 +124,16 @@ function drawMap(d){
   }
   if(!_routeDrawn && d.route.pickup && d.route.dropoff){ _routeDrawn=true; new google.maps.DirectionsService().route({origin:d.route.pickup,destination:d.route.dropoff,travelMode:'DRIVING'},(res,st)=>{ if(st==='OK') _dirR.setDirections(res); }); }
   if(d.driver&&d.driver.lat!=null&&d.driver.lng!=null){ const pos={lat:d.driver.lat,lng:d.driver.lng}; if(!_drvMarker){_drvMarker=new google.maps.Marker({map:_map,position:pos,title:'Your driver',icon:{path:google.maps.SymbolPath.CIRCLE,scale:8,fillColor:'#8bc53f',fillOpacity:1,strokeColor:'#fff',strokeWeight:3}});}else _drvMarker.setPosition(pos); }
+  computeEta();
+}
+// Live ETA: driver's current position → pickup, shown while they're on the way.
+function computeEta(){
+  if(!_mapsReady||!_last) return;
+  const d=_last, st=k=>(d.steps.find(s=>s.key===k)||{}).done;
+  if(!(d.driver&&d.driver.live&&!st('arrived')&&!st('started')&&!d.cancelled)||d.driver.lat==null||!d.route.pickup){_eta=null;return;}
+  new google.maps.DirectionsService().route({origin:{lat:d.driver.lat,lng:d.driver.lng},destination:d.route.pickup,travelMode:'DRIVING'},(res,s)=>{
+    if(s==='OK'&&res.routes[0]){_eta=res.routes[0].legs[0].duration.text; const el=document.getElementById('eta'); if(el){el.style.display='inline-block';el.textContent='🛣️ ~'+_eta+' away';}}
+  });
 }
 function render(d){
   if(!d){document.getElementById('app').innerHTML='<div class="card"><div class="headline">Trip not found</div><div class="ref">This tracking link is no longer active.</div></div>';return;}
@@ -128,7 +161,10 @@ function render(d){
       (dv.trips?'<div class="stat">🚗 '+dv.trips+' trips completed</div>':'')+
       (dv.since?'<div class="stat">📅 With us since '+dv.since+'</div>':'');
     const right='<div class="dvright"><div class="dvhead">'+av+'<div class="val" style="font-size:16px">'+esc(dv.name||'Assigned')+'</div></div>'+stats+'</div>';
-    driver='<div class="card"><div class="lbl">Your driver &amp; vehicle</div><div class="dvcols">'+left+right+'</div></div>';
+    const vf=dv.verified||{};
+    const badges=(vf.licence||vf.prdp)?'<div class="badges">'+(vf.licence?'<span class="badge">✓ Licence verified</span>':'')+(vf.prdp?'<span class="badge">✓ PrDP verified</span>':'')+'</div>':'';
+    const acts='<div class="dvbtns">'+(dv.phone?'<a class="call" href="tel:'+esc(dv.phone)+'">📞 Call driver</a>':'')+'<a class="share" href="#" onclick="shareTrip(event)">🔗 Share trip</a></div>';
+    driver='<div class="card"><div class="lbl">Your driver &amp; vehicle</div><div class="dvcols">'+left+right+'</div>'+badges+acts+'</div>';
   }
   let route='';
   if(d.route.pickup||d.route.dropoff){
@@ -141,14 +177,36 @@ function render(d){
     '</div>';
   }
   const when=(d.tripDate||'')+(d.pickupTime?' · '+d.pickupTime:'');
+  const st=k=>(d.steps.find(s=>s.key===k)||{}).done;
+  const showEta=d.driver&&d.driver.live&&!st('arrived')&&!st('started')&&!d.cancelled;
+  const etaChip=showEta?'<div id="eta" class="etachip"'+(_eta?'':' style="display:none"')+'>'+(_eta?'🛣️ ~'+esc(_eta)+' away':'')+'</div>':'';
+  const sosBtn=(d.driver&&!d.cancelled&&!st('complete'))?'<button class="sosbtn" onclick="openSos()">🆘 I feel unsafe — alert control room</button>':'';
   document.getElementById('app').innerHTML=
-    '<div class="card'+(d.cancelled?' cancel':'')+'">'+(d.clientName&&!d.cancelled?'<div class="greet">Hi '+esc(d.clientName)+' 👋</div>':'')+(d.cancelled?'':'<span class="pulse"></span>')+'<span class="headline">'+esc(d.headline)+'</span><div class="ref">'+esc(d.ref)+(when?' · '+esc(when):'')+'</div></div>'+
-    '<div class="card"><div class="hsteps">'+steps+'</div></div>'+driver+route;
+    '<div class="card'+(d.cancelled?' cancel':'')+'">'+(d.clientName&&!d.cancelled?'<div class="greet">Hi '+esc(d.clientName)+' 👋</div>':'')+(d.cancelled?'':'<span class="pulse"></span>')+'<span class="headline">'+esc(d.headline)+'</span><div class="ref">'+esc(d.ref)+(when?' · '+esc(when):'')+'</div>'+etaChip+'</div>'+
+    '<div class="card"><div class="hsteps">'+steps+'</div></div>'+driver+route+sosBtn;
   _last=d; drawMap(d);
 }
 async function tick(){
   if(!TOKEN){render(null);return;}
   try{const r=await fetch(EDGE+'?token='+encodeURIComponent(TOKEN)+'&format=json',{cache:'no-store'});render(r.ok?await r.json():null);}catch(e){}
+}
+function shareTrip(e){
+  if(e)e.preventDefault();
+  const url=location.href, data={title:'Milez Ahead — Live trip',text:'Follow my Milez Ahead trip live',url};
+  if(navigator.share){navigator.share(data).catch(()=>{});}
+  else if(navigator.clipboard){navigator.clipboard.writeText(url).then(()=>alert('Trip link copied to clipboard')).catch(()=>prompt('Copy this link',url));}
+  else {prompt('Copy this link',url);}
+}
+function openSos(){document.getElementById('sosModal').classList.add('show');}
+function closeSos(){document.getElementById('sosModal').classList.remove('show');}
+async function sosConfirm(){
+  const go=document.getElementById('sosGo'); if(go){go.disabled=true; go.textContent='Alerting…';}
+  let ok=false;
+  try{const r=await fetch(SOS_EDGE,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:TOKEN})}); const j=await r.json().catch(()=>({})); ok=r.ok&&j.ok;}catch(e){}
+  document.getElementById('sosBody').innerHTML = ok
+    ? '<h3>✅ Control room alerted</h3><p>Our team now has your trip and your driver’s live location. Keep this page open — we’ll be in touch. If you’re in immediate danger, call 10111.</p>'
+    : '<h3>Couldn’t send the alert</h3><p>Please call our control room directly on 082 859 0094, or dial 10111 for emergencies.</p>';
+  document.getElementById('sosActs').innerHTML='<button class="no" onclick="closeSos()">Close</button>';
 }
 loadMaps();tick();setInterval(tick,12000);
 </script>
