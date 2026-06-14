@@ -37,6 +37,8 @@
   .stars{color:var(--gold);letter-spacing:1px;font-size:14px}
   .muted{color:#8a8aa0;font-size:12px}
   .vthumb{width:100%;max-height:160px;object-fit:cover;border-radius:12px;margin-top:10px;border:1px solid rgba(0,0,0,.06)}
+  .platewrap{text-align:center;margin-top:10px}
+  .plate{display:inline-block;background:#fff;border:2.5px solid #111;border-radius:7px;padding:6px 16px;font-weight:800;letter-spacing:2px;font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:18px;color:#111}
   a.btn{display:block;text-align:center;text-decoration:none;background:var(--navy);color:#fff;font-weight:700;padding:13px;border-radius:13px;margin-top:8px}
   a.btn.ghost{background:#fff;color:var(--navy);border:1.5px solid rgba(0,0,0,.12)}
   .foot{text-align:center;color:#a3a3b5;font-size:11px;margin-top:14px}
@@ -75,9 +77,10 @@ function render(d){
         '<div class="val" style="font-size:16px">'+esc(dv.name||'Assigned')+'</div>'+
         (stars?'<div style="margin:3px 0">'+stars+'</div>':'')+
         (meta.length?'<div class="muted">'+meta.join(' · ')+'</div>':'')+
-        (dv.vehicle?'<div style="color:#6a6a82;margin-top:4px">🚘 '+esc(dv.vehicle)+'</div>':'')+
+        (dv.vehicle?'<div style="color:#6a6a82;margin-top:4px">🚘 '+esc(dv.vehicle.replace(/\s*\(.*\)\s*$/,''))+'</div>':'')+
       '</div></div>'+
       (dv.vehiclePhoto?'<img class="vthumb" src="'+dv.vehiclePhoto+'" alt="Vehicle" onerror="this.style.display=\'none\'">':'')+
+      (dv.reg?'<div class="platewrap"><div class="plate">'+esc(dv.reg)+'</div></div>':'')+
       (dv.live&&dv.mapLink?'<a class="btn ghost" href="'+dv.mapLink+'" target="_blank" rel="noopener">📍 See driver on map</a>':'')+
       '</div>';
   }
