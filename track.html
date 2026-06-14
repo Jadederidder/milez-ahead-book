@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Milez Ahead — Live trip</title>
+<style>
+  :root{--navy:#282848;--teal:#007880;--gold:#C0B070;--bg:#FBFAF7}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;background:var(--bg);color:var(--navy);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:520px;margin:0 auto;padding:18px 16px 40px}
+  .brand{display:flex;align-items:center;gap:10px;padding:6px 0 14px}
+  .logo{width:38px;height:38px;border-radius:11px;background:var(--navy);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px}
+  .logo .a{color:var(--gold)}.logo .b{color:var(--teal)}
+  .brand .t{font-weight:800;letter-spacing:.2px}.brand .s{font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:var(--teal);font-weight:700}
+  .card{background:#fff;border:1px solid rgba(0,0,0,.06);border-radius:18px;padding:18px;box-shadow:0 2px 14px rgba(0,0,0,.04);margin-bottom:14px}
+  .headline{font-size:21px;font-weight:800;line-height:1.25}
+  .ref{font-size:12px;color:#8a8aa0;margin-top:4px;font-variant-numeric:tabular-nums}
+  .pulse{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--teal);margin-right:7px;box-shadow:0 0 0 0 rgba(0,120,128,.5);animation:p 1.8s infinite}
+  @keyframes p{0%{box-shadow:0 0 0 0 rgba(0,120,128,.45)}70%{box-shadow:0 0 0 12px rgba(0,120,128,0)}100%{box-shadow:0 0 0 0 rgba(0,120,128,0)}}
+  .steps{list-style:none;margin:6px 0 0;padding:0}
+  .step{display:flex;gap:12px;align-items:flex-start;position:relative;padding:0 0 18px}
+  .step:last-child{padding-bottom:0}
+  .step .line{position:absolute;left:13px;top:26px;bottom:-2px;width:2px;background:#e7e7ef}
+  .step.done .line{background:var(--teal)}
+  .dot{width:28px;height:28px;border-radius:50%;flex:0 0 28px;display:flex;align-items:center;justify-content:center;background:#e7e7ef;color:#fff;font-size:15px;z-index:1}
+  .step.done .dot{background:var(--teal)}
+  .step.current .dot{background:var(--navy);box-shadow:0 0 0 5px rgba(40,40,72,.12)}
+  .step .lab{font-weight:700;padding-top:3px}
+  .step.todo .lab{color:#a3a3b5;font-weight:600}
+  .step .at{font-size:12px;color:#9a9ab0;margin-left:auto;padding-top:5px;font-variant-numeric:tabular-nums}
+  .row{display:flex;gap:10px;align-items:center;padding:8px 0}
+  .row .ic{width:30px;color:var(--teal);font-size:18px;text-align:center}
+  .lbl{font-size:11px;color:#9a9ab0;text-transform:uppercase;letter-spacing:.08em;font-weight:700}
+  .val{font-weight:600}
+  a.btn{display:block;text-align:center;text-decoration:none;background:var(--navy);color:#fff;font-weight:700;padding:13px;border-radius:13px;margin-top:8px}
+  a.btn.ghost{background:#fff;color:var(--navy);border:1.5px solid rgba(0,0,0,.12)}
+  .foot{text-align:center;color:#a3a3b5;font-size:11px;margin-top:14px}
+  .cancel{background:#fff3f1;border-color:#f3c7c0}.cancel .headline{color:#c0392b}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand"><div class="logo"><span class="a">M</span><span class="b">A</span></div>
+    <div><div class="t">Milez Ahead</div><div class="s">Live trip</div></div></div>
+  <div id="app"><div class="card"><div class="headline">Loading your trip…</div></div></div>
+  <div class="foot">Powered by Milez Ahead · Executive &amp; medical transport</div>
+</div>
+<script>
+const EDGE='https://izslchhcavckowatgbel.supabase.co/functions/v1/track';
+const TOKEN=new URLSearchParams(location.search).get('token')||'';
+const fmt=t=>t?new Date(t).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):'';
+const esc=s=>(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function render(d){
+  if(!d){document.getElementById('app').innerHTML='<div class="card"><div class="headline">Trip not found</div><div class="ref">This tracking link is no longer active.</div></div>';return;}
+  const steps=d.steps.map(s=>{
+    const cls=s.done?'done':(s.current?'current':'todo');
+    const mark=s.done?'✓':(s.current?'●':'');
+    return '<li class="step '+cls+'"><span class="line"></span><span class="dot">'+mark+'</span><span class="lab">'+esc(s.label)+'</span>'+(s.at?'<span class="at">'+fmt(s.at)+'</span>':'')+'</li>';
+  }).join('');
+  let driver='';
+  if(d.driver){driver='<div class="card"><div class="lbl">Your driver</div><div class="row"><div class="ic">🧑‍✈️</div><div><div class="val">'+esc(d.driver.name||'Assigned')+'</div>'+(d.driver.vehicle?'<div style="color:#6a6a82">'+esc(d.driver.vehicle)+'</div>':'')+'</div></div>'+(d.driver.live&&d.driver.mapLink?'<a class="btn ghost" href="'+d.driver.mapLink+'" target="_blank" rel="noopener">📍 See driver on map</a>':'')+'</div>';}
+  let route='';
+  if(d.route.pickup||d.route.dropoff){route='<div class="card"><div class="row"><div class="ic">🟢</div><div><div class="lbl">Pickup</div><div class="val">'+esc(d.route.pickup||'—')+'</div></div></div><div class="row"><div class="ic">🔴</div><div><div class="lbl">Drop-off</div><div class="val">'+esc(d.route.dropoff||'—')+'</div></div></div>'+(d.route.mapsLink?'<a class="btn ghost" href="'+d.route.mapsLink+'" target="_blank" rel="noopener">🗺️ View route in Maps</a>':'')+'</div>';}
+  const when=(d.tripDate||'')+(d.pickupTime?' · '+d.pickupTime:'');
+  document.getElementById('app').innerHTML=
+    '<div class="card'+(d.cancelled?' cancel':'')+'">'+(d.cancelled?'':'<span class="pulse"></span>')+'<span class="headline">'+esc(d.headline)+'</span><div class="ref">'+esc(d.ref)+(when?' · '+esc(when):'')+'</div></div>'+
+    '<div class="card"><ul class="steps">'+steps+'</ul></div>'+driver+route;
+}
+async function tick(){
+  if(!TOKEN){render(null);return;}
+  try{const r=await fetch(EDGE+'?token='+encodeURIComponent(TOKEN)+'&format=json',{cache:'no-store'});render(r.ok?await r.json():null);}catch(e){}
+}
+tick();setInterval(tick,12000);
+</script>
+</body>
+</html>
