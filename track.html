@@ -81,11 +81,15 @@ function render(d){
       '</div></div>'+
       (dv.vehiclePhoto?'<img class="vthumb" src="'+dv.vehiclePhoto+'" alt="Vehicle" onerror="this.style.display=\'none\'">':'')+
       (dv.reg?'<div class="platewrap"><div class="plate">'+esc(dv.reg)+'</div></div>':'')+
-      (dv.live&&dv.mapLink?'<a class="btn ghost" href="'+dv.mapLink+'" target="_blank" rel="noopener">📍 See driver on map</a>':'')+
       '</div>';
   }
   let route='';
-  if(d.route.pickup||d.route.dropoff){route='<div class="card"><div class="row"><div class="ic">🟢</div><div><div class="lbl">Pickup</div><div class="val">'+esc(d.route.pickup||'—')+'</div></div></div><div class="row"><div class="ic">🔴</div><div><div class="lbl">Drop-off</div><div class="val">'+esc(d.route.dropoff||'—')+'</div></div></div></div>';}
+  if(d.route.pickup||d.route.dropoff){
+    const live=d.driver&&d.driver.live;
+    route='<div class="card"><div class="row"><div class="ic">🟢</div><div><div class="lbl">Pickup</div><div class="val">'+esc(d.route.pickup||'—')+'</div></div></div><div class="row"><div class="ic">🔴</div><div><div class="lbl">Drop-off</div><div class="val">'+esc(d.route.dropoff||'—')+'</div></div></div>'+
+      (d.route.mapsLink?'<a class="btn ghost" href="'+d.route.mapsLink+'" target="_blank" rel="noopener">🗺️ See the route'+(live?' & your driver':'')+'</a>':'')+
+    '</div>';
+  }
   const when=(d.tripDate||'')+(d.pickupTime?' · '+d.pickupTime:'');
   document.getElementById('app').innerHTML=
     '<div class="card'+(d.cancelled?' cancel':'')+'">'+(d.cancelled?'':'<span class="pulse"></span>')+'<span class="headline">'+esc(d.headline)+'</span><div class="ref">'+esc(d.ref)+(when?' · '+esc(when):'')+'</div></div>'+
