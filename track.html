@@ -29,6 +29,17 @@
   .step .lab{font-weight:700;padding-top:3px}
   .step.todo .lab{color:#a3a3b5;font-weight:600}
   .step .at{font-size:12px;color:#9a9ab0;margin-left:auto;padding-top:5px;font-variant-numeric:tabular-nums}
+  .hsteps{display:flex;align-items:flex-start;padding:4px 0 2px}
+  .hstep{flex:1;display:flex;flex-direction:column;align-items:center;position:relative}
+  .hstep::before{content:'';position:absolute;top:11px;right:50%;width:100%;height:3px;background:#e7e7ef}
+  .hstep:first-child::before{display:none}
+  .hstep.done::before,.hstep.current::before{background:var(--teal)}
+  .hdot{width:24px;height:24px;border-radius:50%;background:#e7e7ef;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;z-index:1}
+  .hstep.done .hdot{background:var(--teal)}
+  .hstep.current .hdot{background:var(--navy);box-shadow:0 0 0 4px rgba(40,40,72,.12)}
+  .hlab{font-size:10px;margin-top:7px;text-align:center;font-weight:700;line-height:1.15;color:var(--navy)}
+  .hstep.todo .hlab{color:#a3a3b5;font-weight:600}
+  .htime{font-size:9px;color:#9a9ab0;margin-top:2px;font-variant-numeric:tabular-nums}
   .row{display:flex;gap:10px;align-items:center;padding:8px 0}
   .row .ic{width:30px;color:var(--teal);font-size:18px;text-align:center}
   .lbl{font-size:11px;color:#9a9ab0;text-transform:uppercase;letter-spacing:.08em;font-weight:700}
@@ -78,10 +89,11 @@ function drawMap(d){
 }
 function render(d){
   if(!d){document.getElementById('app').innerHTML='<div class="card"><div class="headline">Trip not found</div><div class="ref">This tracking link is no longer active.</div></div>';return;}
+  const SHORT={booked:'Booked',assigned:'Assigned',enroute:'En route',arrived:'Arrived',started:'In trip',complete:'Done'};
   const steps=d.steps.map(s=>{
     const cls=s.done?'done':(s.current?'current':'todo');
-    const mark=s.done?'✓':(s.current?'●':'');
-    return '<li class="step '+cls+'"><span class="line"></span><span class="dot">'+mark+'</span><span class="lab">'+esc(s.label)+'</span>'+(s.at?'<span class="at">'+fmt(s.at)+'</span>':'')+'</li>';
+    const mark=s.done?'✓':'';
+    return '<div class="hstep '+cls+'"><div class="hdot">'+mark+'</div><div class="hlab">'+esc(SHORT[s.key]||s.label)+'</div>'+(s.at&&s.done?'<div class="htime">'+fmt(s.at)+'</div>':'')+'</div>';
   }).join('');
   let driver='';
   if(d.driver){
@@ -112,7 +124,7 @@ function render(d){
   const when=(d.tripDate||'')+(d.pickupTime?' · '+d.pickupTime:'');
   document.getElementById('app').innerHTML=
     '<div class="card'+(d.cancelled?' cancel':'')+'">'+(d.cancelled?'':'<span class="pulse"></span>')+'<span class="headline">'+esc(d.headline)+'</span><div class="ref">'+esc(d.ref)+(when?' · '+esc(when):'')+'</div></div>'+
-    '<div class="card"><ul class="steps">'+steps+'</ul></div>'+driver+route;
+    '<div class="card"><div class="hsteps">'+steps+'</div></div>'+driver+route;
   _last=d; drawMap(d);
 }
 async function tick(){
