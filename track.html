@@ -14,6 +14,7 @@
   .logo .a{color:var(--gold)}.logo .b{color:var(--teal)}
   .brand .t{font-weight:800;letter-spacing:.2px}.brand .s{font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:var(--teal);font-weight:700}
   .card{background:#fff;border:1px solid rgba(0,0,0,.06);border-radius:18px;padding:18px;box-shadow:0 2px 14px rgba(0,0,0,.04);margin-bottom:14px}
+  .greet{font-size:13px;color:var(--teal);font-weight:700;margin-bottom:5px}
   .headline{font-size:21px;font-weight:800;line-height:1.25}
   .ref{font-size:12px;color:#8a8aa0;margin-top:4px;font-variant-numeric:tabular-nums}
   .pulse{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--teal);margin-right:7px;box-shadow:0 0 0 0 rgba(0,120,128,.5);animation:p 1.8s infinite}
@@ -141,7 +142,7 @@ function render(d){
   }
   const when=(d.tripDate||'')+(d.pickupTime?' · '+d.pickupTime:'');
   document.getElementById('app').innerHTML=
-    '<div class="card'+(d.cancelled?' cancel':'')+'">'+(d.cancelled?'':'<span class="pulse"></span>')+'<span class="headline">'+esc(d.headline)+'</span><div class="ref">'+esc(d.ref)+(when?' · '+esc(when):'')+'</div></div>'+
+    '<div class="card'+(d.cancelled?' cancel':'')+'">'+(d.clientName&&!d.cancelled?'<div class="greet">Hi '+esc(d.clientName)+' 👋</div>':'')+(d.cancelled?'':'<span class="pulse"></span>')+'<span class="headline">'+esc(d.headline)+'</span><div class="ref">'+esc(d.ref)+(when?' · '+esc(when):'')+'</div></div>'+
     '<div class="card"><div class="hsteps">'+steps+'</div></div>'+driver+route;
   _last=d; drawMap(d);
 }
