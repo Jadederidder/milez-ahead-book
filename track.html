@@ -52,6 +52,20 @@
   .plate{display:inline-block;background:#fff;border:2.5px solid #111;border-radius:7px;padding:6px 16px;font-weight:800;letter-spacing:2px;font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:18px;color:#111}
   #mapcard{padding:0;overflow:hidden;display:none}
   .map{width:100%;height:250px;background:#e7e7ef}
+  .dvcols{display:flex;gap:14px;align-items:flex-start}
+  .dvleft{flex:0 0 44%;min-width:0;text-align:center}
+  .dvright{flex:1;min-width:0}
+  .vthumb2{width:100%;max-height:120px;object-fit:contain;background:#fff}
+  .dvleft .plate{font-size:15px;padding:5px 12px;margin-top:8px;letter-spacing:1.5px}
+  .vname{font-size:12px;color:#6a6a82;margin-top:7px;font-weight:600}
+  .dvhead{display:flex;gap:10px;align-items:center;padding-bottom:9px;margin-bottom:3px;border-bottom:1px solid rgba(0,0,0,.05)}
+  .dvhead .av{width:42px;height:42px;flex:0 0 42px;font-size:16px;margin:0}
+  .stat{font-size:13px;color:#3a3a52;margin-top:7px;line-height:1.3}
+  .route2{position:relative}
+  .rrow{display:flex;gap:12px;align-items:flex-start;position:relative;padding:6px 0}
+  .rdot{width:14px;height:14px;border-radius:50%;flex:0 0 14px;margin-top:3px;z-index:1}
+  .rdot.green{background:#22c55e}.rdot.red{background:#ef4444}
+  .rrow:first-child::after{content:'';position:absolute;left:6px;top:22px;bottom:-4px;border-left:2px dotted #c3c3d0}
   a.btn{display:block;text-align:center;text-decoration:none;background:var(--navy);color:#fff;font-weight:700;padding:13px;border-radius:13px;margin-top:8px}
   a.btn.ghost{background:#fff;color:var(--navy);border:1.5px solid rgba(0,0,0,.12)}
   .foot{text-align:center;color:#a3a3b5;font-size:11px;margin-top:14px}
@@ -100,24 +114,28 @@ function render(d){
     const dv=d.driver;
     const initials=esc((dv.name||'D').trim().slice(0,1).toUpperCase());
     const av=dv.photo?'<img class="av" src="'+dv.photo+'" alt="" onerror="this.outerHTML=\'<div class=&quot;av&quot;>'+initials+'</div>\'">':'<div class="av">'+initials+'</div>';
-    let stars='';
-    if(dv.rating){const full=Math.round(dv.rating);stars='<span class="stars">'+'★'.repeat(full)+'☆'.repeat(5-full)+'</span> <span class="muted">'+dv.rating.toFixed(1)+' ('+dv.ratingCount+')</span>';}
-    const meta=[];if(dv.trips)meta.push(dv.trips+' trips');if(dv.since)meta.push('with us since '+dv.since);
-    driver='<div class="card"><div class="lbl">Your driver</div>'+
-      '<div class="row" style="align-items:flex-start;padding-top:4px">'+av+'<div style="flex:1;min-width:0">'+
-        '<div class="val" style="font-size:16px">'+esc(dv.name||'Assigned')+'</div>'+
-        (stars?'<div style="margin:3px 0">'+stars+'</div>':'')+
-        (meta.length?'<div class="muted">'+meta.join(' · ')+'</div>':'')+
-        (dv.vehicle?'<div style="color:#6a6a82;margin-top:4px">🚘 '+esc(dv.vehicle.replace(/\s*\(.*\)\s*$/,''))+'</div>':'')+
-      '</div></div>'+
-      (dv.vehiclePhoto?'<img class="vthumb" src="'+dv.vehiclePhoto+'" alt="Vehicle" onerror="this.style.display=\'none\'">':'')+
-      (dv.reg?'<div class="platewrap"><div class="plate">'+esc(dv.reg)+'</div></div>':'')+
-      '</div>';
+    const vname=dv.vehicle?esc(dv.vehicle.replace(/\s*\(.*\)\s*$/,'')):'';
+    const left='<div class="dvleft">'+
+      (dv.vehiclePhoto?'<img class="vthumb2" src="'+dv.vehiclePhoto+'" alt="Vehicle" onerror="this.style.display=\'none\'">':'')+
+      (dv.reg?'<div class="plate">'+esc(dv.reg)+'</div>':'')+
+      (vname?'<div class="vname">'+vname+'</div>':'')+
+    '</div>';
+    let rating;
+    if(dv.rating){const full=Math.round(dv.rating);rating='<span class="stars">'+'★'.repeat(full)+'☆'.repeat(5-full)+'</span> <span class="muted">'+dv.rating.toFixed(1)+' ('+dv.ratingCount+')</span>';}
+    else rating='<span style="color:var(--teal);font-weight:700">✓ Verified Milez driver</span>';
+    const stats='<div class="stat">'+rating+'</div>'+
+      (dv.trips?'<div class="stat">🚗 '+dv.trips+' trips completed</div>':'')+
+      (dv.since?'<div class="stat">📅 With us since '+dv.since+'</div>':'');
+    const right='<div class="dvright"><div class="dvhead">'+av+'<div class="val" style="font-size:16px">'+esc(dv.name||'Assigned')+'</div></div>'+stats+'</div>';
+    driver='<div class="card"><div class="lbl">Your driver &amp; vehicle</div><div class="dvcols">'+left+right+'</div></div>';
   }
   let route='';
   if(d.route.pickup||d.route.dropoff){
     const live=d.driver&&d.driver.live;
-    route='<div class="card"><div class="row"><div class="ic">🟢</div><div><div class="lbl">Pickup</div><div class="val">'+esc(d.route.pickup||'—')+'</div></div></div><div class="row"><div class="ic">🔴</div><div><div class="lbl">Drop-off</div><div class="val">'+esc(d.route.dropoff||'—')+'</div></div></div>'+
+    route='<div class="card"><div class="route2">'+
+      '<div class="rrow"><span class="rdot green"></span><div><div class="lbl">Pickup</div><div class="val">'+esc(d.route.pickup||'—')+'</div></div></div>'+
+      '<div class="rrow"><span class="rdot red"></span><div><div class="lbl">Drop-off</div><div class="val">'+esc(d.route.dropoff||'—')+'</div></div></div>'+
+    '</div>'+
       (!MAPS_KEY && d.route.mapsLink?'<a class="btn ghost" href="'+d.route.mapsLink+'" target="_blank" rel="noopener">🗺️ See the route'+(live?' & your driver':'')+'</a>':'')+
     '</div>';
   }
