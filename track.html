@@ -39,6 +39,8 @@
   .vthumb{width:100%;max-height:160px;object-fit:cover;border-radius:12px;margin-top:10px;border:1px solid rgba(0,0,0,.06)}
   .platewrap{text-align:center;margin-top:10px}
   .plate{display:inline-block;background:#fff;border:2.5px solid #111;border-radius:7px;padding:6px 16px;font-weight:800;letter-spacing:2px;font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:18px;color:#111}
+  #mapcard{padding:0;overflow:hidden;display:none}
+  .map{width:100%;height:250px;background:#e7e7ef}
   a.btn{display:block;text-align:center;text-decoration:none;background:var(--navy);color:#fff;font-weight:700;padding:13px;border-radius:13px;margin-top:8px}
   a.btn.ghost{background:#fff;color:var(--navy);border:1.5px solid rgba(0,0,0,.12)}
   .foot{text-align:center;color:#a3a3b5;font-size:11px;margin-top:14px}
@@ -49,14 +51,27 @@
 <div class="wrap">
   <div class="brand"><div class="logo"><span class="a">M</span><span class="b">A</span></div>
     <div><div class="t">Milez Ahead</div><div class="s">Live trip</div></div></div>
+  <div id="mapcard" class="card"><div id="map" class="map"></div></div>
   <div id="app"><div class="card"><div class="headline">Loading your trip…</div></div></div>
   <div class="foot">Powered by Milez Ahead · Executive &amp; medical transport</div>
 </div>
 <script>
 const EDGE='https://izslchhcavckowatgbel.supabase.co/functions/v1/track';
 const TOKEN=new URLSearchParams(location.search).get('token')||'';
+// Set MAPS_KEY to a Google Maps JS API browser key (restricted to this domain)
+// to embed the live map. While empty, the page falls back to the "open in Maps" link.
+const MAPS_KEY='';
 const fmt=t=>t?new Date(t).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):'';
 const esc=s=>(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let _map,_dirR,_drvMarker,_routeDrawn,_mapsReady,_last;
+function loadMaps(){ if(!MAPS_KEY) return; const s=document.createElement('script'); s.async=true; s.src='https://maps.googleapis.com/maps/api/js?key='+MAPS_KEY; s.onload=()=>{_mapsReady=true; if(_last)drawMap(_last);}; document.head.appendChild(s); }
+function drawMap(d){
+  if(!MAPS_KEY||!_mapsReady||!d) return;
+  const card=document.getElementById('mapcard'); if(!card) return;
+  if(!_map){ _map=new google.maps.Map(document.getElementById('map'),{disableDefaultUI:true,zoomControl:true,gestureHandling:'greedy'}); _dirR=new google.maps.DirectionsRenderer({map:_map,suppressMarkers:false,polylineOptions:{strokeColor:'#007880',strokeWeight:5}}); }
+  if(!_routeDrawn && d.route.pickup && d.route.dropoff){ _routeDrawn=true; new google.maps.DirectionsService().route({origin:d.route.pickup,destination:d.route.dropoff,travelMode:'DRIVING'},(res,st)=>{ if(st==='OK'){_dirR.setDirections(res); card.style.display='block';} }); }
+  if(d.driver&&d.driver.lat!=null&&d.driver.lng!=null){ const pos={lat:d.driver.lat,lng:d.driver.lng}; if(!_drvMarker){_drvMarker=new google.maps.Marker({map:_map,position:pos,title:'Your driver',icon:{path:google.maps.SymbolPath.CIRCLE,scale:8,fillColor:'#8bc53f',fillOpacity:1,strokeColor:'#fff',strokeWeight:3}});}else _drvMarker.setPosition(pos); card.style.display='block'; }
+}
 function render(d){
   if(!d){document.getElementById('app').innerHTML='<div class="card"><div class="headline">Trip not found</div><div class="ref">This tracking link is no longer active.</div></div>';return;}
   const steps=d.steps.map(s=>{
@@ -87,19 +102,20 @@ function render(d){
   if(d.route.pickup||d.route.dropoff){
     const live=d.driver&&d.driver.live;
     route='<div class="card"><div class="row"><div class="ic">🟢</div><div><div class="lbl">Pickup</div><div class="val">'+esc(d.route.pickup||'—')+'</div></div></div><div class="row"><div class="ic">🔴</div><div><div class="lbl">Drop-off</div><div class="val">'+esc(d.route.dropoff||'—')+'</div></div></div>'+
-      (d.route.mapsLink?'<a class="btn ghost" href="'+d.route.mapsLink+'" target="_blank" rel="noopener">🗺️ See the route'+(live?' & your driver':'')+'</a>':'')+
+      (!MAPS_KEY && d.route.mapsLink?'<a class="btn ghost" href="'+d.route.mapsLink+'" target="_blank" rel="noopener">🗺️ See the route'+(live?' & your driver':'')+'</a>':'')+
     '</div>';
   }
   const when=(d.tripDate||'')+(d.pickupTime?' · '+d.pickupTime:'');
   document.getElementById('app').innerHTML=
     '<div class="card'+(d.cancelled?' cancel':'')+'">'+(d.cancelled?'':'<span class="pulse"></span>')+'<span class="headline">'+esc(d.headline)+'</span><div class="ref">'+esc(d.ref)+(when?' · '+esc(when):'')+'</div></div>'+
     '<div class="card"><ul class="steps">'+steps+'</ul></div>'+driver+route;
+  _last=d; drawMap(d);
 }
 async function tick(){
   if(!TOKEN){render(null);return;}
   try{const r=await fetch(EDGE+'?token='+encodeURIComponent(TOKEN)+'&format=json',{cache:'no-store'});render(r.ok?await r.json():null);}catch(e){}
 }
-tick();setInterval(tick,12000);
+loadMaps();tick();setInterval(tick,12000);
 </script>
 </body>
 </html>
