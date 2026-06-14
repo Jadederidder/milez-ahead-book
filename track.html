@@ -33,6 +33,10 @@
   .row .ic{width:30px;color:var(--teal);font-size:18px;text-align:center}
   .lbl{font-size:11px;color:#9a9ab0;text-transform:uppercase;letter-spacing:.08em;font-weight:700}
   .val{font-weight:600}
+  .av{width:54px;height:54px;border-radius:50%;object-fit:cover;background:#e7e7ef;flex:0 0 54px;display:flex;align-items:center;justify-content:center;font-weight:800;color:#8a8aa0;font-size:19px;margin-right:12px}
+  .stars{color:var(--gold);letter-spacing:1px;font-size:14px}
+  .muted{color:#8a8aa0;font-size:12px}
+  .vthumb{width:100%;max-height:160px;object-fit:cover;border-radius:12px;margin-top:10px;border:1px solid rgba(0,0,0,.06)}
   a.btn{display:block;text-align:center;text-decoration:none;background:var(--navy);color:#fff;font-weight:700;padding:13px;border-radius:13px;margin-top:8px}
   a.btn.ghost{background:#fff;color:var(--navy);border:1.5px solid rgba(0,0,0,.12)}
   .foot{text-align:center;color:#a3a3b5;font-size:11px;margin-top:14px}
@@ -59,7 +63,24 @@ function render(d){
     return '<li class="step '+cls+'"><span class="line"></span><span class="dot">'+mark+'</span><span class="lab">'+esc(s.label)+'</span>'+(s.at?'<span class="at">'+fmt(s.at)+'</span>':'')+'</li>';
   }).join('');
   let driver='';
-  if(d.driver){driver='<div class="card"><div class="lbl">Your driver</div><div class="row"><div class="ic">🧑‍✈️</div><div><div class="val">'+esc(d.driver.name||'Assigned')+'</div>'+(d.driver.vehicle?'<div style="color:#6a6a82">'+esc(d.driver.vehicle)+'</div>':'')+'</div></div>'+(d.driver.live&&d.driver.mapLink?'<a class="btn ghost" href="'+d.driver.mapLink+'" target="_blank" rel="noopener">📍 See driver on map</a>':'')+'</div>';}
+  if(d.driver){
+    const dv=d.driver;
+    const initials=esc((dv.name||'D').trim().slice(0,1).toUpperCase());
+    const av=dv.photo?'<img class="av" src="'+dv.photo+'" alt="" onerror="this.outerHTML=\'<div class=&quot;av&quot;>'+initials+'</div>\'">':'<div class="av">'+initials+'</div>';
+    let stars='';
+    if(dv.rating){const full=Math.round(dv.rating);stars='<span class="stars">'+'★'.repeat(full)+'☆'.repeat(5-full)+'</span> <span class="muted">'+dv.rating.toFixed(1)+' ('+dv.ratingCount+')</span>';}
+    const meta=[];if(dv.trips)meta.push(dv.trips+' trips');if(dv.since)meta.push('with us since '+dv.since);
+    driver='<div class="card"><div class="lbl">Your driver</div>'+
+      '<div class="row" style="align-items:flex-start;padding-top:4px">'+av+'<div style="flex:1;min-width:0">'+
+        '<div class="val" style="font-size:16px">'+esc(dv.name||'Assigned')+'</div>'+
+        (stars?'<div style="margin:3px 0">'+stars+'</div>':'')+
+        (meta.length?'<div class="muted">'+meta.join(' · ')+'</div>':'')+
+        (dv.vehicle?'<div style="color:#6a6a82;margin-top:4px">🚘 '+esc(dv.vehicle)+'</div>':'')+
+      '</div></div>'+
+      (dv.vehiclePhoto?'<img class="vthumb" src="'+dv.vehiclePhoto+'" alt="Vehicle" onerror="this.style.display=\'none\'">':'')+
+      (dv.live&&dv.mapLink?'<a class="btn ghost" href="'+dv.mapLink+'" target="_blank" rel="noopener">📍 See driver on map</a>':'')+
+      '</div>';
+  }
   let route='';
   if(d.route.pickup||d.route.dropoff){route='<div class="card"><div class="row"><div class="ic">🟢</div><div><div class="lbl">Pickup</div><div class="val">'+esc(d.route.pickup||'—')+'</div></div></div><div class="row"><div class="ic">🔴</div><div><div class="lbl">Drop-off</div><div class="val">'+esc(d.route.dropoff||'—')+'</div></div></div>'+(d.route.mapsLink?'<a class="btn ghost" href="'+d.route.mapsLink+'" target="_blank" rel="noopener">🗺️ View route in Maps</a>':'')+'</div>';}
   const when=(d.tripDate||'')+(d.pickupTime?' · '+d.pickupTime:'');
