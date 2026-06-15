@@ -89,6 +89,22 @@
   .sheet .acts button{flex:1;font-weight:700;font-size:14px;padding:12px;border-radius:12px;border:none;cursor:pointer}
   .sheet .acts .go{background:#c0392b;color:#fff}
   .sheet .acts .no{background:#eee;color:var(--navy)}
+  .mp{display:flex;gap:10px;align-items:flex-start;margin-top:13px;padding-top:13px;border-top:1px solid rgba(0,0,0,.05)}
+  .mp .ic{font-size:16px;line-height:1.4}
+  .arrival{display:inline-block;background:#eef6f0;color:#0a7d4b;font-weight:700;font-size:12.5px;padding:7px 12px;border-radius:11px;margin-top:13px;line-height:1.35}
+  .arrival.late{background:#fdf2e9;color:#b9770e}
+  .ratestars{font-size:36px;letter-spacing:7px;color:var(--gold);cursor:pointer;user-select:none;text-align:center;margin-top:8px}
+  .ratestars span{opacity:.3;transition:opacity .12s}
+  .ratestars span.on{opacity:1}
+  .tiprow{display:flex;gap:8px;justify-content:center;margin-top:15px;flex-wrap:wrap}
+  .tip{border:1.5px solid rgba(0,0,0,.12);background:#fff;border-radius:999px;padding:8px 16px;font-weight:700;font-size:14px;cursor:pointer;color:var(--navy)}
+  .tip.on{background:var(--teal);color:#fff;border-color:var(--teal)}
+  .rcmt{width:100%;border:1px solid rgba(0,0,0,.12);border-radius:12px;padding:11px;font-size:14px;margin-top:13px;font-family:inherit;resize:vertical}
+  .receipt .rl{display:flex;justify-content:space-between;gap:14px;padding:8px 0;border-bottom:1px solid rgba(0,0,0,.05);font-size:14px}
+  .receipt .rl:last-of-type{border-bottom:none}
+  .receipt .rl .k{color:#8a8aa0;flex:0 0 auto}
+  .receipt .rl .v{font-weight:700;text-align:right}
+  @media print{body{background:#fff}.brand .s,.foot,.sosbtn,.dvbtns,#rateCard,#mapcard{display:none!important}}
 </style>
 </head>
 <body>
@@ -106,13 +122,14 @@
 <script>
 const EDGE='https://izslchhcavckowatgbel.supabase.co/functions/v1/track';
 const SOS_EDGE='https://izslchhcavckowatgbel.supabase.co/functions/v1/track-sos';
+const FEEDBACK_EDGE='https://izslchhcavckowatgbel.supabase.co/functions/v1/submit-feedback';
 const TOKEN=new URLSearchParams(location.search).get('token')||'';
 // Set MAPS_KEY to a Google Maps JS API browser key (restricted to this domain)
 // to embed the live map. While empty, the page falls back to the "open in Maps" link.
 const MAPS_KEY='AIzaSyAtZvXbiV8BhpC_6dENVYrxoNWdPJlwNiM';
 const fmt=t=>t?new Date(t).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):'';
 const esc=s=>(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-let _map,_dirR,_drvMarker,_routeDrawn,_mapsReady,_last,_eta=null;
+let _map,_dirR,_drvMarker,_routeDrawn,_mapsReady,_last,_eta=null,_timer,_myRating=0,_myTip=null;
 function loadMaps(){ if(!MAPS_KEY) return; const s=document.createElement('script'); s.async=true; s.src='https://maps.googleapis.com/maps/api/js?key='+MAPS_KEY; s.onload=()=>{_mapsReady=true; if(_last)drawMap(_last);}; document.head.appendChild(s); }
 function drawMap(d){
   if(!MAPS_KEY||!_mapsReady||!d) return;
@@ -125,6 +142,7 @@ function drawMap(d){
   if(!_routeDrawn && d.route.pickup && d.route.dropoff){ _routeDrawn=true; new google.maps.DirectionsService().route({origin:d.route.pickup,destination:d.route.dropoff,travelMode:'DRIVING'},(res,st)=>{ if(st==='OK') _dirR.setDirections(res); }); }
   if(d.driver&&d.driver.lat!=null&&d.driver.lng!=null){ const pos={lat:d.driver.lat,lng:d.driver.lng}; if(!_drvMarker){_drvMarker=new google.maps.Marker({map:_map,position:pos,title:'Your driver',icon:{path:google.maps.SymbolPath.CIRCLE,scale:8,fillColor:'#8bc53f',fillOpacity:1,strokeColor:'#fff',strokeWeight:3}});}else _drvMarker.setPosition(pos); }
   computeEta();
+  computeArrival();
 }
 // Live ETA: driver's current position → pickup, shown while they're on the way.
 function computeEta(){
@@ -133,6 +151,32 @@ function computeEta(){
   if(!(d.driver&&d.driver.live&&!st('arrived')&&!st('started')&&!d.cancelled)||d.driver.lat==null||!d.route.pickup){_eta=null;return;}
   new google.maps.DirectionsService().route({origin:{lat:d.driver.lat,lng:d.driver.lng},destination:d.route.pickup,travelMode:'DRIVING'},(res,s)=>{
     if(s==='OK'&&res.routes[0]){_eta=res.routes[0].legs[0].duration.text; const el=document.getElementById('eta'); if(el){el.style.display='inline-block';el.textContent='🛣️ ~'+_eta+' away';}}
+  });
+}
+// Arrival intelligence: estimated drop-off time, compared to the appointment time.
+function computeArrival(){
+  if(!_mapsReady||!_last) return;
+  const d=_last, st=k=>(d.steps.find(s=>s.key===k)||{}).done;
+  if(!d.route.pickup||!d.route.dropoff||d.cancelled||st('complete')) return;
+  const live=d.driver&&d.driver.live&&d.driver.lat!=null&&!st('arrived');
+  const started=st('started');
+  const req={destination:d.route.dropoff,travelMode:'DRIVING'};
+  if(started&&live){req.origin={lat:d.driver.lat,lng:d.driver.lng};}        // mid-trip: straight to drop-off
+  else if(live){req.origin={lat:d.driver.lat,lng:d.driver.lng};req.waypoints=[{location:d.route.pickup}];} // en route via pickup
+  else {req.origin=d.route.pickup;}                                          // scheduled: from pickup
+  new google.maps.DirectionsService().route(req,(res,s)=>{
+    if(s!=='OK'||!res.routes[0]) return;
+    const secs=res.routes[0].legs.reduce((a,l)=>a+l.duration.value,0);
+    let base=new Date();
+    if(!live&&!started&&d.pickupTime){const p=d.pickupTime.split(':');const t=new Date();t.setHours(+p[0],+p[1],0,0);if(t>base)base=t;}
+    const arrive=new Date(base.getTime()+secs*1000);
+    const hh=String(arrive.getHours()).padStart(2,'0'),mm=String(arrive.getMinutes()).padStart(2,'0');
+    let txt='🏁 '+((live||started)?'Arriving':'Est. arrival')+' ~'+hh+':'+mm, cls='arrival';
+    if(d.appointmentTime){const a=d.appointmentTime.split(':');const appt=new Date(arrive);appt.setHours(+a[0],+a[1],0,0);const diff=Math.round((appt-arrive)/60000);
+      if(diff>=0) txt+=' · '+diff+' min before your '+d.appointmentTime+' appointment';
+      else {txt+=' · '+(-diff)+' min after your '+d.appointmentTime+' appointment';cls='arrival late';}
+    }
+    const el=document.getElementById('arrivalEta'); if(el){el.className=cls;el.textContent=txt;el.style.display='inline-block';}
   });
 }
 function render(d){
@@ -148,7 +192,7 @@ function render(d){
     const dv=d.driver;
     const initials=esc((dv.name||'D').trim().slice(0,1).toUpperCase());
     const av=dv.photo?'<img class="av" src="'+dv.photo+'" alt="" onerror="this.outerHTML=\'<div class=&quot;av&quot;>'+initials+'</div>\'">':'<div class="av">'+initials+'</div>';
-    const vname=dv.vehicle?esc(dv.vehicle.replace(/\s*\(.*\)\s*$/,'')):'';
+    const vname=dv.vehicleDesc?esc(dv.vehicleDesc):(dv.vehicle?esc(dv.vehicle.replace(/\s*\(.*\)\s*$/,'')):'');
     const left='<div class="dvleft">'+
       (dv.vehiclePhoto?'<img class="vthumb2" src="'+dv.vehiclePhoto+'" alt="Vehicle" onerror="this.style.display=\'none\'">':'')+
       (dv.reg?'<div class="plate">'+esc(dv.reg)+'</div>':'')+
@@ -159,20 +203,28 @@ function render(d){
     else rating='<span style="color:var(--teal);font-weight:700">✓ Verified Milez driver</span>';
     const stats='<div class="stat">'+rating+'</div>'+
       (dv.trips?'<div class="stat">🚗 '+dv.trips+' trips completed</div>':'')+
+      (dv.languages&&dv.languages.length?'<div class="stat">🗣️ '+esc(dv.languages.join(', '))+'</div>':'')+
       (dv.since?'<div class="stat">📅 With us since '+dv.since+'</div>':'');
     const right='<div class="dvright"><div class="dvhead">'+av+'<div class="val" style="font-size:16px">'+esc(dv.name||'Assigned')+'</div></div>'+stats+'</div>';
     const vf=dv.verified||{};
-    const badges=(vf.licence||vf.prdp)?'<div class="badges">'+(vf.licence?'<span class="badge">✓ Licence verified</span>':'')+(vf.prdp?'<span class="badge">✓ PrDP verified</span>':'')+'</div>':'';
+    const accBadges=(dv.accreditations||[]).map(a=>'<span class="badge">✓ '+esc(a)+'</span>').join('');
+    const allBadges=(vf.licence?'<span class="badge">✓ Licence verified</span>':'')+(vf.prdp?'<span class="badge">✓ PrDP verified</span>':'')+accBadges;
+    const badges=allBadges?'<div class="badges">'+allBadges+'</div>':'';
     const acts='<div class="dvbtns">'+(dv.phone?'<a class="call" href="tel:'+esc(dv.phone)+'">📞 Call driver</a>':'')+'<a class="share" href="#" onclick="shareTrip(event)">🔗 Share trip</a></div>';
     driver='<div class="card"><div class="lbl">Your driver &amp; vehicle</div><div class="dvcols">'+left+right+'</div>'+badges+acts+'</div>';
   }
   let route='';
   if(d.route.pickup||d.route.dropoff){
     const live=d.driver&&d.driver.live;
+    const stp=k=>(d.steps.find(s=>s.key===k)||{}).done;
+    const showArrival=!d.cancelled&&!stp('complete');
+    const showMeet=d.route.meetingPoint&&!d.cancelled&&!stp('started');
     route='<div class="card"><div class="route2">'+
       '<div class="rrow"><span class="rdot green"></span><div><div class="lbl">Pickup</div><div class="val">'+esc(d.route.pickup||'—')+'</div></div></div>'+
       '<div class="rrow"><span class="rdot red"></span><div><div class="lbl">Drop-off</div><div class="val">'+esc(d.route.dropoff||'—')+'</div></div></div>'+
     '</div>'+
+      (showMeet?'<div class="mp"><span class="ic">📍</span><div><div class="lbl">Where to meet your driver</div><div class="val">'+esc(d.route.meetingPoint)+'</div></div></div>':'')+
+      (showArrival?'<div><span id="arrivalEta" class="arrival" style="display:none"></span></div>':'')+
       (!MAPS_KEY && d.route.mapsLink?'<a class="btn ghost" href="'+d.route.mapsLink+'" target="_blank" rel="noopener">🗺️ See the route'+(live?' & your driver':'')+'</a>':'')+
     '</div>';
   }
@@ -181,14 +233,58 @@ function render(d){
   const showEta=d.driver&&d.driver.live&&!st('arrived')&&!st('started')&&!d.cancelled;
   const etaChip=showEta?'<div id="eta" class="etachip"'+(_eta?'':' style="display:none"')+'>'+(_eta?'🛣️ ~'+esc(_eta)+' away':'')+'</div>':'';
   const sosBtn=(d.driver&&!d.cancelled&&!st('complete'))?'<button class="sosbtn" onclick="openSos()">🆘 I feel unsafe — alert control room</button>':'';
+  // After the trip: branded receipt + rate & tip + one-tap return booking.
+  let after='';
+  if(d.receipt){
+    const r=d.receipt, rl=(k,v)=>'<div class="rl"><span class="k">'+k+'</span><span class="v">'+v+'</span></div>';
+    const receipt='<div class="card receipt"><div class="lbl">Trip receipt</div>'+
+      rl('Reference',esc(d.ref))+(d.tripDate?rl('Date',esc(d.tripDate)):'')+
+      rl('From',esc(d.route.pickup||'—'))+rl('To',esc(d.route.dropoff||'—'))+
+      (d.driver&&d.driver.name?rl('Driver',esc(d.driver.name)):'')+
+      (r.distanceKm!=null?rl('Distance',r.distanceKm+' km'):'')+
+      (r.durationMin!=null?rl('Duration',r.durationMin+' min'):'')+
+      (r.fare!=null?rl('Fare','R'+r.fare.toFixed(2)):'')+
+      '<a class="btn ghost" href="#" onclick="window.print();return false" style="margin-top:14px">🧾 Save / print receipt</a></div>';
+    const rate='<div class="card rate" id="rateCard"><div class="lbl">How was your trip?</div>'+
+      '<div class="ratestars" id="stars">'+[1,2,3,4,5].map(n=>'<span data-n="'+n+'" onclick="setRating('+n+')">★</span>').join('')+'</div>'+
+      '<div class="tiprow" id="tiprow">'+[20,50,100].map(t=>'<button class="tip" data-t="'+t+'" onclick="setTip('+t+')">R'+t+'</button>').join('')+'<button class="tip" data-t="0" onclick="setTip(0)">No tip</button></div>'+
+      '<textarea class="rcmt" id="rcmt" placeholder="Tell us about your driver (optional)"></textarea>'+
+      '<a class="btn" href="#" onclick="submitRating(event)" style="margin-top:12px">Submit rating</a></div>';
+    const rb=d.rebook||{}, p=new URLSearchParams();
+    if(rb.name)p.set('name',rb.name); if(rb.phone)p.set('phone',rb.phone);
+    if(rb.from)p.set('pickup',rb.from); if(rb.to)p.set('dropoff',rb.to);
+    const rebook='<a class="btn" href="./?'+p.toString()+'" style="background:var(--teal)">🔁 Book my return trip</a>';
+    after=receipt+rate+rebook;
+  }
   document.getElementById('app').innerHTML=
     '<div class="card'+(d.cancelled?' cancel':'')+'">'+(d.clientName&&!d.cancelled?'<div class="greet">Hi '+esc(d.clientName)+' 👋</div>':'')+(d.cancelled?'':'<span class="pulse"></span>')+'<span class="headline">'+esc(d.headline)+'</span><div class="ref">'+esc(d.ref)+(when?' · '+esc(when):'')+'</div>'+etaChip+'</div>'+
-    '<div class="card"><div class="hsteps">'+steps+'</div></div>'+driver+route+sosBtn;
+    '<div class="card"><div class="hsteps">'+steps+'</div></div>'+driver+route+sosBtn+after;
   _last=d; drawMap(d);
 }
 async function tick(){
   if(!TOKEN){render(null);return;}
-  try{const r=await fetch(EDGE+'?token='+encodeURIComponent(TOKEN)+'&format=json',{cache:'no-store'});render(r.ok?await r.json():null);}catch(e){}
+  try{
+    const r=await fetch(EDGE+'?token='+encodeURIComponent(TOKEN),{cache:'no-store'});
+    const d=r.ok?await r.json():null;
+    render(d);
+    // Once the trip is complete nothing changes — stop polling so the rating
+    // widget keeps the client's star/tip selection instead of resetting.
+    if(d&&(d.steps||[]).some(s=>s.key==='complete'&&s.done)&&_timer){clearInterval(_timer);_timer=null;}
+  }catch(e){}
+}
+function setRating(n){_myRating=n;document.querySelectorAll('#stars span').forEach(s=>s.classList.toggle('on',Number(s.dataset.n)<=n));}
+function setTip(t){_myTip=t;document.querySelectorAll('#tiprow .tip').forEach(b=>b.classList.toggle('on',Number(b.dataset.t)===t));}
+async function submitRating(e){
+  if(e)e.preventDefault();
+  if(!_myRating){alert('Please tap a star to rate your trip');return;}
+  const cmt=(document.getElementById('rcmt')||{}).value||'';
+  const payload={token:TOKEN,rating:_myRating,comment:cmt}; if(_myTip)payload.tip=_myTip;
+  try{
+    const r=await fetch(FEEDBACK_EDGE,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    const j=await r.json().catch(()=>({})); const card=document.getElementById('rateCard');
+    if(r.ok&&j.ok&&card){card.innerHTML='<div class="lbl">Thank you</div><div class="headline" style="font-size:18px;margin-top:6px">🙏 Thanks for the '+_myRating+'★'+(_myTip?' and the R'+_myTip+' tip':'')+'</div><p class="muted" style="margin-top:6px">Your feedback keeps Milez Ahead world-class.</p>';}
+    else alert('Could not submit just yet, please try again.');
+  }catch(_){alert('Could not submit just yet, please try again.');}
 }
 function shareTrip(e){
   if(e)e.preventDefault();
@@ -208,7 +304,7 @@ async function sosConfirm(){
     : '<h3>Couldn’t send the alert</h3><p>Please call our control room directly on 082 859 0094, or dial 10111 for emergencies.</p>';
   document.getElementById('sosActs').innerHTML='<button class="no" onclick="closeSos()">Close</button>';
 }
-loadMaps();tick();setInterval(tick,12000);
+loadMaps();tick();_timer=setInterval(tick,12000);
 </script>
 </body>
 </html>

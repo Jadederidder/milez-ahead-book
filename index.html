@@ -120,6 +120,20 @@
   const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
   const SVC_LABEL = { airport: 'Airport', drive_home: 'Drive home', manage_booking: 'Private' }
 
+  // Prefill from a deep link — e.g. "Book my return trip" on the live tracker
+  // passes name, phone and the reversed pickup/drop-off so the client only adds a date.
+  ;(function () {
+    const q = new URLSearchParams(location.search)
+    const set = (name, val) => { if (val && form[name] != null) form[name].value = val }
+    set('full_name', q.get('name')); set('phone', q.get('phone'))
+    set('pickup_address', q.get('pickup')); set('dropoff_address', q.get('dropoff'))
+    if (q.get('pickup') || q.get('dropoff')) {
+      welcome.textContent = '✓ We’ve pre-filled your return trip — just pick a date.'
+      welcome.classList.remove('hidden')
+      setTimeout(() => { try { form.trip_date.focus() } catch (_) {} }, 200)
+    }
+  })()
+
   // Recognise a returning client as they type their cell number, prefill their
   // name + policy, and offer one-tap rebook of recent trips.
   let lookupTimer
