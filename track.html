@@ -256,9 +256,24 @@ function render(d){
     const rebook='<a class="btn" href="./?'+p.toString()+'" style="background:var(--teal)">🔁 Book my return trip</a>';
     after=receipt+rate+rebook;
   }
-  document.getElementById('app').innerHTML=
-    '<div class="card'+(d.cancelled?' cancel':'')+'">'+(d.clientName&&!d.cancelled?'<div class="greet">Hi '+esc(d.clientName)+' 👋</div>':'')+(d.cancelled?'':'<span class="pulse"></span>')+'<span class="headline">'+esc(d.headline)+'</span><div class="ref">'+esc(d.ref)+(when?' · '+esc(when):'')+'</div>'+etaChip+'</div>'+
-    '<div class="card"><div class="hsteps">'+steps+'</div></div>'+driver+route+sosBtn+after;
+  const statusCard='<div class="card'+(d.cancelled?' cancel':'')+'">'+(d.clientName&&!d.cancelled?'<div class="greet">Hi '+esc(d.clientName)+' 👋</div>':'')+(d.cancelled?'':'<span class="pulse"></span>')+'<span class="headline">'+esc(d.headline)+'</span><div class="ref">'+esc(d.ref)+(when?' · '+esc(when):'')+'</div>'+etaChip+'</div>';
+  const timelineCard='<div class="card"><div class="hsteps">'+steps+'</div></div>';
+  const mapSlot='<div id="mapslot"></div>';
+  // Phase-adaptive order. Arrived → the driver/plate card jumps up so the client
+  // can spot the car; otherwise the live map leads. Done → receipt/rating lead.
+  const arrived=st('arrived')&&!st('started')&&!d.cancelled;
+  const done=st('complete')||d.cancelled;
+  let bodyHtml;
+  if(done) bodyHtml=statusCard+timelineCard+after+driver+mapSlot;
+  else if(arrived) bodyHtml=statusCard+driver+mapSlot+timelineCard+route+sosBtn;
+  else bodyHtml=statusCard+mapSlot+timelineCard+driver+route+sosBtn;
+  // Park the persistent map node out of #app before the innerHTML rewrite, then
+  // drop it back into the slot — so the live Google Map is never recreated.
+  const wrap=document.querySelector('.wrap'), mc=document.getElementById('mapcard');
+  if(mc&&wrap) wrap.appendChild(mc);
+  document.getElementById('app').innerHTML=bodyHtml;
+  const slot=document.getElementById('mapslot');
+  if(slot&&mc){ slot.replaceWith(mc); if(_map&&window.google) google.maps.event.trigger(_map,'resize'); }
   _last=d; drawMap(d);
 }
 async function tick(){
