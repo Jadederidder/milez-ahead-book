@@ -70,6 +70,12 @@
           <span class="mt-1 block text-xs text-slate-400">If your travel is covered by a programme, enter your policy number and we'll recognise you. Otherwise just leave it blank — your mobile number identifies you.</span>
         </label>
 
+        <label class="block">
+          <span class="lbl">Voucher / gift code <span class="font-normal text-slate-400">— optional</span></span>
+          <input name="code" id="code" class="field" placeholder="e.g. MA-XXXXXX" autocomplete="off" autocapitalize="characters" style="text-transform:uppercase" />
+          <span id="codeMsg" class="mt-1 hidden text-xs font-medium"></span>
+        </label>
+
         <div class="grid gap-4 sm:grid-cols-2">
           <label><span class="lbl">Date *</span><input name="trip_date" type="date" class="field" required /></label>
           <label><span class="lbl">Pickup time</span><input name="pickup_time" type="time" class="field" /></label>
@@ -134,6 +140,12 @@
       welcome.classList.remove('hidden')
       setTimeout(() => { try { form.trip_date.focus() } catch (_) {} }, 200)
     }
+    const giftCode = q.get('code')
+    if (giftCode && form.code) {
+      form.code.value = giftCode.toUpperCase()
+      welcome.textContent = '🎁 You’ve been gifted a Milez Ahead trip — just add your trip details below.'
+      welcome.classList.remove('hidden')
+    }
   })()
 
   // Recognise a returning client as they type their cell number, prefill their
@@ -186,6 +198,40 @@
   }
   form.phone.addEventListener('blur', lookupClient)
   form.phone.addEventListener('input', () => { clearTimeout(lookupTimer); lookupTimer = setTimeout(lookupClient, 600) })
+
+  // Voucher / gift code — validate live so the customer sees "free trip" before submitting.
+  const codeEl = document.getElementById('code')
+  const codeMsg = document.getElementById('codeMsg')
+  let codeTimer
+  function setCodeMsg(text, ok) {
+    codeMsg.textContent = text
+    codeMsg.style.color = ok ? '#059669' : '#dc2626'
+    codeMsg.classList.toggle('hidden', !text)
+    btn.textContent = ok ? 'Request my free trip' : 'Request my trip'
+  }
+  async function checkCode() {
+    const code = (codeEl.value || '').trim()
+    if (!code) { setCodeMsg('', false); return }
+    try {
+      const res = await fetch(FN_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': ANON, 'Authorization': 'Bearer ' + ANON },
+        body: JSON.stringify({ check_code: code }),
+      })
+      const d = await res.json()
+      if (d.valid) { setCodeMsg('✓ Valid code — this trip is on us, no payment needed.', true) }
+      else {
+        const m = d.reason === 'expired' ? 'This code has expired.'
+          : d.reason === 'exhausted' ? 'This code has already been fully used.'
+          : d.reason === 'disabled' ? 'This code is no longer active.'
+          : 'We couldn’t find that code.'
+        setCodeMsg('✕ ' + m, false)
+      }
+    } catch { /* non-fatal */ }
+  }
+  codeEl.addEventListener('input', () => { codeEl.value = codeEl.value.toUpperCase(); clearTimeout(codeTimer); codeTimer = setTimeout(checkCode, 500) })
+  codeEl.addEventListener('blur', checkCode)
+  if (codeEl.value) checkCode()
 
   // Google Places autocomplete → capture coordinates so web bookings land on
   // the dispatch maps. initMA is the Maps JS callback (see script tag below).
@@ -242,6 +288,10 @@
       const data = await res.json()
       if (!res.ok || data.error) throw new Error(data.error || 'Something went wrong. Please try again.')
       document.getElementById('ref').textContent = data.ref
+      if (data.free) {
+        const sp = document.querySelector('#success p.mt-3')
+        if (sp) sp.textContent = '🎉 This trip is on us — no payment needed. A Milez Ahead controller will confirm your driver and vehicle shortly.'
+      }
       form.classList.add('hidden')
       document.getElementById('success').classList.remove('hidden')
       window.scrollTo({ top: 0, behavior: 'smooth' })
