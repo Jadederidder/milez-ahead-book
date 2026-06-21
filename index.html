@@ -42,6 +42,7 @@
         </div>
         <h2 class="mt-4 text-xl font-bold text-slate-900">Booking received</h2>
         <p class="mt-1 text-sm text-slate-500">Your reference is <span id="ref" class="font-semibold" style="color:var(--teal)"></span>.</p>
+        <p id="fareLine" class="mt-2 hidden text-sm font-semibold" style="color:var(--teal)"></p>
         <p class="mt-3 text-sm text-slate-600">A Milez Ahead controller will confirm your driver and vehicle shortly. Keep your phone handy.</p>
         <button onclick="location.reload()" class="mt-6 rounded-lg px-5 py-2.5 text-sm font-semibold text-white" style="background:var(--navy)">Book another trip</button>
       </div>
@@ -288,9 +289,16 @@
       const data = await res.json()
       if (!res.ok || data.error) throw new Error(data.error || 'Something went wrong. Please try again.')
       document.getElementById('ref').textContent = data.ref
+      const fl = document.getElementById('fareLine')
       if (data.free) {
         const sp = document.querySelector('#success p.mt-3')
         if (sp) sp.textContent = '🎉 This trip is on us — no payment needed. A Milez Ahead controller will confirm your driver and vehicle shortly.'
+      } else if (data.payment === 'card' && data.fare != null) {
+        fl.textContent = 'Estimated fare: R' + Number(data.fare).toFixed(2) + ' — we\'ll send a secure payment link to your WhatsApp to confirm.'
+        fl.classList.remove('hidden')
+      } else if (data.payment === 'covered') {
+        fl.textContent = 'Covered by your programme — no payment needed.'
+        fl.classList.remove('hidden')
       }
       form.classList.add('hidden')
       document.getElementById('success').classList.remove('hidden')
