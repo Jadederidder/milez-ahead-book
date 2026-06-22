@@ -82,6 +82,15 @@
           <label><span class="lbl">Pickup time</span><input name="pickup_time" type="time" class="field" /></label>
         </div>
 
+        <div id="airportPick" class="hidden rounded-xl border border-slate-200 bg-slate-50/60 p-3">
+          <span class="lbl">Which end is the airport?</span>
+          <div class="mt-1 grid grid-cols-2 gap-2">
+            <button type="button" data-leg="drop" class="leg rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium">To airport</button>
+            <button type="button" data-leg="pick" class="leg rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium">From airport</button>
+          </div>
+          <select id="airportSel" class="field mt-2"><option value="">Select airport…</option></select>
+        </div>
+
         <label class="block"><span class="lbl">Pickup address *</span><input name="pickup_address" class="field" required placeholder="Where should we collect you?" /></label>
         <label class="block"><span class="lbl">Drop-off address *</span><input name="dropoff_address" class="field" required placeholder="Where are you going?" /></label>
 
@@ -110,6 +119,27 @@
 
   let service = 'airport'
   const svcBtns = [...document.querySelectorAll('.svc')]
+
+  // SA airports — picking one fills the chosen leg's address + coordinates, so the
+  // fare estimates server-side the same way it does in the console.
+  const AIRPORTS = [
+    ['CPT', 'Cape Town International', 'Cape Town International Airport (CPT), Cape Town', -33.9715, 18.6021],
+    ['JNB', 'O.R. Tambo (Johannesburg)', 'O.R. Tambo International Airport (JNB), Kempton Park, Johannesburg', -26.1367, 28.2411],
+    ['HLA', 'Lanseria (Johannesburg)', 'Lanseria International Airport (HLA), Johannesburg', -25.9385, 27.9261],
+    ['DUR', 'King Shaka (Durban)', 'King Shaka International Airport (DUR), La Mercy, Durban', -29.6144, 31.1197],
+    ['GRJ', 'George', 'George Airport (GRJ), George', -34.0056, 22.3789],
+    ['PLZ', 'Gqeberha (PE)', 'Chief Dawid Stuurman International Airport (PLZ), Gqeberha', -33.9849, 25.6173],
+    ['ELS', 'East London', 'King Phalo Airport (ELS), East London', -33.0356, 27.8261],
+    ['BFN', 'Bloemfontein', 'Bram Fischer International Airport (BFN), Bloemfontein', -29.0927, 26.3024],
+    ['MQP', 'KMIA (Mbombela)', 'Kruger Mpumalanga International Airport (MQP), Mbombela', -25.3832, 31.1056],
+    ['RCB', 'Richards Bay', 'Richards Bay Airport (RCB), Richards Bay', -28.7409, 32.0921],
+  ]
+  let airportLeg = 'drop' // which end is the airport: 'drop' (to airport) | 'pick' (from airport)
+  const airportPick = document.getElementById('airportPick')
+  const airportSel = document.getElementById('airportSel')
+  const legBtns = [...document.querySelectorAll('.leg')]
+  AIRPORTS.forEach(a => { const o = document.createElement('option'); o.value = a[0]; o.textContent = a[1] + ' (' + a[0] + ')'; airportSel.appendChild(o) })
+
   function paint() {
     svcBtns.forEach(b => {
       const on = b.dataset.v === service
@@ -117,8 +147,24 @@
       b.style.color = on ? '#fff' : ''
       b.style.borderColor = on ? '#007880' : '#cbd5e1'
     })
+    airportPick.classList.toggle('hidden', service !== 'airport')
+    legBtns.forEach(b => {
+      const on = b.dataset.leg === airportLeg
+      b.style.background = on ? '#0e1e3a' : ''
+      b.style.color = on ? '#fff' : ''
+      b.style.borderColor = on ? '#0e1e3a' : '#cbd5e1'
+    })
   }
   svcBtns.forEach(b => b.addEventListener('click', () => { service = b.dataset.v; paint() }))
+  legBtns.forEach(b => b.addEventListener('click', () => { airportLeg = b.dataset.leg; applyAirport(); paint() }))
+  airportSel.addEventListener('change', applyAirport)
+  function applyAirport() {
+    const a = AIRPORTS.find(x => x[0] === airportSel.value)
+    if (!a) return
+    const addr = a[2], coords = { lat: a[3], lng: a[4] }
+    if (airportLeg === 'drop') { form.dropoff_address.value = addr; dropCoords = coords; dropText = addr }
+    else { form.pickup_address.value = addr; pickupCoords = coords; pickupText = addr }
+  }
   paint()
 
   const form = document.getElementById('form')
