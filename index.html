@@ -342,6 +342,9 @@
       } else if (data.payment === 'card' && data.fare != null) {
         fl.textContent = 'Estimated fare: R' + Number(data.fare).toFixed(2) + ' — we\'ll send a secure payment link to your WhatsApp to confirm.'
         fl.classList.remove('hidden')
+      } else if (data.payment === 'quote') {
+        fl.textContent = 'A Milez Ahead controller will confirm your fare and send a secure payment link to your WhatsApp.'
+        fl.classList.remove('hidden')
       } else if (data.payment === 'covered') {
         fl.textContent = 'Covered by your programme — no payment needed.'
         fl.classList.remove('hidden')
