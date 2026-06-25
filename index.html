@@ -56,6 +56,7 @@
             <button type="button" data-v="drive_home" class="svc rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium">Drive home</button>
             <button type="button" data-v="manage_booking" class="svc rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium">Private</button>
           </div>
+          <p id="svcDesc" class="mt-2 text-xs leading-snug text-slate-500"></p>
         </div>
 
         <div class="grid gap-4 sm:grid-cols-2">
@@ -102,6 +103,11 @@
 
         <label class="block"><span class="lbl">Notes for the driver</span><textarea name="notes" rows="2" class="field" placeholder="Anything we should know?"></textarea></label>
 
+        <label id="indemnityWrap" class="flex items-start gap-2.5 rounded-xl border border-slate-200 bg-slate-50/60 p-3 text-xs leading-snug text-slate-600">
+          <input id="indemnity" type="checkbox" class="mt-0.5 h-4 w-4 shrink-0" style="accent-color:var(--teal)" />
+          <span>I confirm my vehicle is adequately insured, including cover for authorised third-party drivers such as Milez Ahead chauffeurs. I accept that Milez Ahead and its service providers are not liable for any loss, damage or delay arising from the service, except in the case of gross negligence or intentional misconduct.</span>
+        </label>
+
         <div id="error" class="hidden rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700"></div>
 
         <button id="submit" type="submit" class="w-full rounded-xl py-3.5 text-base font-bold text-white shadow-lg transition hover:brightness-105" style="background:var(--lime)">
@@ -119,6 +125,14 @@
 
   let service = 'airport'
   const svcBtns = [...document.querySelectorAll('.svc')]
+  // Plain-language descriptions so the client knows exactly what each service is —
+  // especially Drive home (the two-driver Home Safe team people don't expect).
+  const SVC_DESC = {
+    airport: 'Door-to-door airport transfers. We watch your flight and time the pickup so you’re never rushed.',
+    drive_home: 'Home Safe Chauffeur — had a few drinks? A two-driver team comes to you: one drives you home in your own car, the other follows. You and your car both arrive safely.',
+    manage_booking: 'A private, pay-as-you-go trip — book a professional Milez Ahead driver for any errand, transfer or appointment.',
+  }
+  const svcDescEl = document.getElementById('svcDesc')
 
   // SA airports — picking one fills the chosen leg's address + coordinates, so the
   // fare estimates server-side the same way it does in the console.
@@ -147,6 +161,7 @@
       b.style.color = on ? '#fff' : ''
       b.style.borderColor = on ? '#007880' : '#cbd5e1'
     })
+    if (svcDescEl) svcDescEl.textContent = SVC_DESC[service] || ''
     airportPick.classList.toggle('hidden', service !== 'airport')
     legBtns.forEach(b => {
       const on = b.dataset.leg === airportLeg
@@ -307,10 +322,20 @@
   form.addEventListener('submit', async (e) => {
     e.preventDefault()
     errEl.classList.add('hidden')
+    // Indemnity must be accepted — branded inline error, no native popup.
+    const indemnity = document.getElementById('indemnity')
+    if (indemnity && !indemnity.checked) {
+      errEl.textContent = 'Please accept the terms & indemnity to continue.'
+      errEl.classList.remove('hidden')
+      document.getElementById('indemnityWrap').style.borderColor = '#dc2626'
+      errEl.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      return
+    }
     btn.disabled = true; btn.textContent = 'Sending…'
     const fd = new FormData(form)
     const payload = Object.fromEntries(fd.entries())
     payload.service_type = service
+    payload.indemnity_accepted = true // captured at booking — see terms acknowledgment
     // Use the live field value, falling back to the last text we saw it hold
     // (guards against the autocomplete blanking the field after a selection).
     const pickup = (form.pickup_address.value || pickupText || '').trim()
