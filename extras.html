@@ -135,14 +135,15 @@ window.confirmExtras = async () => {
   try{
     const res = await call({ action:'apply', items, settlement:SETTLE });
     if (res.redirect){ location.href = res.redirect; return; }
-    if (res.ok){ showState('✅','Added to your trip', `${t.cred} credit${t.cred===1?'':'s'} used. Your driver has been updated — see you soon!`); return; }
+    if (res.ok){ showState('✅','Added to your trip', `${t.cred} credit${t.cred===1?'':'s'} used — taking you back to WhatsApp…`); setTimeout(()=>{location.href='https://wa.me/27799722798';},2000); return; }
     throw new Error(res.error || 'Something went wrong.');
   }catch(e){ go.disabled=false; render(); const er=document.getElementById('err'); er.textContent=e.message; er.style.display='block'; }
 };
 
 window.cancelExtras = async () => {
   try{ await call({ action:'cancel' }); }catch(e){}
-  showState('👍','All clear', 'No extras added. You can reply to WhatsApp any time if you change your mind.');
+  showState('👍','All clear', 'No extras added — taking you back to WhatsApp…');
+  setTimeout(()=>{location.href='https://wa.me/27799722798';},1800);
 };
 
 (async function init(){

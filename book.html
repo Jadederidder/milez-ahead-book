@@ -35,6 +35,11 @@
   .seg button{flex:1;padding:11px;border:1.5px solid var(--line);border-radius:11px;background:#fff;font-weight:700;font-size:14px;color:var(--muted);cursor:pointer}
   .seg button.sel{border-color:var(--teal);background:#eafaf7;color:var(--navy)}
   .preview{background:#f6fbfa;border:1px solid #cdeae7;border-radius:12px;padding:11px 14px;font-size:13.5px;color:var(--navy);font-weight:600;margin-bottom:14px;display:none}
+  .escort{display:flex;gap:11px;align-items:flex-start;padding:14px;border:1.5px solid var(--line);border-radius:12px;cursor:pointer;background:#fff}
+  .escort input{margin-top:3px;width:20px;height:20px;flex-shrink:0}
+  .escort .et{font-weight:700;font-size:14.5px;color:var(--navy)}
+  .escort .ep{font-weight:700;font-size:11.5px;color:var(--gold);margin-left:6px;letter-spacing:.3px}
+  .escort .ed{font-size:12.5px;color:var(--muted);margin-top:4px}
   .indem{display:flex;gap:11px;align-items:flex-start;padding:13px;border:1.5px solid var(--line);border-radius:12px;background:#fff}
   .indem input{margin-top:3px;width:20px;height:20px;flex-shrink:0}
   .indem span{font-size:13px;color:var(--muted)}
@@ -95,7 +100,11 @@ function render(){
   const svcBtns = SERVICES.map(s=>`<button type="button" class="${f.service===s[0]?'sel':''}" onclick="setSvc('${s[0]}')">${s[1]}<span class="s">${s[2]}</span></button>`).join('');
   const airOpts = AIRPORTS.map(a=>`<option value="${a[0]}">${a[1]}</option>`).join('');
   const drvOpts = `<option value="">Any available driver</option>`+CTX.drivers.map(d=>`<option value="${d.id}" ${CTX.preferred_driver_id===d.id?'selected':''}>${esc(d.name)}</option>`).join('');
-  const recent = (CTX.recent||[]).length ? `<div class="field"><label class="lab">Rebook a recent trip</label><select id="rebook" onchange="rebook(this.value)"><option value="">New trip</option>${CTX.recent.map((t,i)=>`<option value="${i}">${esc(t.label)}</option>`).join('')}</select></div>`:'';
+  // Rebook only shows recents of the SELECTED service, so picking one never
+  // silently changes the trip type.
+  window.RECF=(CTX.recent||[]).filter(t=>t.service_type===f.service);
+  const svcLabel=(SERVICES.find(s=>s[0]===f.service)||[])[1]||'';
+  const recent = RECF.length ? `<div class="field"><label class="lab">Rebook a recent ${esc(svcLabel)} trip</label><select id="rebook" onchange="rebook(this.value)"><option value="">New trip</option>${RECF.map((t,i)=>`<option value="${i}">${esc(t.label)}</option>`).join('')}</select></div>`:'';
   main.innerHTML = `
     <div class="card">
       <label class="lab">Service</label><div class="svc">${svcBtns}</div>
@@ -129,7 +138,11 @@ function render(){
       <div class="field"><label class="lab">Preferred driver</label><select id="driver">${drvOpts}</select>
         <label style="display:flex;gap:8px;align-items:center;margin-top:8px;font-size:13px;color:var(--muted)"><input type="checkbox" id="savePref" style="width:18px;height:18px"> Always use this driver for me</label></div>
       <div class="field"><label class="lab">Notes <span style="font-weight:500;text-transform:none;color:#9aa1ab">(optional)</span></label><textarea id="notes" placeholder="Anything we should know?"></textarea></div>
-      ${CTX.escort_enabled?`<label style="display:flex;gap:8px;align-items:center;font-size:13.5px;color:var(--ink);font-weight:600"><input type="checkbox" id="escort" style="width:18px;height:18px"> Add armed escort</label>`:''}
+      ${CTX.escort_enabled?`<div class="field"><label class="lab">Security (optional)</label>
+        <label class="escort"><input type="checkbox" id="escort">
+          <div><div class="et">🛡️ Add armed escort <span class="ep">FROM R995 / HR</span></div>
+          <div class="ed">A discreet armed-response vehicle follows your car door to door, point A to B. The first hour is added upfront; we confirm the final cost with you.</div></div>
+        </label></div>`:''}
     </div>
     <div class="preview" id="preview"></div>
     <div class="indem" id="indemWrap"><input type="checkbox" id="indemnity"><span>I accept the Milez Ahead / MUA terms & indemnity: the service provider is not liable for the vehicle, belongings or late arrival except in cases of gross negligence, and I confirm the vehicle is adequately insured.</span></div>
@@ -145,7 +158,7 @@ window.setSvc=(s)=>{ f.service=s; render(); };
 window.setDir=(d)=>{ f.direction=d; document.getElementById('dirArr').classList.toggle('sel',d==='arrival'); document.getElementById('dirDep').classList.toggle('sel',d==='departure'); };
 window.setSz=(z)=>{ f.size=z; document.querySelectorAll('.szb').forEach(b=>b.classList.toggle('sel',b.dataset.sz===z)); };
 window.tog=(el)=>{ el.classList.toggle('sel'); };
-window.rebook=(i)=>{ if(i===''){return;} const t=CTX.recent[i]; if(!t)return; f.service=t.service_type; render(); setTimeout(()=>{ const p=document.getElementById('pickup'),d=document.getElementById('drop'); if(p&&t.pickup)p.value=t.pickup; if(d&&t.dropoff)d.value=t.dropoff; },50); };
+window.rebook=(i)=>{ if(i==='')return; const t=(window.RECF||[])[i]; if(!t)return; const p=document.getElementById('pickup'),d=document.getElementById('drop'); if(p&&t.pickup)p.value=t.pickup; if(d&&t.dropoff)d.value=t.dropoff; };
 
 let mapsLoaded=false;
 function initMaps(){
@@ -188,7 +201,7 @@ window.submit=async()=>{
   go.disabled=true; go.innerHTML='<span class="spin"></span>';
   try{
     const res=await call({action:'submit',booking,save_preferred:document.getElementById('savePref')?.checked});
-    if(res.ok){ showState('✅','Booking received','Your trip '+res.ref+' is in. We\'re arranging your driver — watch WhatsApp for the confirmation.'); return; }
+    if(res.ok){ showState('✅','Booking received','Trip '+res.ref+' is in — taking you back to WhatsApp…'); setTimeout(()=>{location.href='https://wa.me/27799722798';},2000); return; }
     throw new Error(res.error||'Something went wrong.');
   }catch(e){ go.disabled=false; go.textContent='Confirm booking'; err.textContent=e.message; err.style.display='block'; }
 };
