@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>Milez Ahead — Add extras</title>
+<style>
+  :root{ --navy:#1d2a4d; --teal:#0c8b86; --teal2:#13a89c; --gold:#c79a3b; --ink:#1f2430; --muted:#6b7280; --bg:#f4f1ea; --line:#e7e3da; }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:520px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column}
+  header{background:linear-gradient(135deg,var(--navy),#0c5c5a);color:#fff;padding:26px 22px 30px;border-radius:0 0 22px 22px}
+  header .kick{font-size:11px;letter-spacing:2.5px;text-transform:uppercase;color:var(--gold);font-weight:700}
+  header h1{margin:8px 0 2px;font-size:24px;font-weight:800}
+  header p{margin:0;color:#cfe0e2;font-size:14px}
+  main{padding:18px 16px 28px;flex:1}
+  .card{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:0 1px 2px rgba(20,30,50,.05),0 8px 24px rgba(20,30,50,.06);overflow:hidden}
+  .row{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--line)}
+  .row:last-child{border-bottom:0}
+  .row .info{flex:1;min-width:0}
+  .row .name{font-weight:700;font-size:15.5px}
+  .row .price{font-size:12.5px;color:var(--muted)}
+  .stepper{display:flex;align-items:center;gap:2px}
+  .stepper button{width:34px;height:34px;border-radius:10px;border:1px solid var(--line);background:#fff;font-size:20px;font-weight:700;color:var(--teal);display:grid;place-items:center;cursor:pointer}
+  .stepper button:active{background:#f0f7f6}
+  .stepper button[disabled]{color:#c7cdd6;cursor:default}
+  .stepper .n{width:30px;text-align:center;font-weight:800;font-size:16px}
+  .row.on{background:#f6fbfa}
+  .totals{margin:16px 2px 6px;display:flex;justify-content:space-between;align-items:baseline}
+  .totals .big{font-size:26px;font-weight:800;color:var(--navy)}
+  .totals .cr{font-size:13px;color:var(--teal);font-weight:700}
+  .seg{display:flex;gap:8px;margin:14px 0 4px}
+  .seg button{flex:1;padding:13px;border-radius:13px;border:1.5px solid var(--line);background:#fff;font-weight:700;font-size:14.5px;color:var(--muted);cursor:pointer}
+  .seg button.sel{border-color:var(--teal);background:#eafaf7;color:var(--navy)}
+  .seg button .sub{display:block;font-size:11px;font-weight:600;color:var(--muted);margin-top:1px}
+  .seg button[disabled]{opacity:.45;cursor:default}
+  .cta{width:100%;margin-top:16px;padding:16px;border:0;border-radius:14px;background:linear-gradient(135deg,var(--navy),var(--teal));color:#fff;font-size:16px;font-weight:800;cursor:pointer}
+  .cta[disabled]{opacity:.45;cursor:default}
+  .ghost{display:block;width:100%;margin-top:10px;padding:12px;background:none;border:0;color:var(--muted);font-size:13.5px;font-weight:600;cursor:pointer;text-decoration:underline}
+  .hint{font-size:12.5px;color:var(--muted);text-align:center;margin-top:14px}
+  .state{padding:60px 24px;text-align:center}
+  .state .em{font-size:40px}
+  .state h2{margin:14px 0 6px;color:var(--navy)}
+  .state p{color:var(--muted)}
+  .err{background:#fde9e3;color:#b4441f;border-radius:12px;padding:11px 14px;font-size:13.5px;font-weight:600;margin-top:12px;display:none}
+  .foot{padding:18px;text-align:center;color:#9aa1ab;font-size:11.5px}
+  .spin{display:inline-block;width:18px;height:18px;border:2.5px solid rgba(255,255,255,.5);border-top-color:#fff;border-radius:50%;animation:s .7s linear infinite;vertical-align:-3px}
+  @keyframes s{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="kick">Milez Ahead</div>
+    <h1 id="hi">Add to your trip</h1>
+    <p id="sub">Loading your trip…</p>
+  </header>
+  <main id="main">
+    <div class="state"><div class="spin" style="border-color:#cdd6e6;border-top-color:#0c8b86"></div></div>
+  </main>
+  <div class="foot">Milez Ahead Executive Drive · secure</div>
+</div>
+
+<script>
+const FN = 'https://izslchhcavckowatgbel.supabase.co/functions/v1/trip-extras';
+const qs = new URLSearchParams(location.search);
+const T = qs.get('t') || '', K = qs.get('k') || '';
+const main = document.getElementById('main');
+const sub = document.getElementById('sub');
+const hi = document.getElementById('hi');
+const state = {}; // kind -> qty
+let RATES = [], SETTLE = 'card', CAN_CREDITS = false, CREDITS_LEFT = 0;
+
+const zar = (n) => 'R' + (Math.round(n)).toLocaleString('en-ZA');
+
+function showState(em, title, msg){
+  main.innerHTML = `<div class="state"><div class="em">${em}</div><h2>${title}</h2><p>${msg}</p></div>`;
+}
+
+async function call(payload){
+  const r = await fetch(FN, { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ trip:T, token:K, ...payload }) });
+  return r.json();
+}
+
+function totals(){
+  let rand = 0, cred = 0, any = false;
+  for (const r of RATES){ const q = state[r.kind]||0; if(q>0){any=true; rand += q*Number(r.unit_amount); cred += q*Number(r.credits||1);} }
+  return { rand, cred, any };
+}
+
+function render(){
+  const t = totals();
+  const rows = RATES.map(r => {
+    const q = state[r.kind]||0;
+    return `<div class="row ${q>0?'on':''}">
+      <div class="info"><div class="name">${r.label}</div><div class="price">${zar(r.unit_amount)}${r.unit_label?' · '+r.unit_label:''}</div></div>
+      <div class="stepper">
+        <button ${q<=0?'disabled':''} onclick="bump('${r.kind}',-1)">−</button>
+        <span class="n">${q}</span>
+        <button onclick="bump('${r.kind}',1)">+</button>
+      </div></div>`;
+  }).join('');
+
+  const creditsBtn = CAN_CREDITS
+    ? `<button id="bc" class="${SETTLE==='credits'?'sel':''}" ${t.cred>CREDITS_LEFT?'disabled':''} onclick="setSettle('credits')">Use credits<span class="sub">${CREDITS_LEFT} left</span></button>`
+    : `<button disabled>Use credits<span class="sub">none available</span></button>`;
+
+  const payLabel = SETTLE==='credits'
+    ? `Confirm — ${t.cred} credit${t.cred===1?'':'s'}`
+    : `Pay by card — ${zar(t.rand)}`;
+
+  main.innerHTML = `
+    <div class="card">${rows}</div>
+    <div class="totals"><span style="color:var(--muted);font-weight:600">Total</span>
+      <span><span class="big">${zar(t.rand)}</span>${CAN_CREDITS?` · <span class="cr">${t.cred} credit${t.cred===1?'':'s'}</span>`:''}</span></div>
+    <div class="seg">
+      <button id="bcard" class="${SETTLE==='card'?'sel':''}" onclick="setSettle('card')">Pay by card<span class="sub">secure link</span></button>
+      ${creditsBtn}
+    </div>
+    <div class="err" id="err"></div>
+    <button class="cta" id="go" ${!t.any?'disabled':''} onclick="confirmExtras()">${payLabel}</button>
+    <button class="ghost" onclick="cancelExtras()">No thanks — cancel any pending extras</button>
+    <div class="hint">You only pay for what you add. Card payments are processed securely by Paystack.</div>`;
+}
+
+window.bump = (kind, d) => { state[kind] = Math.max(0, Math.min(20, (state[kind]||0)+d)); render(); };
+window.setSettle = (s) => { SETTLE = s; render(); };
+
+window.confirmExtras = async () => {
+  const t = totals(); if(!t.any) return;
+  const go = document.getElementById('go'); const err = document.getElementById('err');
+  err.style.display='none'; go.disabled = true; go.innerHTML = '<span class="spin"></span>';
+  const items = RATES.filter(r => (state[r.kind]||0)>0).map(r => ({ kind:r.kind, qty:state[r.kind] }));
+  try{
+    const res = await call({ action:'apply', items, settlement:SETTLE });
+    if (res.redirect){ location.href = res.redirect; return; }
+    if (res.ok){ showState('✅','Added to your trip', `${t.cred} credit${t.cred===1?'':'s'} used. Your driver has been updated — see you soon!`); return; }
+    throw new Error(res.error || 'Something went wrong.');
+  }catch(e){ go.disabled=false; render(); const er=document.getElementById('err'); er.textContent=e.message; er.style.display='block'; }
+};
+
+window.cancelExtras = async () => {
+  try{ await call({ action:'cancel' }); }catch(e){}
+  showState('👍','All clear', 'No extras added. You can reply to WhatsApp any time if you change your mind.');
+};
+
+(async function init(){
+  if(!T||!K){ showState('🔗','Link not valid','Please use the link from your Milez Ahead WhatsApp.'); return; }
+  try{
+    const c = await call({ action:'context' });
+    if (c.error){ showState('🔗','Link not valid', c.error); return; }
+    if (c.closed){ showState('🚗','Trip closed','This trip is already on its way or completed — extras can no longer be added.'); return; }
+    RATES = c.rates||[]; CAN_CREDITS = !!c.can_use_credits; CREDITS_LEFT = c.credits_left||0;
+    SETTLE = CAN_CREDITS ? 'credits' : 'card';
+    hi.textContent = c.name ? `Hi ${c.name.split(' ')[0]} 👋` : 'Add to your trip';
+    sub.textContent = `Trip ${c.ref} · tap to add what you need`;
+    render();
+  }catch(e){ showState('⚠️','Could not load','Please try the link again in a moment.'); }
+})();
+</script>
+</body>
+</html>
