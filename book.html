@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>Milez Ahead — Book a trip</title>
+<style>
+  :root{ --navy:#1d2a4d; --teal:#0c8b86; --teal2:#13a89c; --gold:#c79a3b; --ink:#1f2430; --muted:#6b7280; --bg:#f4f1ea; --line:#e7e3da; }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:540px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column}
+  header{background:linear-gradient(135deg,var(--navy),#0c5c5a);color:#fff;padding:24px 22px 26px;border-radius:0 0 22px 22px}
+  header .kick{font-size:11px;letter-spacing:2.5px;text-transform:uppercase;color:var(--gold);font-weight:700;display:flex;align-items:center;gap:8px}
+  header .kick img{height:18px;width:auto;border-radius:3px;background:#fff;padding:1px}
+  header h1{margin:8px 0 2px;font-size:23px;font-weight:800}
+  header p{margin:0;color:#cfe0e2;font-size:14px}
+  header .bal{margin-top:12px;display:inline-block;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.18);padding:6px 12px;border-radius:999px;font-size:13px;font-weight:700}
+  main{padding:16px 16px 30px;flex:1}
+  .card{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:0 1px 2px rgba(20,30,50,.05),0 8px 24px rgba(20,30,50,.06);padding:16px;margin-bottom:14px}
+  label.lab{display:block;font-size:12px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.4px;margin:0 0 7px}
+  .field{margin-bottom:14px}
+  input[type=text],input[type=date],input[type=time],input[type=number],select,textarea{
+    width:100%;padding:13px 14px;border:1.5px solid var(--line);border-radius:12px;font-size:15.5px;font-family:inherit;background:#fff;color:var(--ink)}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--teal)}
+  textarea{min-height:64px;resize:vertical}
+  .svc{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .svc button{padding:13px 10px;border:1.5px solid var(--line);border-radius:13px;background:#fff;font-weight:700;font-size:14px;color:var(--muted);cursor:pointer;text-align:left}
+  .svc button .s{display:block;font-size:11px;font-weight:600;color:var(--muted);margin-top:2px}
+  .svc button.sel{border-color:var(--teal);background:#eafaf7;color:var(--navy)}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{padding:9px 13px;border:1.5px solid var(--line);border-radius:999px;background:#fff;font-size:13.5px;font-weight:600;color:var(--muted);cursor:pointer}
+  .chip.sel{border-color:var(--teal);background:#eafaf7;color:var(--navy)}
+  .seg{display:flex;gap:8px}
+  .seg button{flex:1;padding:11px;border:1.5px solid var(--line);border-radius:11px;background:#fff;font-weight:700;font-size:14px;color:var(--muted);cursor:pointer}
+  .seg button.sel{border-color:var(--teal);background:#eafaf7;color:var(--navy)}
+  .preview{background:#f6fbfa;border:1px solid #cdeae7;border-radius:12px;padding:11px 14px;font-size:13.5px;color:var(--navy);font-weight:600;margin-bottom:14px;display:none}
+  .indem{display:flex;gap:11px;align-items:flex-start;padding:13px;border:1.5px solid var(--line);border-radius:12px;background:#fff}
+  .indem input{margin-top:3px;width:20px;height:20px;flex-shrink:0}
+  .indem span{font-size:13px;color:var(--muted)}
+  .cta{width:100%;margin-top:6px;padding:16px;border:0;border-radius:14px;background:linear-gradient(135deg,var(--navy),var(--teal));color:#fff;font-size:16.5px;font-weight:800;cursor:pointer}
+  .cta[disabled]{opacity:.5;cursor:default}
+  .err{background:#fde9e3;color:#b4441f;border-radius:12px;padding:11px 14px;font-size:13.5px;font-weight:600;margin:12px 0;display:none}
+  .hide{display:none}
+  .foot{padding:16px;text-align:center;color:#9aa1ab;font-size:11.5px}
+  .state{padding:60px 24px;text-align:center}.state .em{font-size:42px}.state h2{margin:14px 0 6px;color:var(--navy)}.state p{color:var(--muted)}
+  .spin{display:inline-block;width:20px;height:20px;border:2.5px solid rgba(255,255,255,.5);border-top-color:#fff;border-radius:50%;animation:s .7s linear infinite;vertical-align:-4px}@keyframes s{to{transform:rotate(360deg)}}
+  .hint{font-size:12px;color:var(--muted);margin-top:4px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="kick"><span>Milez Ahead</span><img id="coLogo" class="hide" alt=""/></div>
+    <h1 id="hi">Book a trip</h1>
+    <p id="sub">Loading…</p>
+    <div class="bal hide" id="bal"></div>
+  </header>
+  <main id="main"><div class="state"><div class="spin" style="border-color:#cdd6e6;border-top-color:#0c8b86"></div></div></main>
+  <div class="foot">Milez Ahead Executive Drive · secure booking</div>
+</div>
+
+<script>
+const FN = 'https://izslchhcavckowatgbel.supabase.co/functions/v1/book-web';
+const MAPS_KEY = 'AIzaSyAtZvXbiV8BhpC_6dENVYrxoNWdPJlwNiM';
+const AIRPORTS = [['CPT','Cape Town (CPT)'],['JNB','O.R. Tambo (JNB)'],['HLA','Lanseria (HLA)'],['DUR','King Shaka (DUR)'],['PLZ','Gqeberha (PLZ)'],['GRJ','George (GRJ)'],['BFN','Bloemfontein (BFN)'],['ELS','East London (ELS)']];
+const SERVICES = [
+  ['airport','Airport','transfer to/from'],['drive_home','Home Safe','drive me & my car home'],
+  ['chauffeur','Chauffeur','executive drive'],['convenient','Convenient','everyday driver'],
+  ['manage_booking','Private / Card','pay by card'],['trauma','Other','treatment / medical']
+];
+const qs = new URLSearchParams(location.search); const S = qs.get('s') || '';
+const main = document.getElementById('main');
+let CTX = {}, place = { pickup:null, drop:null };
+const f = {}; // current form values
+
+async function call(payload){ const r = await fetch(FN,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({token:S,...payload})}); return r.json(); }
+function showState(em,t,m){ main.innerHTML = `<div class="state"><div class="em">${em}</div><h2>${t}</h2><p>${m}</p></div>`; }
+function esc(s){ return (s||'').replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c])); }
+const haversine=(a,b)=>{const R=6371,d=x=>x*Math.PI/180;const dl=d(b.lat-a.lat),dn=d(b.lng-a.lng);const h=Math.sin(dl/2)**2+Math.cos(d(a.lat))*Math.cos(d(b.lat))*Math.sin(dn/2)**2;return 2*R*Math.asin(Math.sqrt(h));};
+
+function creditsFor(km,radius){ if(km<=radius) return 1; return 1+Math.ceil((Math.min(km,200)-radius)/50); }
+
+function updatePreview(){
+  const el=document.getElementById('preview'); if(!el) return;
+  if(place.pickup && place.drop){
+    const km=haversine(place.pickup,place.drop)*1.4;
+    if(CTX.is_member){ const c=creditsFor(km,CTX.cover_radius_km||50); el.textContent=`≈ ${Math.round(km)} km · about ${c} credit${c===1?'':'s'} from your allowance`; el.style.display='block'; }
+    else { el.textContent=`≈ ${Math.round(km)} km · you'll receive a secure card payment link`; el.style.display='block'; }
+  } else el.style.display='none';
+}
+
+function render(){
+  const isAir = f.service==='airport', isHome = f.service==='drive_home';
+  const svcBtns = SERVICES.map(s=>`<button type="button" class="${f.service===s[0]?'sel':''}" onclick="setSvc('${s[0]}')">${s[1]}<span class="s">${s[2]}</span></button>`).join('');
+  const airOpts = AIRPORTS.map(a=>`<option value="${a[0]}">${a[1]}</option>`).join('');
+  const drvOpts = `<option value="">Any available driver</option>`+CTX.drivers.map(d=>`<option value="${d.id}" ${CTX.preferred_driver_id===d.id?'selected':''}>${esc(d.name)}</option>`).join('');
+  const recent = (CTX.recent||[]).length ? `<div class="field"><label class="lab">Rebook a recent trip</label><select id="rebook" onchange="rebook(this.value)"><option value="">New trip</option>${CTX.recent.map((t,i)=>`<option value="${i}">${esc(t.label)}</option>`).join('')}</select></div>`:'';
+  main.innerHTML = `
+    <div class="card">
+      <label class="lab">Service</label><div class="svc">${svcBtns}</div>
+    </div>
+    ${recent}
+    <div class="card">
+      <div class="row2"><div class="field"><label class="lab">Date</label><input type="date" id="date"></div>
+      <div class="field"><label class="lab">Pick-up time</label><input type="time" id="time"></div></div>
+      <div class="field"><label class="lab">Pick-up address</label><input type="text" id="pickup" placeholder="Start typing your address…" autocomplete="off"></div>
+      <div class="field ${isAir?'hide':''}" id="dropWrap"><label class="lab">Drop-off address</label><input type="text" id="drop" placeholder="Where to?" autocomplete="off"></div>
+      <div class="${isAir?'':'hide'}" id="airWrap">
+        <div class="field"><label class="lab">Airport</label><select id="airport">${airOpts}</select></div>
+        <div class="field"><label class="lab">Direction</label><div class="seg"><button type="button" id="dirArr" class="sel" onclick="setDir('arrival')">Arrival</button><button type="button" id="dirDep" onclick="setDir('departure')">Departure</button></div></div>
+        <div class="field"><label class="lab">Flight number <span style="font-weight:500;text-transform:none;color:#9aa1ab">(optional)</span></label><input type="text" id="flight" placeholder="e.g. FA204"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="row2"><div class="field"><label class="lab">Passengers</label><input type="number" id="pax" min="1" max="14" value="1"></div>
+      <div class="field"><label class="lab">Bags</label><input type="number" id="bags" min="0" max="20" value="0"></div></div>
+      <div class="field"><label class="lab">Luggage size</label><div class="seg"><button type="button" data-sz="small" class="szb sel" onclick="setSz('small')">Small</button><button type="button" data-sz="medium" class="szb" onclick="setSz('medium')">Medium</button><button type="button" data-sz="large" class="szb" onclick="setSz('large')">Large</button></div></div>
+      <div class="field"><label class="lab">Travelling with</label><div class="chips" id="special">
+        ${['baby_seat:Baby seat','pram:Pram','wheelchair:Wheelchair','golf_bag:Golf bag','extra_bags:Lots of luggage'].map(s=>{const[v,l]=s.split(':');return `<div class="chip" data-v="${v}" onclick="tog(this)">${l}</div>`}).join('')}
+      </div><div class="hint">Helps us send a vehicle that fits.</div></div>
+    </div>
+    <div class="card ${isHome?'':'hide'}" id="vehWrap">
+      <label class="lab">The car we're driving home</label>
+      <div class="row2"><div class="field"><input type="text" id="vmake" placeholder="Make"></div><div class="field"><input type="text" id="vmodel" placeholder="Model"></div></div>
+      <div class="row2"><div class="field"><input type="text" id="vcolour" placeholder="Colour"></div><div class="field"><input type="text" id="vreg" placeholder="Registration"></div></div>
+    </div>
+    <div class="card">
+      <div class="field"><label class="lab">Preferred driver</label><select id="driver">${drvOpts}</select>
+        <label style="display:flex;gap:8px;align-items:center;margin-top:8px;font-size:13px;color:var(--muted)"><input type="checkbox" id="savePref" style="width:18px;height:18px"> Always use this driver for me</label></div>
+      <div class="field"><label class="lab">Notes <span style="font-weight:500;text-transform:none;color:#9aa1ab">(optional)</span></label><textarea id="notes" placeholder="Anything we should know?"></textarea></div>
+      ${CTX.escort_enabled?`<label style="display:flex;gap:8px;align-items:center;font-size:13.5px;color:var(--ink);font-weight:600"><input type="checkbox" id="escort" style="width:18px;height:18px"> Add armed escort</label>`:''}
+    </div>
+    <div class="preview" id="preview"></div>
+    <div class="indem" id="indemWrap"><input type="checkbox" id="indemnity"><span>I accept the Milez Ahead / MUA terms & indemnity: the service provider is not liable for the vehicle, belongings or late arrival except in cases of gross negligence, and I confirm the vehicle is adequately insured.</span></div>
+    <div class="err" id="err"></div>
+    <button class="cta" id="go" onclick="submit()">Confirm booking</button>`;
+  // wire inputs
+  document.getElementById('pax').oninput=e=>f.pax=e.target.value;
+  ['date','time','bags','flight','notes','airport'].forEach(id=>{const el=document.getElementById(id);if(el)el.oninput=()=>{};});
+  initMaps();
+}
+
+window.setSvc=(s)=>{ f.service=s; render(); };
+window.setDir=(d)=>{ f.direction=d; document.getElementById('dirArr').classList.toggle('sel',d==='arrival'); document.getElementById('dirDep').classList.toggle('sel',d==='departure'); };
+window.setSz=(z)=>{ f.size=z; document.querySelectorAll('.szb').forEach(b=>b.classList.toggle('sel',b.dataset.sz===z)); };
+window.tog=(el)=>{ el.classList.toggle('sel'); };
+window.rebook=(i)=>{ if(i===''){return;} const t=CTX.recent[i]; if(!t)return; f.service=t.service_type; render(); setTimeout(()=>{ const p=document.getElementById('pickup'),d=document.getElementById('drop'); if(p&&t.pickup)p.value=t.pickup; if(d&&t.dropoff)d.value=t.dropoff; },50); };
+
+let mapsLoaded=false;
+function initMaps(){
+  const pickup=document.getElementById('pickup'), drop=document.getElementById('drop');
+  if(!pickup) return;
+  pickup.addEventListener('input',()=>{place.pickup=null;updatePreview();});
+  if(drop) drop.addEventListener('input',()=>{place.drop=null;updatePreview();});
+  if(window.google&&google.maps&&google.maps.places){ wireAuto(); }
+  else if(!mapsLoaded){ mapsLoaded=true; const sc=document.createElement('script'); sc.src=`https://maps.googleapis.com/maps/api/js?key=${MAPS_KEY}&libraries=places&loading=async&callback=__maps`; sc.async=true; document.head.appendChild(sc); }
+}
+window.__maps=()=>wireAuto();
+function wireAuto(){
+  const opts={fields:['formatted_address','geometry'],componentRestrictions:{country:'za'}};
+  const p=document.getElementById('pickup'), d=document.getElementById('drop');
+  if(p&&!p._wired){ p._wired=1; const a=new google.maps.places.Autocomplete(p,opts); a.addListener('place_changed',()=>{const pl=a.getPlace(),l=pl.geometry&&pl.geometry.location; place.pickup=l?{lat:l.lat(),lng:l.lng()}:null; if(pl.formatted_address)p.value=pl.formatted_address; updatePreview();}); }
+  if(d&&!d._wired){ d._wired=1; const a=new google.maps.places.Autocomplete(d,opts); a.addListener('place_changed',()=>{const pl=a.getPlace(),l=pl.geometry&&pl.geometry.location; place.drop=l?{lat:l.lat(),lng:l.lng()}:null; if(pl.formatted_address)d.value=pl.formatted_address; updatePreview();}); }
+}
+
+window.submit=async()=>{
+  const err=document.getElementById('err'); err.style.display='none';
+  const go=document.getElementById('go');
+  if(!f.service){ err.textContent='Please choose a service.'; err.style.display='block'; return; }
+  if(!document.getElementById('date').value){ err.textContent='Please choose a date.'; err.style.display='block'; return; }
+  const isAir=f.service==='airport';
+  const pickup=document.getElementById('pickup').value.trim();
+  if(!pickup){ err.textContent='Please enter a pick-up address.'; err.style.display='block'; return; }
+  if(!document.getElementById('indemnity').checked){ err.textContent='Please accept the terms & indemnity to continue.'; document.getElementById('indemWrap').style.borderColor='#dc2626'; err.style.display='block'; return; }
+  const special=[...document.querySelectorAll('#special .chip.sel')].map(c=>c.dataset.v);
+  const booking={
+    service_type:f.service, trip_date:document.getElementById('date').value, pickup_time:document.getElementById('time').value||undefined,
+    passengers:+document.getElementById('pax').value||1, luggage:+document.getElementById('bags').value||0, luggage_size:f.size||'small',
+    pickup_address:pickup, pickup_lat:place.pickup?.lat??null, pickup_lng:place.pickup?.lng??null,
+    special_items:special, notes:document.getElementById('notes').value||undefined,
+    requested_driver_id:document.getElementById('driver').value||null, indemnity_accepted:true,
+    add_escort:!!document.getElementById('escort')?.checked, policy_number:CTX.policy_number||undefined,
+  };
+  if(isAir){ booking.airport_code=document.getElementById('airport').value; booking.direction=f.direction||'arrival'; booking.flight_number=document.getElementById('flight').value||undefined; }
+  else { booking.dropoff_address=document.getElementById('drop').value.trim()||undefined; booking.dropoff_lat=place.drop?.lat??null; booking.dropoff_lng=place.drop?.lng??null; }
+  if(f.service==='drive_home'){ booking.client_vehicle_make=document.getElementById('vmake').value||null; booking.client_vehicle_model=document.getElementById('vmodel').value||null; booking.client_vehicle_colour=document.getElementById('vcolour').value||null; booking.client_vehicle_reg=document.getElementById('vreg').value||null; }
+  go.disabled=true; go.innerHTML='<span class="spin"></span>';
+  try{
+    const res=await call({action:'submit',booking,save_preferred:document.getElementById('savePref')?.checked});
+    if(res.ok){ showState('✅','Booking received','Your trip '+res.ref+' is in. We\'re arranging your driver — watch WhatsApp for the confirmation.'); return; }
+    throw new Error(res.error||'Something went wrong.');
+  }catch(e){ go.disabled=false; go.textContent='Confirm booking'; err.textContent=e.message; err.style.display='block'; }
+};
+
+(async function init(){
+  if(!S){ showState('🔗','Link not valid','Please use the booking link from your Milez Ahead WhatsApp.'); return; }
+  try{
+    const c=await call({action:'context'});
+    if(c.error){ showState('🔗','Link not valid',c.error); return; }
+    CTX=c; f.service='airport'; f.size='small'; f.direction='arrival';
+    document.getElementById('hi').textContent=c.name?`Hi ${esc(c.name.split(' ')[0])} 👋`:'Book a trip';
+    document.getElementById('sub').textContent='Tell us about your trip — a few taps.';
+    if(c.is_member && c.credits_left!=null){ const b=document.getElementById('bal'); b.textContent=`🎟️ ${c.credits_left} trips left`; b.classList.remove('hide'); }
+    if(c.mua){ const l=document.getElementById('coLogo'); l.src='https://book.milezahead.co.za/mua-logo.png'; l.classList.remove('hide'); l.onerror=()=>l.classList.add('hide'); }
+    render();
+  }catch(e){ showState('⚠️','Could not load','Please try the link again in a moment.'); }
+})();
+</script>
+</body>
+</html>
