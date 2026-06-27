@@ -119,7 +119,10 @@ function render(){
     ${recent}
     <div class="card">
       <div class="row2"><div class="field"><label class="lab">Date</label><input type="date" id="date"></div>
-      <div class="field"><label class="lab">Pick-up time</label><input type="time" id="time"></div></div>
+      <div class="field"><label class="lab">Pick-up time</label><div class="row2">
+        <select id="thour"><option value="">Hr</option>${Array.from({length:24},(_,i)=>String(i).padStart(2,'0')).map(h=>`<option>${h}</option>`).join('')}</select>
+        <select id="tmin"><option value="">Min</option>${['00','15','30','45'].map(m=>`<option>${m}</option>`).join('')}</select>
+      </div></div></div>
       <div class="field"><label class="lab">Pick-up address</label><div class="acwrap"><input type="text" id="pickup" placeholder="Start typing your address…" autocomplete="off"></div></div>
       <div class="field ${isAir?'hide':''}" id="dropWrap"><label class="lab">Drop-off address</label><div class="acwrap"><input type="text" id="drop" placeholder="Where to?" autocomplete="off"></div></div>
       <div class="${isAir?'':'hide'}" id="airWrap">
@@ -224,7 +227,7 @@ window.submit=async()=>{
   if(!document.getElementById('indemnity').checked){ err.textContent='Please accept the terms & indemnity to continue.'; document.getElementById('indemWrap').style.borderColor='#dc2626'; err.style.display='block'; return; }
   const special=[...document.querySelectorAll('#special .chip.sel')].map(c=>c.dataset.v);
   const booking={
-    service_type:f.service, trip_date:document.getElementById('date').value, pickup_time:document.getElementById('time').value||undefined,
+    service_type:f.service, trip_date:document.getElementById('date').value, pickup_time:(document.getElementById('thour').value?`${document.getElementById('thour').value}:${document.getElementById('tmin').value||'00'}`:undefined),
     passengers:+document.getElementById('pax').value||1, luggage:+document.getElementById('bags').value||0, luggage_size:f.size||'small',
     pickup_address:pickup, pickup_lat:place.pickup?.lat??null, pickup_lng:place.pickup?.lng??null,
     special_items:special, notes:document.getElementById('notes').value||undefined,
