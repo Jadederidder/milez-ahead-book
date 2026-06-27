@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>Milez Ahead — Your driver</title>
+<style>
+  :root{ --navy:#1d2a4d; --teal:#0c8b86; --teal2:#13a89c; --gold:#c79a3b; --ink:#1f2430; --muted:#6b7280; --bg:#f4f1ea; --line:#e7e3da; }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:540px;margin:0 auto;min-height:100vh}
+  header{position:relative;overflow:hidden;background:linear-gradient(135deg,var(--navy),#0c5c5a);color:#fff;padding:24px 22px 78px;border-radius:0 0 26px 26px}
+  header .kick{font-size:11px;letter-spacing:2.5px;text-transform:uppercase;color:var(--gold);font-weight:700}
+  header .ttl{font-size:13px;color:#cfe0e2;margin-top:6px;font-weight:600}
+  header .grid{position:absolute;inset:0;opacity:.10;background:linear-gradient(transparent 31px,rgba(255,255,255,.6) 32px),linear-gradient(90deg,transparent 31px,rgba(255,255,255,.6) 32px);background-size:32px 32px;mask:linear-gradient(105deg,transparent 60%,#000)}
+  main{padding:0 16px 30px;margin-top:-58px;position:relative}
+  .card{background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:0 1px 2px rgba(20,30,50,.05),0 10px 28px rgba(20,30,50,.07);padding:18px;margin-bottom:14px}
+  .id{display:flex;gap:15px;align-items:center}
+  .avatar{width:78px;height:78px;border-radius:20px;object-fit:cover;border:3px solid #fff;box-shadow:0 6px 18px rgba(20,30,50,.18);background:var(--gold)}
+  .avatar.ph{display:grid;place-items:center;color:var(--navy);font-weight:800;font-size:30px}
+  .name{font-size:22px;font-weight:800;color:var(--navy);line-height:1.1}
+  .role{font-size:12.5px;font-weight:700;color:var(--gold);letter-spacing:.3px;margin-top:2px}
+  .stars{color:var(--gold);letter-spacing:1px}
+  .metarow{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:13px;font-size:13px;color:var(--muted);font-weight:600}
+  .metarow b{color:var(--navy)}
+  h3.sec{font-size:11.5px;text-transform:uppercase;letter-spacing:1.2px;color:var(--teal);font-weight:800;margin:0 0 9px}
+  .about{font-size:14.5px;color:#36404f;line-height:1.6}
+  .badges{display:flex;flex-wrap:wrap;gap:8px}
+  .badge{background:#e7f5f3;color:#0c7068;font-weight:700;font-size:12.5px;padding:7px 12px;border-radius:999px}
+  .langs{display:flex;flex-wrap:wrap;gap:8px}
+  .lang{background:#fffaf0;border:1px solid #ecdfb6;color:#8a6d1f;font-weight:700;font-size:12.5px;padding:7px 12px;border-radius:999px}
+  .veh{display:flex;gap:14px;align-items:center}
+  .veh img{width:120px;height:74px;object-fit:contain}
+  .reg{display:inline-block;border:2px solid var(--navy);border-radius:8px;padding:4px 12px;font-weight:800;letter-spacing:1px;color:var(--navy);font-family:"SF Mono",ui-monospace,monospace;margin-top:6px}
+  .vdesc{font-weight:700;color:var(--navy)}
+  .cta{display:block;width:100%;margin-top:6px;padding:15px;border:0;border-radius:14px;background:linear-gradient(135deg,var(--navy),var(--teal));color:#fff;font-size:16px;font-weight:800;text-align:center;text-decoration:none;cursor:pointer}
+  .ghost{display:block;width:100%;margin-top:10px;padding:13px;border:1.5px solid var(--line);border-radius:13px;background:#fff;color:var(--navy);font-weight:700;font-size:14.5px;text-align:center;text-decoration:none}
+  .foot{padding:14px;text-align:center;color:#9aa1ab;font-size:11.5px}
+  .state{padding:70px 24px;text-align:center}.state .em{font-size:42px}.state h2{margin:14px 0 6px;color:var(--navy)}.state p{color:var(--muted)}
+  .spin{display:inline-block;width:20px;height:20px;border:2.5px solid #cdd6e6;border-top-color:#0c8b86;border-radius:50%;animation:s .7s linear infinite}@keyframes s{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><div class="grid"></div><div class="kick">Milez Ahead</div><div class="ttl">Your driver for this trip</div></header>
+  <main id="main"><div class="state"><div class="spin"></div></div></main>
+  <div class="foot">Milez Ahead Executive Drive</div>
+</div>
+<script>
+const TRACK='https://izslchhcavckowatgbel.supabase.co/functions/v1/track';
+const qs=new URLSearchParams(location.search); const T=qs.get('t')||qs.get('token')||'';
+const main=document.getElementById('main');
+const esc=s=>(s||'').replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+function state(em,t,m){main.innerHTML=`<div class="state"><div class="em">${em}</div><h2>${t}</h2><p>${m}</p></div>`;}
+
+function about(dv){
+  const bits=[];
+  bits.push(`${esc(dv.name)} is a professional Milez Ahead chauffeur, dedicated to a safe, comfortable and seamless journey for every client.`);
+  const facts=[];
+  if(dv.since) facts.push(`driving with us since ${dv.since}`);
+  if(dv.trips) facts.push(`${dv.trips} trip${dv.trips===1?'':'s'} completed`);
+  if(dv.rating) facts.push(`rated ${dv.rating.toFixed(1)}★`);
+  if(facts.length) bits.push(`Known for professionalism and discretion — ${facts.join(', ')}.`);
+  return bits.join(' ');
+}
+
+function render(dv){
+  const initial=(dv.name||'D').trim()[0].toUpperCase();
+  const avatar=dv.photo?`<img class="avatar" src="${esc(dv.photo)}" alt="" onerror="this.outerHTML='<div class=&quot;avatar ph&quot;>${initial}</div>'">`:`<div class="avatar ph">${initial}</div>`;
+  const full=dv.rating?Math.round(dv.rating):0;
+  const stars=dv.rating?`<span class="stars">${'★'.repeat(full)}${'☆'.repeat(5-full)}</span> ${dv.rating.toFixed(1)} (${dv.ratingCount})`:`<span style="color:var(--teal);font-weight:700">✓ Verified Milez driver</span>`;
+  const meta=[stars, dv.since?`<b>Since</b> ${dv.since}`:'', dv.trips?`<b>${dv.trips}</b> trips`:''].filter(Boolean).map(x=>`<span>${x}</span>`).join('');
+  const badges=(dv.accreditations||[]).map(a=>`<span class="badge">✓ ${esc(a)}</span>`).join('');
+  const langs=(dv.languages||[]).map(l=>`<span class="lang">${esc(l)}</span>`).join('');
+  const vimg=dv.vehiclePhoto?`<img src="${esc(dv.vehiclePhoto)}" alt="" onerror="this.style.display='none'">`:'';
+  const veh=(dv.vehicleDesc||dv.reg)?`<div class="card"><h3 class="sec">Your vehicle</h3><div class="veh">${vimg}<div>${dv.vehicleDesc?`<div class="vdesc">${esc(dv.vehicleDesc)}</div>`:''}${dv.reg?`<div class="reg">${esc(dv.reg)}</div>`:''}</div></div></div>`:'';
+  main.innerHTML=`
+    <div class="card">
+      <div class="id">${avatar}<div><div class="name">${esc(dv.name)}</div><div class="role">Professional Driver / Chauffeur</div></div></div>
+      <div class="metarow">${meta}</div>
+    </div>
+    <div class="card"><h3 class="sec">About your driver</h3><div class="about">${about(dv)}</div></div>
+    ${badges?`<div class="card"><h3 class="sec">Qualifications & accreditations</h3><div class="badges">${badges}</div></div>`:''}
+    ${langs?`<div class="card"><h3 class="sec">Languages spoken</h3><div class="langs">${langs}</div></div>`:''}
+    ${veh}
+    ${dv.phone?`<a class="cta" href="tel:${esc(dv.phone)}">📞 Call your driver</a>`:''}
+    <a class="ghost" href="track.html?token=${encodeURIComponent(T)}">← Back to live tracking</a>`;
+}
+
+(async function(){
+  if(!T){ state('🔗','Link not valid','Please open this from your Milez Ahead trip message.'); return; }
+  try{
+    const r=await fetch(`${TRACK}?token=${encodeURIComponent(T)}`); const d=await r.json();
+    if(!d||d.error||!d.driver){ state('🚗','No driver yet','Your driver has not been assigned yet — check back shortly.'); return; }
+    render(d.driver);
+  }catch(e){ state('⚠️','Could not load','Please try the link again in a moment.'); }
+})();
+</script>
+</body>
+</html>

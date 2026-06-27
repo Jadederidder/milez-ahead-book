@@ -78,6 +78,8 @@
   .dvbtns a{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;text-decoration:none;font-weight:700;font-size:13px;padding:11px;border-radius:12px}
   .dvbtns a.call{background:var(--teal);color:#fff}
   .dvbtns a.share{background:#fff;color:var(--navy);border:1.5px solid rgba(0,0,0,.12)}
+  .meet{display:block;text-align:center;margin-top:12px;padding:12px;border:1.5px solid var(--navy);border-radius:12px;color:var(--navy);font-weight:800;font-size:14px;text-decoration:none}
+  .meet:active{background:#f3f6fb}
   .sosbtn{display:block;width:100%;background:#fff;color:#c0392b;border:1.5px solid #f0cdc6;font-weight:700;font-size:13px;padding:12px;border-radius:13px;margin-top:6px;cursor:pointer}
   .sosbtn:active{background:#fff3f1}
   .modal{position:fixed;inset:0;background:rgba(20,20,35,.55);display:none;align-items:center;justify-content:center;padding:24px;z-index:50}
@@ -211,7 +213,8 @@ function render(d){
     const allBadges=(vf.licence?'<span class="badge">✓ Licence verified</span>':'')+(vf.prdp?'<span class="badge">✓ PrDP verified</span>':'')+accBadges;
     const badges=allBadges?'<div class="badges">'+allBadges+'</div>':'';
     const acts='<div class="dvbtns">'+(dv.phone?'<a class="call" href="tel:'+esc(dv.phone)+'">📞 Call driver</a>':'')+'<a class="share" href="#" onclick="shareTrip(event)">🔗 Share trip</a></div>';
-    driver='<div class="card"><div class="lbl">Your driver &amp; vehicle</div><div class="dvcols">'+left+right+'</div>'+badges+acts+'</div>';
+    const meet='<a class="meet" href="driver.html?t='+encodeURIComponent(TOKEN)+'">👤 Meet your driver</a>';
+    driver='<div class="card"><div class="lbl">Your driver &amp; vehicle</div><div class="dvcols">'+left+right+'</div>'+badges+meet+acts+'</div>';
   }
   let route='';
   if(d.route.pickup||d.route.dropoff){
