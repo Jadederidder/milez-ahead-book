@@ -51,6 +51,10 @@
   .state{padding:60px 24px;text-align:center}.state .em{font-size:42px}.state h2{margin:14px 0 6px;color:var(--navy)}.state p{color:var(--muted)}
   .spin{display:inline-block;width:20px;height:20px;border:2.5px solid rgba(255,255,255,.5);border-top-color:#fff;border-radius:50%;animation:s .7s linear infinite;vertical-align:-4px}@keyframes s{to{transform:rotate(360deg)}}
   .hint{font-size:12px;color:var(--muted);margin-top:4px}
+  .acwrap{position:relative}
+  .acbox{position:absolute;left:0;right:0;top:100%;z-index:40;background:#fff;border:1.5px solid var(--teal);border-top:none;border-radius:0 0 12px 12px;box-shadow:0 10px 28px rgba(20,30,50,.14);display:none;max-height:230px;overflow:auto}
+  .acitem{padding:12px 14px;font-size:14px;cursor:pointer;border-top:1px solid #f1eee6;color:var(--ink)}
+  .acitem:active,.acitem:hover{background:#eafaf7}
 </style>
 </head>
 <body>
@@ -70,6 +74,7 @@
 window.addEventListener('error', (e)=>{ console.warn('caught', e.message); });
 window.addEventListener('unhandledrejection', (e)=>{ console.warn('caught', e.reason); });
 const FN = 'https://izslchhcavckowatgbel.supabase.co/functions/v1/book-web';
+const MAPS_KEY = 'AIzaSyAtZvXbiV8BhpC_6dENVYrxoNWdPJlwNiM';
 const AIRPORTS =[['CPT','Cape Town (CPT)'],['JNB','O.R. Tambo (JNB)'],['HLA','Lanseria (HLA)'],['DUR','King Shaka (DUR)'],['PLZ','Gqeberha (PLZ)'],['GRJ','George (GRJ)'],['BFN','Bloemfontein (BFN)'],['ELS','East London (ELS)']];
 const SERVICES = [
   ['airport','Airport','transfer to/from'],['drive_home','Home Safe','drive me & my car home'],
@@ -115,8 +120,8 @@ function render(){
     <div class="card">
       <div class="row2"><div class="field"><label class="lab">Date</label><input type="date" id="date"></div>
       <div class="field"><label class="lab">Pick-up time</label><input type="time" id="time"></div></div>
-      <div class="field"><label class="lab">Pick-up address</label><input type="text" id="pickup" placeholder="Start typing your address…" autocomplete="off"></div>
-      <div class="field ${isAir?'hide':''}" id="dropWrap"><label class="lab">Drop-off address</label><input type="text" id="drop" placeholder="Where to?" autocomplete="off"></div>
+      <div class="field"><label class="lab">Pick-up address</label><div class="acwrap"><input type="text" id="pickup" placeholder="Start typing your address…" autocomplete="off"></div></div>
+      <div class="field ${isAir?'hide':''}" id="dropWrap"><label class="lab">Drop-off address</label><div class="acwrap"><input type="text" id="drop" placeholder="Where to?" autocomplete="off"></div></div>
       <div class="${isAir?'':'hide'}" id="airWrap">
         <div class="field"><label class="lab">Airport</label><select id="airport">${airOpts}</select></div>
         <div class="field"><label class="lab">Direction</label><div class="seg"><button type="button" id="dirArr" class="sel" onclick="setDir('arrival')">Arrival</button><button type="button" id="dirDep" onclick="setDir('departure')">Departure</button></div></div>
@@ -162,14 +167,50 @@ window.setSz=(z)=>{ f.size=z; document.querySelectorAll('.szb').forEach(b=>b.cla
 window.tog=(el)=>{ el.classList.toggle('sel'); };
 window.rebook=(i)=>{ if(i==='')return; const t=(window.RECF||[])[i]; if(!t)return; const p=document.getElementById('pickup'),d=document.getElementById('drop'); if(p&&t.pickup)p.value=t.pickup; if(d&&t.dropoff)d.value=t.dropoff; };
 
-// Addresses are typed and geocoded server-side (same as WhatsApp bookings).
-// The in-page Google autocomplete was removed: the legacy Maps component
-// crashed the WhatsApp in-app browser. It returns via the modern Places
-// component once the key is cleared for this domain.
+// Modern, lightweight address autocomplete via the Places API (New) over fetch
+// + a custom dropdown — no heavy Maps SDK, no deprecated component (which crashed
+// the WhatsApp browser). Everything is guarded so a failure only means "no
+// suggestions", never a crash; the typed address still submits and we geocode it.
 function initMaps(){
-  const pickup=document.getElementById('pickup'), drop=document.getElementById('drop');
-  if(pickup) pickup.addEventListener('input',()=>{place.pickup=null;});
-  if(drop) drop.addEventListener('input',()=>{place.drop=null;});
+  attachAC(document.getElementById('pickup'), 'pickup');
+  attachAC(document.getElementById('drop'), 'drop');
+}
+function attachAC(input, which){
+  if(!input || input._ac) return; input._ac=1;
+  const box=document.createElement('div'); box.className='acbox'; input.parentNode.appendChild(box);
+  let timer;
+  input.addEventListener('input', ()=>{
+    place[which]=null;
+    const q=input.value.trim(); clearTimeout(timer);
+    if(q.length<3){ box.style.display='none'; return; }
+    timer=setTimeout(()=>suggest(q, box, input, which), 250);
+  });
+  input.addEventListener('blur', ()=>setTimeout(()=>{ box.style.display='none'; }, 200));
+}
+async function suggest(q, box, input, which){
+  try{
+    const r=await fetch('https://places.googleapis.com/v1/places:autocomplete',{
+      method:'POST', headers:{'Content-Type':'application/json','X-Goog-Api-Key':MAPS_KEY},
+      body:JSON.stringify({input:q, includedRegionCodes:['za']})
+    });
+    if(!r.ok){ box.style.display='none'; return; }
+    const d=await r.json();
+    const items=(d.suggestions||[]).map(s=>s.placePrediction).filter(Boolean).slice(0,5);
+    if(!items.length){ box.style.display='none'; return; }
+    box.innerHTML=items.map(s=>`<div class="acitem" data-id="${s.placeId}">${esc(s.text&&s.text.text||'')}</div>`).join('');
+    box.style.display='block';
+    box.querySelectorAll('.acitem').forEach((it,i)=>{ it.onmousedown=(e)=>e.preventDefault(); it.onclick=()=>pick(items[i], input, which, box); });
+  }catch(_){ box.style.display='none'; }
+}
+async function pick(s, input, which, box){
+  input.value=(s.text&&s.text.text)||input.value; box.style.display='none';
+  try{
+    const r=await fetch(`https://places.googleapis.com/v1/places/${s.placeId}?fields=location,formattedAddress`,{headers:{'X-Goog-Api-Key':MAPS_KEY}});
+    const pd=await r.json();
+    if(pd.location){ place[which]={lat:pd.location.latitude,lng:pd.location.longitude}; }
+    if(pd.formattedAddress){ input.value=pd.formattedAddress; }
+    updatePreview();
+  }catch(_){}
 }
 
 window.submit=async()=>{
