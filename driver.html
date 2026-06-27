@@ -54,9 +54,11 @@ const esc=s=>(s||'').replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"
 function state(em,t,m){main.innerHTML=`<div class="state"><div class="em">${em}</div><h2>${t}</h2><p>${m}</p></div>`;}
 
 function about(dv){
-  const bits=[];
-  bits.push(`${esc(dv.name)} is a professional Milez Ahead chauffeur, dedicated to a safe, comfortable and seamless journey for every client.`);
+  // A curated bio (set by ops from the driver's profile PDF) always wins.
+  if(dv.about) return esc(dv.about);
+  const bits=[`${esc(dv.name)} is a professional Milez Ahead chauffeur, dedicated to a safe, comfortable and seamless journey for every client.`];
   const facts=[];
+  if(dv.yearsExperience) facts.push(`${dv.yearsExperience} years' experience`);
   if(dv.since) facts.push(`driving with us since ${dv.since}`);
   if(dv.trips) facts.push(`${dv.trips} trip${dv.trips===1?'':'s'} completed`);
   if(dv.rating) facts.push(`rated ${dv.rating.toFixed(1)}★`);
@@ -69,8 +71,9 @@ function render(dv){
   const avatar=dv.photo?`<img class="avatar" src="${esc(dv.photo)}" alt="" onerror="this.outerHTML='<div class=&quot;avatar ph&quot;>${initial}</div>'">`:`<div class="avatar ph">${initial}</div>`;
   const full=dv.rating?Math.round(dv.rating):0;
   const stars=dv.rating?`<span class="stars">${'★'.repeat(full)}${'☆'.repeat(5-full)}</span> ${dv.rating.toFixed(1)} (${dv.ratingCount})`:`<span style="color:var(--teal);font-weight:700">✓ Verified Milez driver</span>`;
-  const meta=[stars, dv.since?`<b>Since</b> ${dv.since}`:'', dv.trips?`<b>${dv.trips}</b> trips`:''].filter(Boolean).map(x=>`<span>${x}</span>`).join('');
+  const meta=[stars, dv.yearsExperience?`<b>${dv.yearsExperience} yrs</b> experience`:'', dv.since?`<b>Since</b> ${dv.since}`:'', dv.trips?`<b>${dv.trips}</b> trips`:''].filter(Boolean).map(x=>`<span>${x}</span>`).join('');
   const badges=(dv.accreditations||[]).map(a=>`<span class="badge">✓ ${esc(a)}</span>`).join('');
+  const specs=(dv.specialties||[]).map(s=>`<span class="badge">${esc(s)}</span>`).join('');
   const langs=(dv.languages||[]).map(l=>`<span class="lang">${esc(l)}</span>`).join('');
   const vimg=dv.vehiclePhoto?`<img src="${esc(dv.vehiclePhoto)}" alt="" onerror="this.style.display='none'">`:'';
   const veh=(dv.vehicleDesc||dv.reg)?`<div class="card"><h3 class="sec">Your vehicle</h3><div class="veh">${vimg}<div>${dv.vehicleDesc?`<div class="vdesc">${esc(dv.vehicleDesc)}</div>`:''}${dv.reg?`<div class="reg">${esc(dv.reg)}</div>`:''}</div></div></div>`:'';
@@ -81,6 +84,7 @@ function render(dv){
     </div>
     <div class="card"><h3 class="sec">About your driver</h3><div class="about">${about(dv)}</div></div>
     ${badges?`<div class="card"><h3 class="sec">Qualifications & accreditations</h3><div class="badges">${badges}</div></div>`:''}
+    ${specs?`<div class="card"><h3 class="sec">Specialties</h3><div class="badges">${specs}</div></div>`:''}
     ${langs?`<div class="card"><h3 class="sec">Languages spoken</h3><div class="langs">${langs}</div></div>`:''}
     ${veh}
     ${dv.phone?`<a class="cta" href="tel:${esc(dv.phone)}">📞 Call your driver</a>`:''}
