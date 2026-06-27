@@ -25,6 +25,12 @@
   .metarow b{color:var(--navy)}
   h3.sec{font-size:11.5px;text-transform:uppercase;letter-spacing:1.2px;color:var(--teal);font-weight:800;margin:0 0 9px}
   .about{font-size:14.5px;color:#36404f;line-height:1.6}
+  .more{margin-top:10px;display:none}
+  .more.open{display:block;animation:fade .25s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}
+  .more p{font-size:14px;color:#3d4757;line-height:1.62;margin:0 0 10px}
+  .more p:last-child{margin-bottom:0}
+  .readmore{margin-top:8px;background:none;border:0;padding:0;color:var(--teal);font-weight:800;font-size:13.5px;cursor:pointer;letter-spacing:.2px}
   .badges{display:flex;flex-wrap:wrap;gap:8px}
   .badge{background:#e7f5f3;color:#0c7068;font-weight:700;font-size:12.5px;padding:7px 12px;border-radius:999px}
   .langs{display:flex;flex-wrap:wrap;gap:8px}
@@ -53,6 +59,12 @@ const main=document.getElementById('main');
 const esc=s=>(s||'').replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
 function state(em,t,m){main.innerHTML=`<div class="state"><div class="em">${em}</div><h2>${t}</h2><p>${m}</p></div>`;}
 
+function toggleMore(){
+  const m=document.getElementById('more'), b=document.getElementById('rm');
+  if(!m||!b) return;
+  const open=m.classList.toggle('open');
+  b.textContent=open?'Read less ▴':'Read more ▾';
+}
 function about(dv){
   // A curated bio (set by ops from the driver's profile PDF) always wins.
   if(dv.about) return esc(dv.about);
@@ -74,6 +86,9 @@ function render(dv){
   const meta=[stars, dv.yearsExperience?`<b>${dv.yearsExperience} yrs</b> experience`:'', dv.since?`<b>Since</b> ${dv.since}`:'', dv.trips?`<b>${dv.trips}</b> trips`:''].filter(Boolean).map(x=>`<span>${x}</span>`).join('');
   const badges=(dv.accreditations||[]).map(a=>`<span class="badge">✓ ${esc(a)}</span>`).join('');
   const specs=(dv.specialties||[]).map(s=>`<span class="badge">${esc(s)}</span>`).join('');
+  const detail=dv.profileDetail
+    ? `<div class="more" id="more">${dv.profileDetail.split(/\n+/).filter(p=>p.trim()).map(p=>`<p>${esc(p.trim())}</p>`).join('')}</div><button class="readmore" id="rm" onclick="toggleMore()">Read more ▾</button>`
+    : '';
   const langs=(dv.languages||[]).map(l=>`<span class="lang">${esc(l)}</span>`).join('');
   const vimg=dv.vehiclePhoto?`<img src="${esc(dv.vehiclePhoto)}" alt="" onerror="this.style.display='none'">`:'';
   const veh=(dv.vehicleDesc||dv.reg)?`<div class="card"><h3 class="sec">Your vehicle</h3><div class="veh">${vimg}<div>${dv.vehicleDesc?`<div class="vdesc">${esc(dv.vehicleDesc)}</div>`:''}${dv.reg?`<div class="reg">${esc(dv.reg)}</div>`:''}</div></div></div>`:'';
@@ -82,7 +97,7 @@ function render(dv){
       <div class="id">${avatar}<div><div class="name">${esc(dv.name)}</div><div class="role">Professional Driver / Chauffeur</div></div></div>
       <div class="metarow">${meta}</div>
     </div>
-    <div class="card"><h3 class="sec">About your driver</h3><div class="about">${about(dv)}</div></div>
+    <div class="card"><h3 class="sec">About your driver</h3><div class="about">${about(dv)}</div>${detail}</div>
     ${badges?`<div class="card"><h3 class="sec">Qualifications & accreditations</h3><div class="badges">${badges}</div></div>`:''}
     ${specs?`<div class="card"><h3 class="sec">Specialties</h3><div class="badges">${specs}</div></div>`:''}
     ${langs?`<div class="card"><h3 class="sec">Languages spoken</h3><div class="langs">${langs}</div></div>`:''}
