@@ -66,9 +66,11 @@
 </div>
 
 <script>
+// Never let one error white-screen the form in the WhatsApp in-app browser.
+window.addEventListener('error', (e)=>{ console.warn('caught', e.message); });
+window.addEventListener('unhandledrejection', (e)=>{ console.warn('caught', e.reason); });
 const FN = 'https://izslchhcavckowatgbel.supabase.co/functions/v1/book-web';
-const MAPS_KEY = 'AIzaSyAtZvXbiV8BhpC_6dENVYrxoNWdPJlwNiM';
-const AIRPORTS = [['CPT','Cape Town (CPT)'],['JNB','O.R. Tambo (JNB)'],['HLA','Lanseria (HLA)'],['DUR','King Shaka (DUR)'],['PLZ','Gqeberha (PLZ)'],['GRJ','George (GRJ)'],['BFN','Bloemfontein (BFN)'],['ELS','East London (ELS)']];
+const AIRPORTS =[['CPT','Cape Town (CPT)'],['JNB','O.R. Tambo (JNB)'],['HLA','Lanseria (HLA)'],['DUR','King Shaka (DUR)'],['PLZ','Gqeberha (PLZ)'],['GRJ','George (GRJ)'],['BFN','Bloemfontein (BFN)'],['ELS','East London (ELS)']];
 const SERVICES = [
   ['airport','Airport','transfer to/from'],['drive_home','Home Safe','drive me & my car home'],
   ['chauffeur','Chauffeur','executive drive'],['convenient','Convenient','everyday driver'],
@@ -160,21 +162,14 @@ window.setSz=(z)=>{ f.size=z; document.querySelectorAll('.szb').forEach(b=>b.cla
 window.tog=(el)=>{ el.classList.toggle('sel'); };
 window.rebook=(i)=>{ if(i==='')return; const t=(window.RECF||[])[i]; if(!t)return; const p=document.getElementById('pickup'),d=document.getElementById('drop'); if(p&&t.pickup)p.value=t.pickup; if(d&&t.dropoff)d.value=t.dropoff; };
 
-let mapsLoaded=false;
+// Addresses are typed and geocoded server-side (same as WhatsApp bookings).
+// The in-page Google autocomplete was removed: the legacy Maps component
+// crashed the WhatsApp in-app browser. It returns via the modern Places
+// component once the key is cleared for this domain.
 function initMaps(){
   const pickup=document.getElementById('pickup'), drop=document.getElementById('drop');
-  if(!pickup) return;
-  pickup.addEventListener('input',()=>{place.pickup=null;updatePreview();});
-  if(drop) drop.addEventListener('input',()=>{place.drop=null;updatePreview();});
-  if(window.google&&google.maps&&google.maps.places){ wireAuto(); }
-  else if(!mapsLoaded){ mapsLoaded=true; const sc=document.createElement('script'); sc.src=`https://maps.googleapis.com/maps/api/js?key=${MAPS_KEY}&libraries=places&loading=async&callback=__maps`; sc.async=true; document.head.appendChild(sc); }
-}
-window.__maps=()=>wireAuto();
-function wireAuto(){
-  const opts={fields:['formatted_address','geometry'],componentRestrictions:{country:'za'}};
-  const p=document.getElementById('pickup'), d=document.getElementById('drop');
-  if(p&&!p._wired){ p._wired=1; const a=new google.maps.places.Autocomplete(p,opts); a.addListener('place_changed',()=>{const pl=a.getPlace(),l=pl.geometry&&pl.geometry.location; place.pickup=l?{lat:l.lat(),lng:l.lng()}:null; if(pl.formatted_address)p.value=pl.formatted_address; updatePreview();}); }
-  if(d&&!d._wired){ d._wired=1; const a=new google.maps.places.Autocomplete(d,opts); a.addListener('place_changed',()=>{const pl=a.getPlace(),l=pl.geometry&&pl.geometry.location; place.drop=l?{lat:l.lat(),lng:l.lng()}:null; if(pl.formatted_address)d.value=pl.formatted_address; updatePreview();}); }
+  if(pickup) pickup.addEventListener('input',()=>{place.pickup=null;});
+  if(drop) drop.addEventListener('input',()=>{place.drop=null;});
 }
 
 window.submit=async()=>{
