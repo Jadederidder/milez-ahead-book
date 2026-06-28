@@ -106,7 +106,6 @@ function render(){
   const isAir = f.service==='airport', isHome = f.service==='drive_home';
   const svcBtns = SERVICES.map(s=>`<button type="button" class="${f.service===s[0]?'sel':''}" onclick="setSvc('${s[0]}')">${s[1]}<span class="s">${s[2]}</span></button>`).join('');
   const airOpts = AIRPORTS.map(a=>`<option value="${a[0]}">${a[1]}</option>`).join('');
-  const drvOpts = `<option value="">Any available driver</option>`+CTX.drivers.map(d=>`<option value="${d.id}" ${CTX.preferred_driver_id===d.id?'selected':''}>${esc(d.name)}</option>`).join('');
   // Rebook only shows recents of the SELECTED service, so picking one never
   // silently changes the trip type.
   window.RECF=(CTX.recent||[]).filter(t=>t.service_type===f.service);
@@ -132,8 +131,8 @@ function render(){
       </div>
     </div>
     <div class="card">
-      <div class="row2"><div class="field"><label class="lab">Passengers</label><input type="number" id="pax" min="1" max="14" value="1"></div>
-      <div class="field"><label class="lab">Bags</label><input type="number" id="bags" min="0" max="20" value="0"></div></div>
+      <div class="row2"><div class="field"><label class="lab">Passengers</label><select id="pax">${Array.from({length:14},(_,i)=>i+1).map(n=>`<option${n===1?' selected':''}>${n}</option>`).join('')}</select></div>
+      <div class="field"><label class="lab">Bags</label><select id="bags">${Array.from({length:21},(_,i)=>i).map(n=>`<option${n===0?' selected':''}>${n}</option>`).join('')}</select></div></div>
       <div class="field"><label class="lab">Luggage size</label><div class="seg"><button type="button" data-sz="small" class="szb sel" onclick="setSz('small')">Small</button><button type="button" data-sz="medium" class="szb" onclick="setSz('medium')">Medium</button><button type="button" data-sz="large" class="szb" onclick="setSz('large')">Large</button></div></div>
       <div class="field"><label class="lab">Travelling with</label><div class="chips" id="special">
         ${['baby_seat:Baby seat','pram:Pram','wheelchair:Wheelchair','golf_bag:Golf bag','extra_bags:Lots of luggage'].map(s=>{const[v,l]=s.split(':');return `<div class="chip" data-v="${v}" onclick="tog(this)">${l}</div>`}).join('')}
@@ -145,7 +144,12 @@ function render(){
       <div class="row2"><div class="field"><input type="text" id="vcolour" placeholder="Colour"></div><div class="field"><input type="text" id="vreg" placeholder="Registration"></div></div>
     </div>
     <div class="card">
-      <div class="field"><label class="lab">Preferred driver</label><select id="driver">${drvOpts}</select>
+      <div class="field"><label class="lab">Preferred driver</label>
+        <div class="acwrap">
+          <input type="text" id="driverSearch" placeholder="Any available driver — type a name" autocomplete="off">
+          <input type="hidden" id="driver" value="${CTX.preferred_driver_id||''}">
+          <div class="acbox" id="driverBox"></div>
+        </div>
         <label style="display:flex;gap:8px;align-items:center;margin-top:8px;font-size:13px;color:var(--muted)"><input type="checkbox" id="savePref" style="width:18px;height:18px"> Always use this driver for me</label></div>
       <div class="field"><label class="lab">Notes <span style="font-weight:500;text-transform:none;color:#9aa1ab">(optional)</span></label><textarea id="notes" placeholder="Anything we should know?"></textarea></div>
       ${CTX.escort_enabled?`<div class="field"><label class="lab">Security (optional)</label>
@@ -159,7 +163,8 @@ function render(){
     <div class="err" id="err"></div>
     <button class="cta" id="go" onclick="submit()">Confirm booking</button>`;
   // wire inputs
-  document.getElementById('pax').oninput=e=>f.pax=e.target.value;
+  document.getElementById('pax').onchange=e=>f.pax=e.target.value;
+  wireDriverSearch();
   ['date','time','bags','flight','notes','airport'].forEach(id=>{const el=document.getElementById(id);if(el)el.oninput=()=>{};});
   initMaps();
 }
@@ -205,13 +210,37 @@ async function suggest(q, box, input, which){
     box.querySelectorAll('.acitem').forEach((it,i)=>{ it.onmousedown=(e)=>e.preventDefault(); it.onclick=()=>pick(items[i], input, which, box); });
   }catch(_){ box.style.display='none'; }
 }
+// Searchable preferred-driver picker — typeahead over CTX.drivers, so it scales
+// past a scroll-through list (1000+ drivers). Selection sets the hidden #driver id.
+function wireDriverSearch(){
+  const inp=document.getElementById('driverSearch'), hid=document.getElementById('driver'), box=document.getElementById('driverBox');
+  if(!inp||!hid||!box) return;
+  if(hid.value){ const d=(CTX.drivers||[]).find(x=>x.id===hid.value); if(d) inp.value=d.name; }
+  function render(q){
+    const ql=(q||'').trim().toLowerCase();
+    const list=(CTX.drivers||[]).filter(d=>!ql||(d.name||'').toLowerCase().includes(ql)).slice(0,8);
+    const rows=['<div class="acitem" data-id="">Any available driver</div>']
+      .concat(list.map(d=>`<div class="acitem" data-id="${d.id}">${esc(d.name)}</div>`));
+    box.innerHTML=rows.join('');
+    box.querySelectorAll('.acitem').forEach(it=>{ it.onmousedown=e=>e.preventDefault(); it.onclick=()=>{ hid.value=it.dataset.id; inp.value=it.dataset.id?it.textContent:''; box.style.display='none'; }; });
+    box.style.display='block';
+  }
+  inp.oninput=()=>{ hid.value=''; render(inp.value); };
+  inp.onfocus=()=>render(inp.value);
+  inp.onblur=()=>setTimeout(()=>{ box.style.display='none'; },150);
+}
 async function pick(s, input, which, box){
   input.value=(s.text&&s.text.text)||input.value; box.style.display='none';
   try{
     const r=await fetch(`https://places.googleapis.com/v1/places/${s.placeId}?fields=location,formattedAddress`,{headers:{'X-Goog-Api-Key':MAPS_KEY}});
     const pd=await r.json();
     if(pd.location){ place[which]={lat:pd.location.latitude,lng:pd.location.longitude}; }
-    if(pd.formattedAddress){ input.value=pd.formattedAddress; }
+    if(pd.formattedAddress){
+      // Keep the FULL address for the driver/back-office, but SHOW the recognisable
+      // first part (street/place) so the box doesn't scroll to "…7551, South Africa".
+      input.dataset.full=pd.formattedAddress;
+      input.value=pd.formattedAddress.split(',')[0].trim()||pd.formattedAddress;
+    }
     updatePreview();
   }catch(_){}
 }
@@ -222,7 +251,8 @@ window.submit=async()=>{
   if(!f.service){ err.textContent='Please choose a service.'; err.style.display='block'; return; }
   if(!document.getElementById('date').value){ err.textContent='Please choose a date.'; err.style.display='block'; return; }
   const isAir=f.service==='airport';
-  const pickup=document.getElementById('pickup').value.trim();
+  const pickupEl=document.getElementById('pickup');
+  const pickup=(pickupEl.dataset.full||pickupEl.value.trim());
   if(!pickup){ err.textContent='Please enter a pick-up address.'; err.style.display='block'; return; }
   if(!document.getElementById('indemnity').checked){ err.textContent='Please accept the terms & indemnity to continue.'; document.getElementById('indemWrap').style.borderColor='#dc2626'; err.style.display='block'; return; }
   const special=[...document.querySelectorAll('#special .chip.sel')].map(c=>c.dataset.v);
@@ -235,7 +265,7 @@ window.submit=async()=>{
     add_escort:!!document.getElementById('escort')?.checked, policy_number:CTX.policy_number||undefined,
   };
   if(isAir){ booking.airport_code=document.getElementById('airport').value; booking.direction=f.direction||'arrival'; booking.flight_number=document.getElementById('flight').value||undefined; }
-  else { booking.dropoff_address=document.getElementById('drop').value.trim()||undefined; booking.dropoff_lat=place.drop?.lat??null; booking.dropoff_lng=place.drop?.lng??null; }
+  else { const dropEl=document.getElementById('drop'); booking.dropoff_address=(dropEl.dataset.full||dropEl.value.trim())||undefined; booking.dropoff_lat=place.drop?.lat??null; booking.dropoff_lng=place.drop?.lng??null; }
   if(f.service==='drive_home'){ booking.client_vehicle_make=document.getElementById('vmake').value||null; booking.client_vehicle_model=document.getElementById('vmodel').value||null; booking.client_vehicle_colour=document.getElementById('vcolour').value||null; booking.client_vehicle_reg=document.getElementById('vreg').value||null; }
   go.disabled=true; go.innerHTML='<span class="spin"></span>';
   try{
