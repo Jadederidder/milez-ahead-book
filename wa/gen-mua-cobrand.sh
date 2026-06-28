@@ -23,7 +23,7 @@ cobrand() { # $1 = source wa-*.png filename
     "$OUT/$src"
 }
 
-for f in wa-assigned.png wa-enroute.png wa-arrived.png wa-complete.png wa-booked.png; do
+for f in wa-assigned.png wa-enroute.png wa-arrived.png wa-complete.png wa-booked.png wa-reminder.png; do
   cobrand "$f"
   echo "co-branded -> $OUT/$f"
 done
