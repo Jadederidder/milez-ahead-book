@@ -125,6 +125,7 @@
 const EDGE='https://izslchhcavckowatgbel.supabase.co/functions/v1/track';
 const SOS_EDGE='https://izslchhcavckowatgbel.supabase.co/functions/v1/track-sos';
 const FEEDBACK_EDGE='https://izslchhcavckowatgbel.supabase.co/functions/v1/submit-feedback';
+const TIP_EDGE='https://izslchhcavckowatgbel.supabase.co/functions/v1/tip-init';
 const TOKEN=new URLSearchParams(location.search).get('token')||'';
 // Set MAPS_KEY to a Google Maps JS API browser key (restricted to this domain)
 // to embed the live map. While empty, the page falls back to the "open in Maps" link.
@@ -248,10 +249,14 @@ function render(d){
       (r.durationMin!=null?rl('Duration',r.durationMin+' min'):'')+
       (r.fare!=null?rl('Fare','R'+r.fare.toFixed(2)):'')+
       '<a class="btn ghost" href="#" onclick="window.print();return false" style="margin-top:14px">🧾 Save / print receipt</a></div>';
+    const tipName=(d.driver&&d.driver.name)?esc(d.driver.name.split(/\s+/)[0]):'your driver';
     const rate='<div class="card rate" id="rateCard"><div class="lbl">How was your trip?</div>'+
       '<div class="ratestars" id="stars">'+[1,2,3,4,5].map(n=>'<span data-n="'+n+'" onclick="setRating('+n+')">★</span>').join('')+'</div>'+
-      '<div class="tiprow" id="tiprow">'+[20,50,100].map(t=>'<button class="tip" data-t="'+t+'" onclick="setTip('+t+')">R'+t+'</button>').join('')+'<button class="tip" data-t="0" onclick="setTip(0)">No tip</button></div>'+
+      '<div style="text-align:center;font-size:13px;color:var(--muted);margin-top:16px;font-weight:600">Add a tip for '+tipName+'?</div>'+
+      '<div class="tiprow" id="tiprow">'+[50,100,200,500].map(t=>'<button class="tip" data-t="'+t+'" onclick="setTip('+t+')">R'+t+'</button>').join('')+'<button class="tip" data-t="-1" onclick="setTip(-1)">Custom</button><button class="tip" data-t="0" onclick="setTip(0)">No tip</button></div>'+
+      '<input id="tipCustom" type="number" inputmode="numeric" min="1" placeholder="Enter tip amount (R)" style="display:none;width:100%;margin-top:10px;padding:11px 13px;border:1.5px solid rgba(0,0,0,.14);border-radius:10px;font-size:14px;box-sizing:border-box" oninput="onCustomTip(this.value)">'+
       '<textarea class="rcmt" id="rcmt" placeholder="Tell us about your driver (optional)"></textarea>'+
+      '<div id="rateErr" style="display:none;color:#c0392b;font-size:12.5px;margin-top:8px"></div>'+
       '<a class="btn" href="#" onclick="submitRating(event)" style="margin-top:12px">Submit rating</a></div>';
     const rb=d.rebook||{}, p=new URLSearchParams();
     if(rb.name)p.set('name',rb.name); if(rb.phone)p.set('phone',rb.phone);
@@ -291,18 +296,39 @@ async function tick(){
   }catch(e){}
 }
 function setRating(n){_myRating=n;document.querySelectorAll('#stars span').forEach(s=>s.classList.toggle('on',Number(s.dataset.n)<=n));}
-function setTip(t){_myTip=t;document.querySelectorAll('#tiprow .tip').forEach(b=>b.classList.toggle('on',Number(b.dataset.t)===t));}
+function setTip(t){
+  const ci=document.getElementById('tipCustom');
+  if(t===-1){ if(ci){ci.style.display='block';ci.focus();} _myTip=Math.max(0,Math.floor(Number(ci&&ci.value)||0)); }
+  else { if(ci)ci.style.display='none'; _myTip=t; }
+  document.querySelectorAll('#tiprow .tip').forEach(b=>b.classList.toggle('on',Number(b.dataset.t)===t));
+}
+function onCustomTip(v){ _myTip=Math.max(0,Math.floor(Number(v)||0)); }
+function rateErr(msg){ const el=document.getElementById('rateErr'); if(el){el.textContent=msg;el.style.display=msg?'block':'none';} }
 async function submitRating(e){
   if(e)e.preventDefault();
-  if(!_myRating){alert('Please tap a star to rate your trip');return;}
+  if(!_myRating){rateErr('Please tap a star to rate your trip.');return;}
+  rateErr('');
   const cmt=(document.getElementById('rcmt')||{}).value||'';
   const payload={token:TOKEN,rating:_myRating,comment:cmt}; if(_myTip)payload.tip=_myTip;
+  const card=document.getElementById('rateCard');
   try{
     const r=await fetch(FEEDBACK_EDGE,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-    const j=await r.json().catch(()=>({})); const card=document.getElementById('rateCard');
-    if(r.ok&&j.ok&&card){card.innerHTML='<div class="lbl">Thank you</div><div class="headline" style="font-size:18px;margin-top:6px">🙏 Thanks for the '+_myRating+'★'+(_myTip?' and the R'+_myTip+' tip':'')+'</div><p class="muted" style="margin-top:6px">Your feedback keeps Milez Ahead world-class.</p>';}
-    else alert('Could not submit just yet, please try again.');
-  }catch(_){alert('Could not submit just yet, please try again.');}
+    const j=await r.json().catch(()=>({}));
+    if(!(r.ok&&j.ok)){rateErr('Could not submit just yet, please try again.');return;}
+    // Rating is saved. If they chose a tip, take them to secure Paystack checkout
+    // — the tip only reaches the driver once that payment clears.
+    if(_myTip>0){
+      if(card)card.innerHTML='<div class="lbl">Thank you</div><div class="headline" style="font-size:18px;margin-top:6px">🙏 Thanks for the '+_myRating+'★</div><p class="muted" style="margin-top:6px">Taking you to secure checkout for your R'+_myTip+' tip…</p>';
+      try{
+        const tr=await fetch(TIP_EDGE,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:TOKEN,amount:_myTip})});
+        const tj=await tr.json().catch(()=>({}));
+        if(tr.ok&&tj.ok&&tj.authorization_url){location.href=tj.authorization_url;return;}
+      }catch(_){}
+      if(card)card.innerHTML='<div class="lbl">Thank you</div><div class="headline" style="font-size:18px;margin-top:6px">🙏 Thanks for the '+_myRating+'★</div><p class="muted" style="margin-top:6px">Your rating is saved. We couldn’t open the tip checkout just now — reopen this page to try the tip again.</p>';
+      return;
+    }
+    if(card)card.innerHTML='<div class="lbl">Thank you</div><div class="headline" style="font-size:18px;margin-top:6px">🙏 Thanks for the '+_myRating+'★</div><p class="muted" style="margin-top:6px">Your feedback keeps Milez Ahead world-class.</p>';
+  }catch(_){rateErr('Could not submit just yet, please try again.');}
 }
 function shareTrip(e){
   if(e)e.preventDefault();
