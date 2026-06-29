@@ -143,7 +143,7 @@ function drawMap(d){
     _dirR=new google.maps.DirectionsRenderer({map:_map,suppressMarkers:false,polylineOptions:{strokeColor:'#007880',strokeWeight:5}});
   }
   if(!_routeDrawn && d.route.pickup && d.route.dropoff){ _routeDrawn=true; new google.maps.DirectionsService().route({origin:d.route.pickup,destination:d.route.dropoff,travelMode:'DRIVING'},(res,st)=>{ if(st==='OK') _dirR.setDirections(res); }); }
-  if(d.driver&&d.driver.lat!=null&&d.driver.lng!=null){ const pos={lat:d.driver.lat,lng:d.driver.lng}; if(!_drvMarker){_drvMarker=new google.maps.Marker({map:_map,position:pos,title:'Your driver',icon:{path:google.maps.SymbolPath.CIRCLE,scale:8,fillColor:'#8bc53f',fillOpacity:1,strokeColor:'#fff',strokeWeight:3}});}else _drvMarker.setPosition(pos); }
+  if(d.driver&&d.driver.lat!=null&&d.driver.lng!=null){ const pos={lat:d.driver.lat,lng:d.driver.lng}; if(!_drvMarker){_drvMarker=new google.maps.Marker({map:_map,position:pos,title:'Your driver',icon:{path:google.maps.SymbolPath.CIRCLE,scale:10,fillColor:'#9b1fe8',fillOpacity:1,strokeColor:'#fff',strokeWeight:3}});}else _drvMarker.setPosition(pos); }
   computeEta();
   computeArrival();
 }
