@@ -135,7 +135,7 @@ function render(){
       <div class="field"><label class="lab">Bags</label><select id="bags">${Array.from({length:21},(_,i)=>i).map(n=>`<option${n===0?' selected':''}>${n}</option>`).join('')}</select></div></div>
       <div class="field"><label class="lab">Luggage size</label><div class="seg"><button type="button" data-sz="small" class="szb sel" onclick="setSz('small')">Small</button><button type="button" data-sz="medium" class="szb" onclick="setSz('medium')">Medium</button><button type="button" data-sz="large" class="szb" onclick="setSz('large')">Large</button></div></div>
       <div class="field"><label class="lab">Travelling with</label><div class="chips" id="special">
-        ${['baby_seat:Baby seat','pram:Pram','wheelchair:Wheelchair','golf_bag:Golf bag','extra_bags:Lots of luggage'].map(s=>{const[v,l]=s.split(':');return `<div class="chip" data-v="${v}" onclick="tog(this)">${l}</div>`}).join('')}
+        ${['baby_seat:Baby seat','pram:Pram','wheelchair:Wheelchair','golf_bag:Golf bag','bicycle:Bicycle','surfboard:Surfboard','extra_bags:Lots of luggage'].map(s=>{const[v,l]=s.split(':');return `<div class="chip" data-v="${v}" onclick="tog(this)">${l}</div>`}).join('')}
       </div><div class="hint">Helps us send a vehicle that fits.</div></div>
     </div>
     <div class="card ${isHome?'':'hide'}" id="vehWrap">
