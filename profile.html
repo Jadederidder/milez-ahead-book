@@ -64,6 +64,7 @@ async function load(){
   const p=r.profile;
   document.getElementById('sub').textContent=p.full_name?('Hi '+p.full_name.split(' ')[0]+' 👋'):'Welcome';
   if(r.credits){const b=document.getElementById('bal');b.style.display='inline-block';b.textContent=`🎟 ${r.credits.left} of ${r.credits.total} rides left this year`;}
+  window._data=r;
   render(p,r.trips||[]);
 }
 function render(p,trips){
@@ -84,8 +85,38 @@ function render(p,trips){
       ${p.policy_number?`<label class="lab">Policy number</label><input value="${esc(p.policy_number)}" readonly>`:''}
       <button class="btn" id="save" onclick="save()">Save my details</button>
     </div>
-    <div class="card"><h2>My trips</h2>${tripsHtml}</div>
+    <div class="card"><h2>My trips</h2>${tripsHtml}${trips.length?'<button class="btn" id="pdfBtn" onclick="savePdf()" style="margin-top:14px;background:var(--navy)">📄 Download my statement (PDF)</button>':''}</div>
   `);
+}
+async function savePdf(){
+  const d=window._data; if(!d) return;
+  const btn=document.getElementById('pdfBtn'); if(btn){btn.disabled=true;btn.textContent='Preparing…';}
+  try{
+    const { jsPDF } = await import('https://esm.sh/jspdf@2.5.1');
+    const doc=new jsPDF({unit:'pt',format:'a4'}); const M=40, R=555; let y=54;
+    doc.setFont('helvetica','bold'); doc.setFontSize(18); doc.setTextColor(13,79,74);
+    doc.text('Milez Ahead — My statement', M, y); y+=26;
+    doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.setTextColor(60,60,60);
+    doc.text(d.profile.full_name||'', M, y); y+=15;
+    if(d.profile.phone){ doc.text(d.profile.phone, M, y); y+=15; }
+    if(d.credits){ doc.setTextColor(20,20,20); doc.text(`Rides this year: ${d.credits.left} of ${d.credits.total} left (${d.credits.used} used)`, M, y); y+=10; }
+    y+=8; doc.setDrawColor(210); doc.line(M, y, R, y); y+=18;
+    doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(20,20,20);
+    doc.text('Date', M, y); doc.text('Ref', M+95, y); doc.text('Trip', M+195, y); doc.text('Fare', R, y, {align:'right'}); y+=6;
+    doc.line(M, y, R, y); y+=16; doc.setFont('helvetica','normal'); doc.setTextColor(50,50,50);
+    (d.trips||[]).forEach(t=>{
+      if(y>800){ doc.addPage(); y=54; }
+      const from=(t.pickup_address||'').split(',')[0]; const to=(t.dropoff_address||t.airport_code||'').split(',')[0];
+      doc.text(String(t.trip_date||''), M, y);
+      doc.text(String(t.ref||'').slice(0,16), M+95, y);
+      doc.text((from+(to?' → '+to:'')).slice(0,42), M+195, y);
+      doc.text(t.fare!=null?('R'+Number(t.fare).toFixed(0)):'', R, y, {align:'right'});
+      y+=15;
+    });
+    if(!(d.trips||[]).length){ doc.text('No trips yet.', M, y); }
+    doc.save('Milez-Ahead-statement.pdf');
+  }catch(e){ alert('Could not build the PDF — please try again.'); }
+  finally{ if(btn){btn.disabled=false;btn.textContent='📄 Download my statement (PDF)';} }
 }
 async function save(){
   const btn=document.getElementById('save');btn.disabled=true;btn.textContent='Saving…';
