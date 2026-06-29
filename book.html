@@ -207,7 +207,7 @@ async function suggest(q, box, input, which){
     if(!items.length){ box.style.display='none'; return; }
     box.innerHTML=items.map(s=>`<div class="acitem" data-id="${s.placeId}">${esc(s.text&&s.text.text||'')}</div>`).join('');
     box.style.display='block';
-    box.querySelectorAll('.acitem').forEach((it,i)=>{ it.onmousedown=(e)=>e.preventDefault(); it.onclick=()=>pick(items[i], input, which, box); });
+    box.querySelectorAll('.acitem').forEach((it,i)=>{ it.onpointerdown=(e)=>{ e.preventDefault(); pick(items[i], input, which, box); }; });
   }catch(_){ box.style.display='none'; }
 }
 // Searchable preferred-driver picker — typeahead over CTX.drivers, so it scales
@@ -222,7 +222,7 @@ function wireDriverSearch(){
     const rows=['<div class="acitem" data-id="">Any available driver</div>']
       .concat(list.map(d=>`<div class="acitem" data-id="${d.id}">${esc(d.name)}</div>`));
     box.innerHTML=rows.join('');
-    box.querySelectorAll('.acitem').forEach(it=>{ it.onmousedown=e=>e.preventDefault(); it.onclick=()=>{ hid.value=it.dataset.id; inp.value=it.dataset.id?it.textContent:''; box.style.display='none'; }; });
+    box.querySelectorAll('.acitem').forEach(it=>{ it.onpointerdown=e=>{ e.preventDefault(); hid.value=it.dataset.id; inp.value=it.dataset.id?it.textContent:''; box.style.display='none'; }; });
     box.style.display='block';
   }
   inp.oninput=()=>{ hid.value=''; render(inp.value); };
@@ -254,6 +254,13 @@ window.submit=async()=>{
   const pickupEl=document.getElementById('pickup');
   const pickup=(pickupEl.dataset.full||pickupEl.value.trim());
   if(!pickup){ err.textContent='Please enter a pick-up address.'; err.style.display='block'; return; }
+  if(!document.getElementById('thour').value){ err.textContent='Please choose a pick-up time.'; err.style.display='block'; return; }
+  if(isAir){
+    if(!document.getElementById('airport').value){ err.textContent='Please choose the airport.'; err.style.display='block'; return; }
+  } else {
+    const dEl=document.getElementById('drop'); const drop=(dEl&&(dEl.dataset.full||dEl.value.trim()))||'';
+    if(!drop){ err.textContent='Please enter a drop-off address.'; err.style.display='block'; return; }
+  }
   if(!document.getElementById('indemnity').checked){ err.textContent='Please accept the terms & indemnity to continue.'; document.getElementById('indemWrap').style.borderColor='#dc2626'; err.style.display='block'; return; }
   const special=[...document.querySelectorAll('#special .chip.sel')].map(c=>c.dataset.v);
   const booking={
