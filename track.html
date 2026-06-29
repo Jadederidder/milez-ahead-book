@@ -132,7 +132,7 @@ const TOKEN=new URLSearchParams(location.search).get('token')||'';
 const MAPS_KEY='AIzaSyAtZvXbiV8BhpC_6dENVYrxoNWdPJlwNiM';
 const fmt=t=>t?new Date(t).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):'';
 const esc=s=>(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-let _map,_dirR,_drvMarker,_routeDrawn,_mapsReady,_last,_eta=null,_timer,_myRating=0,_myTip=null;
+let _map,_dirR,_drvMarker,_routePhase,_mapsReady,_last,_eta=null,_timer,_myRating=0,_myTip=null;
 function loadMaps(){ if(!MAPS_KEY) return; const s=document.createElement('script'); s.async=true; s.src='https://maps.googleapis.com/maps/api/js?key='+MAPS_KEY; s.onload=()=>{_mapsReady=true; if(_last)drawMap(_last);}; document.head.appendChild(s); }
 function drawMap(d){
   if(!MAPS_KEY||!_mapsReady||!d) return;
@@ -142,8 +142,22 @@ function drawMap(d){
     _map=new google.maps.Map(document.getElementById('map'),{center:{lat:-29,lng:24.5},zoom:5,disableDefaultUI:true,zoomControl:true,gestureHandling:'greedy'});
     _dirR=new google.maps.DirectionsRenderer({map:_map,suppressMarkers:false,polylineOptions:{strokeColor:'#007880',strokeWeight:5}});
   }
-  if(!_routeDrawn && d.route.pickup && d.route.dropoff){ _routeDrawn=true; new google.maps.DirectionsService().route({origin:d.route.pickup,destination:d.route.dropoff,travelMode:'DRIVING'},(res,st)=>{ if(st==='OK') _dirR.setDirections(res); }); }
-  if(d.driver&&d.driver.lat!=null&&d.driver.lng!=null){ const pos={lat:d.driver.lat,lng:d.driver.lng}; if(!_drvMarker){_drvMarker=new google.maps.Marker({map:_map,position:pos,title:'Your driver',icon:{path:google.maps.SymbolPath.CIRCLE,scale:10,fillColor:'#9b1fe8',fillOpacity:1,strokeColor:'#fff',strokeWeight:3}});}else _drvMarker.setPosition(pos); }
+  // Phase-aware route: before pickup it's about the DRIVER coming to you
+  // (driver → pickup); once you're collected it's the TRIP (pickup → drop-off).
+  // If the driver isn't sharing a live location yet, we don't draw a pointless
+  // pickup→drop-off line — we wait for them to move (see the "waiting" note).
+  const _started=(d.steps.find(s=>s.key==='started')||{}).done;
+  const _live=d.driver&&d.driver.live&&d.driver.lat!=null&&d.driver.lng!=null;
+  let phase,req=null;
+  if(_started && d.route.pickup && d.route.dropoff){ phase='trip'; req={origin:_live?{lat:d.driver.lat,lng:d.driver.lng}:d.route.pickup,destination:d.route.dropoff,travelMode:'DRIVING'}; }
+  else if(_live && d.route.pickup){ phase='approach'; req={origin:{lat:d.driver.lat,lng:d.driver.lng},destination:d.route.pickup,travelMode:'DRIVING'}; }
+  else { phase='wait'; }
+  if(phase!==_routePhase){
+    _routePhase=phase;
+    if(req){ _dirR.setMap(_map); new google.maps.DirectionsService().route(req,(res,st)=>{ if(st==='OK') _dirR.setDirections(res); }); }
+    else { _dirR.setMap(null); } // waiting for the driver to move — no route yet
+  } else if(req){ new google.maps.DirectionsService().route(req,(res,st)=>{ if(st==='OK') _dirR.setDirections(res); }); }
+  if(d.driver&&d.driver.lat!=null&&d.driver.lng!=null){ const pos={lat:d.driver.lat,lng:d.driver.lng}; if(!_drvMarker){_drvMarker=new google.maps.Marker({map:_map,position:pos,title:'Your driver',zIndex:99,icon:{path:google.maps.SymbolPath.CIRCLE,scale:10,fillColor:'#9b1fe8',fillOpacity:1,strokeColor:'#fff',strokeWeight:3}});}else _drvMarker.setPosition(pos); }
   computeEta();
   computeArrival();
 }
@@ -271,10 +285,14 @@ function render(d){
   // can spot the car; otherwise the live map leads. Done → receipt/rating lead.
   const arrived=st('arrived')&&!st('started')&&!d.cancelled;
   const done=st('complete')||d.cancelled;
+  // En route but no live GPS yet → tell the client we're waiting for the driver to
+  // move, instead of showing a static pickup/drop-off line (which reads as pointless).
+  const enrouteNoLive=!st('started')&&!st('arrived')&&!d.cancelled&&!(d.driver&&d.driver.live);
+  const waitNote=enrouteNoLive?'<div class="card" style="text-align:center;color:var(--muted);font-size:13px;padding:14px">🔄 Your driver’s live location will appear on the map the moment they set off.</div>':'';
   let bodyHtml;
   if(done) bodyHtml=statusCard+timelineCard+after+driver+mapSlot;
   else if(arrived) bodyHtml=statusCard+driver+mapSlot+timelineCard+route+sosBtn;
-  else bodyHtml=statusCard+mapSlot+timelineCard+driver+route+sosBtn;
+  else bodyHtml=statusCard+mapSlot+waitNote+timelineCard+driver+route+sosBtn;
   // Park the persistent map node out of #app before the innerHTML rewrite, then
   // drop it back into the slot — so the live Google Map is never recreated.
   const wrap=document.querySelector('.wrap'), mc=document.getElementById('mapcard');
