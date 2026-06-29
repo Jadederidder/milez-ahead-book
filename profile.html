@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>Milez Ahead — My profile</title>
+<style>
+  :root{ --navy:#1d2a4d; --teal:#0c8b86; --teal2:#13a89c; --gold:#c79a3b; --ink:#1f2430; --muted:#6b7280; --bg:#f4f1ea; --line:#e7e3da; }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:540px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column}
+  header{background:linear-gradient(135deg,var(--navy),#0c5c5a);color:#fff;padding:24px 22px 26px;border-radius:0 0 22px 22px}
+  header .kick{font-size:11px;letter-spacing:2.5px;text-transform:uppercase;color:var(--gold);font-weight:700}
+  header h1{margin:8px 0 2px;font-size:23px;font-weight:800}
+  header p{margin:0;color:#cfe0e2;font-size:14px}
+  header .bal{margin-top:12px;display:inline-block;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.18);padding:6px 12px;border-radius:999px;font-size:13px;font-weight:700}
+  main{padding:16px 16px 30px;flex:1}
+  .card{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:0 1px 2px rgba(20,30,50,.05),0 8px 24px rgba(20,30,50,.06);padding:16px;margin-bottom:14px}
+  .card h2{margin:0 0 12px;font-size:15px;color:var(--navy)}
+  label.lab{display:block;font-size:12px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.4px;margin:14px 0 6px}
+  label.lab:first-of-type{margin-top:0}
+  input,textarea{width:100%;font:15px inherit;padding:11px 12px;border:1px solid var(--line);border-radius:11px;background:#fff;color:var(--ink)}
+  input:focus,textarea:focus{outline:none;border-color:var(--teal)}
+  input[readonly]{background:#f6f5f1;color:var(--muted)}
+  textarea{min-height:74px;resize:vertical}
+  .hint{font-size:12px;color:var(--muted);margin:5px 0 0}
+  .btn{width:100%;margin-top:16px;padding:14px;border:none;border-radius:12px;background:linear-gradient(135deg,var(--teal),var(--teal2));color:#fff;font-weight:800;font-size:16px}
+  .btn:disabled{opacity:.6}
+  .trip{display:flex;justify-content:space-between;gap:10px;padding:11px 0;border-bottom:1px solid var(--line)}
+  .trip:last-child{border-bottom:none}
+  .trip .when{font-weight:700;color:var(--navy);font-size:14px}
+  .trip .route{font-size:13px;color:var(--muted);margin-top:2px}
+  .pill{font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;white-space:nowrap}
+  .pill.done{background:#e8f5ee;color:#137a45}.pill.live{background:#e7f0ff;color:#1f5fc0}.pill.cxl{background:#fdecec;color:#c0392b}.pill.pend{background:#fff4e0;color:#9a6a08}
+  .fare{font-weight:800;color:var(--navy);font-size:14px;white-space:nowrap}
+  .msg{padding:12px;border-radius:11px;font-size:14px;margin-bottom:12px;text-align:center}
+  .msg.err{background:#fdecec;color:#c0392b}.msg.ok{background:#e8f5ee;color:#137a45}
+  .center{text-align:center;color:var(--muted);padding:40px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="kick">MILEZ AHEAD</div>
+    <h1>My profile</h1>
+    <p id="sub">Loading your details…</p>
+    <span class="bal" id="bal" style="display:none"></span>
+  </header>
+  <main id="main"><div class="center">Loading…</div></main>
+</div>
+<script>
+const FN='https://izslchhcavckowatgbel.supabase.co/functions/v1/client-profile';
+const S=new URLSearchParams(location.search).get('s')||'';
+const esc=s=>(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const money=n=>n==null?'':'R'+Number(n).toFixed(0);
+async function call(payload){const r=await fetch(FN,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({token:S,...payload})});return r.json();}
+function pill(st){const m={completed:['done','Completed'],in_progress:['live','In progress'],driver_confirmed:['live','Driver confirmed'],driver_assigned:['live','Driver allocated'],captured:['pend','Received'],awaiting_driver:['pend','Arranging'],cancelled:['cxl','Cancelled'],no_show:['cxl','No-show']};const[c,l]=m[st]||['pend',st];return `<span class="pill ${c}">${l}</span>`;}
+function fmt(d){if(!d)return '';const dt=new Date(d+'T00:00:00');return dt.toLocaleDateString('en-ZA',{day:'numeric',month:'short',year:'numeric'});}
+
+async function load(){
+  if(!S){show('<div class="msg err">This link is missing its code. Please reopen <b>My profile</b> from WhatsApp.</div>');return;}
+  const r=await call({action:'context'});
+  if(r.error){document.getElementById('sub').textContent='';show('<div class="msg err">'+esc(r.error)+'</div>');return;}
+  const p=r.profile;
+  document.getElementById('sub').textContent=p.full_name?('Hi '+p.full_name.split(' ')[0]+' 👋'):'Welcome';
+  if(r.credits){const b=document.getElementById('bal');b.style.display='inline-block';b.textContent=`🎟 ${r.credits.left} of ${r.credits.total} rides left this year`;}
+  render(p,r.trips||[]);
+}
+function render(p,trips){
+  const tripsHtml=trips.length?trips.map(t=>{
+    const to=t.dropoff_address||t.airport_code||'';const from=(t.pickup_address||'').split(',')[0];
+    return `<div class="trip"><div><div class="when">${fmt(t.trip_date)}${t.pickup_time?' · '+String(t.pickup_time).slice(0,5):''} ${pill(t.status)}</div><div class="route">${esc(from)}${to?' → '+esc(String(to).split(',')[0]):''}</div></div><div class="fare">${money(t.fare)}</div></div>`;
+  }).join(''):'<div class="center">No trips yet.</div>';
+  show(`
+    <div class="card">
+      <h2>Your details</h2>
+      <div class="msg ok" id="saved" style="display:none">Saved ✓</div>
+      <label class="lab">Full name</label><input id="full_name" value="${esc(p.full_name)}">
+      <label class="lab">Email</label><input id="email" type="email" value="${esc(p.email)}" placeholder="you@example.com">
+      <label class="lab">Alternative contact</label><input id="alt_contact" value="${esc(p.alt_contact)}" placeholder="A second number / next of kin">
+      <label class="lab">Special requirements</label><textarea id="special_requirements" placeholder="e.g. wheelchair access · male driver · no music">${esc(p.special_requirements)}</textarea>
+      <div class="hint">Shown to your controller on every trip.</div>
+      <label class="lab">Phone</label><input value="${esc(p.phone)}" readonly>
+      ${p.policy_number?`<label class="lab">Policy number</label><input value="${esc(p.policy_number)}" readonly>`:''}
+      <button class="btn" id="save" onclick="save()">Save my details</button>
+    </div>
+    <div class="card"><h2>My trips</h2>${tripsHtml}</div>
+  `);
+}
+async function save(){
+  const btn=document.getElementById('save');btn.disabled=true;btn.textContent='Saving…';
+  const r=await call({action:'save',
+    full_name:document.getElementById('full_name').value,
+    email:document.getElementById('email').value,
+    alt_contact:document.getElementById('alt_contact').value,
+    special_requirements:document.getElementById('special_requirements').value});
+  btn.disabled=false;btn.textContent='Save my details';
+  const s=document.getElementById('saved');
+  if(r.error){alert(r.error);}else{s.style.display='block';setTimeout(()=>s.style.display='none',2500);}
+}
+function show(html){document.getElementById('main').innerHTML=html;}
+load();
+</script>
+</body>
+</html>
