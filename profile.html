@@ -85,7 +85,7 @@ function render(p,trips){
       ${p.policy_number?`<label class="lab">Policy number</label><input value="${esc(p.policy_number)}" readonly>`:''}
       <button class="btn" id="save" onclick="save()">Save my details</button>
     </div>
-    <div class="card"><h2>My trips</h2>${tripsHtml}${trips.length?'<button class="btn" id="pdfBtn" onclick="savePdf()" style="margin-top:14px;background:var(--navy)">📄 Download my statement (PDF)</button>':''}</div>
+    <div class="card"><h2>My trips</h2>${trips.length?'<button class="btn" id="pdfBtn" onclick="savePdf()" style="margin:0 0 16px;background:var(--navy)">📄 Download my statement (PDF)</button>':''}${tripsHtml}</div>
   `);
 }
 async function savePdf(){
