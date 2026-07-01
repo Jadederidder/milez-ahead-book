@@ -46,7 +46,7 @@
   .cta{width:100%;margin-top:6px;padding:16px;border:0;border-radius:14px;background:linear-gradient(135deg,var(--navy),var(--teal));color:#fff;font-size:16.5px;font-weight:800;cursor:pointer}
   .cta[disabled]{opacity:.5;cursor:default}
   .err{background:#fde9e3;color:#b4441f;border-radius:12px;padding:11px 14px;font-size:13.5px;font-weight:600;margin:12px 0;display:none}
-  .hide{display:none}
+  .hide{display:none !important}
   .foot{padding:16px;text-align:center;color:#9aa1ab;font-size:11.5px}
   .state{padding:60px 24px;text-align:center}.state .em{font-size:42px}.state h2{margin:14px 0 6px;color:var(--navy)}.state p{color:var(--muted)}
   .spin{display:inline-block;width:20px;height:20px;border:2.5px solid rgba(255,255,255,.5);border-top-color:#fff;border-radius:50%;animation:s .7s linear infinite;vertical-align:-4px}@keyframes s{to{transform:rotate(360deg)}}
@@ -87,7 +87,7 @@ let CTX = {}, place = { pickup:null, drop:null };
 const f = {}; // current form values
 
 async function call(payload){ const r = await fetch(FN,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({token:S,...payload})}); return r.json(); }
-function showState(em,t,m){ main.innerHTML = `<div class="state"><div class="em">${em}</div><h2>${t}</h2><p>${m}</p></div>`; }
+function showState(em,t,m){ const s=document.getElementById('sub'); if(s) s.style.display='none'; const b=document.getElementById('bal'); if(b) b.classList.add('hide'); main.innerHTML = `<div class="state"><div class="em">${em}</div><h2>${t}</h2><p>${m}</p></div>`; }
 function esc(s){ return (s||'').replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c])); }
 const haversine=(a,b)=>{const R=6371,d=x=>x*Math.PI/180;const dl=d(b.lat-a.lat),dn=d(b.lng-a.lng);const h=Math.sin(dl/2)**2+Math.cos(d(a.lat))*Math.cos(d(b.lat))*Math.sin(dn/2)**2;return 2*R*Math.asin(Math.sqrt(h));};
 
