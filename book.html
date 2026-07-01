@@ -10,8 +10,11 @@
   body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
   .wrap{max-width:540px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column}
   header{background:linear-gradient(135deg,var(--navy),#0c5c5a);color:#fff;padding:24px 22px 26px;border-radius:0 0 22px 22px}
-  header .kick{font-size:11px;letter-spacing:2.5px;text-transform:uppercase;color:var(--gold);font-weight:700;display:flex;align-items:center;gap:8px}
+  header .kick{font-size:11px;letter-spacing:2.5px;text-transform:uppercase;color:var(--gold);font-weight:700;display:flex;align-items:center;justify-content:space-between;gap:8px}
   header .kick img{height:18px;width:auto;border-radius:3px;background:#fff;padding:1px}
+  .mua-badge{display:inline-flex;flex-direction:column;align-items:center;gap:1px;border:1px solid rgba(199,154,59,.55);border-radius:8px;padding:5px 12px;line-height:1}
+  .mua-badge b{color:var(--gold);font-weight:800;font-size:13px;letter-spacing:.12em}
+  .mua-badge i{color:rgba(199,154,59,.9);font-style:normal;font-size:8px;font-weight:700;letter-spacing:.14em}
   header h1{margin:8px 0 2px;font-size:23px;font-weight:800}
   header p{margin:0;color:#cfe0e2;font-size:14px}
   header .bal{margin-top:12px;display:inline-block;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.18);padding:6px 12px;border-radius:999px;font-size:13px;font-weight:700}
@@ -60,7 +63,7 @@
 <body>
 <div class="wrap">
   <header>
-    <div class="kick"><span>Milez Ahead</span><img id="coLogo" class="hide" alt=""/></div>
+    <div class="kick"><span>Milez Ahead</span><span id="coBadge" class="mua-badge hide"><b>MUA</b><i>Member benefit</i></span></div>
     <h1 id="hi">Book a trip</h1>
     <p id="sub">Loading…</p>
     <div class="bal hide" id="bal"></div>
@@ -291,7 +294,7 @@ window.submit=async()=>{
     document.getElementById('hi').textContent=c.name?`Hi ${esc(c.name.split(' ')[0])} 👋`:'Book a trip';
     document.getElementById('sub').textContent='Tell us about your trip — a few taps.';
     if(c.is_member && c.credits_left!=null){ const b=document.getElementById('bal'); b.textContent=`🎟️ ${c.credits_left} trips left`; b.classList.remove('hide'); }
-    if(c.mua){ const l=document.getElementById('coLogo'); l.src='https://book.milezahead.co.za/mua-logo.png'; l.classList.remove('hide'); l.onerror=()=>l.classList.add('hide'); }
+    if(c.mua){ document.getElementById('coBadge').classList.remove('hide'); }
     render();
   }catch(e){ showState('⚠️','Could not load','Please try the link again in a moment.'); }
 })();
