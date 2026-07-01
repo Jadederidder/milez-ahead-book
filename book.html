@@ -291,7 +291,7 @@ window.submit=async()=>{
     document.getElementById('hi').textContent=c.name?`Hi ${esc(c.name.split(' ')[0])} 👋`:'Book a trip';
     document.getElementById('sub').textContent='Tell us about your trip — a few taps.';
     if(c.is_member && c.credits_left!=null){ const b=document.getElementById('bal'); b.textContent=`🎟️ ${c.credits_left} trips left`; b.classList.remove('hide'); }
-    if(c.mua){ const l=document.getElementById('coLogo'); l.src='https://book.milezahead.co.za/wa/mua-logo.png'; l.classList.remove('hide'); l.onerror=()=>l.classList.add('hide'); }
+    if(c.mua){ const l=document.getElementById('coLogo'); l.src='https://book.milezahead.co.za/mua-logo.png'; l.classList.remove('hide'); l.onerror=()=>l.classList.add('hide'); }
     render();
   }catch(e){ showState('⚠️','Could not load','Please try the link again in a moment.'); }
 })();
