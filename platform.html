@@ -1,0 +1,450 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Milez Ahead · Platform & Stack</title>
+</head>
+<body>
+<style>
+  :root {
+    --navy: #282848;
+    --navyBlue: #1B3A6B;
+    --gold: #C0B070;
+    --goldDeep: #B8860B;
+    --teal: #007880;
+    --tealLit: #12A5A0;
+    --tealDeep: #03616A;
+
+    --bg: #F5F6F9;
+    --surface: #FFFFFF;
+    --ink: #1E1F35;
+    --inkDim: #6E7286;
+    --line: rgba(30, 31, 53, 0.10);
+    --lift: rgba(40, 40, 72, 0.06);
+    --onDark: #F4F1E6;
+    --onDarkDim: #A9B0C7;
+    --lineOnDark: rgba(244, 241, 230, 0.16);
+
+    --mono: ui-monospace, "SF Mono", "Menlo", "Cascadia Code", "Roboto Mono", monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+
+    --skew: -0.46rad;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14151F;
+      --surface: #1E2030;
+      --ink: #ECECF2;
+      --inkDim: #9AA0B4;
+      --line: rgba(255, 255, 255, 0.10);
+      --lift: rgba(0, 0, 0, 0.35);
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #F5F6F9; --surface: #FFFFFF; --ink: #1E1F35; --inkDim: #6E7286;
+    --line: rgba(30,31,53,0.10); --lift: rgba(40,40,72,0.06);
+  }
+  :root[data-theme="dark"] {
+    --bg: #14151F; --surface: #1E2030; --ink: #ECECF2; --inkDim: #9AA0B4;
+    --line: rgba(255,255,255,0.10); --lift: rgba(0,0,0,0.35);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 1060px;
+    margin: 0 auto;
+    padding: clamp(20px, 4vw, 52px) clamp(18px, 4vw, 40px) 72px;
+  }
+
+  /* ── hero ─────────────────────────────────────────── */
+  .hero {
+    position: relative;
+    overflow: hidden;
+    border-radius: 22px;
+    background: linear-gradient(135deg, var(--navy) 0%, var(--navyBlue) 100%);
+    color: var(--onDark);
+    padding: clamp(28px, 5vw, 52px);
+    box-shadow: 0 18px 40px rgba(40, 40, 72, 0.22);
+  }
+  .streaks { position: absolute; inset: 0; pointer-events: none; }
+  .streaks i {
+    position: absolute;
+    height: 8px;
+    border-radius: 3px;
+    transform: skewX(var(--skew));
+    background: linear-gradient(90deg, rgba(192,176,112,0) 0%, rgba(192,176,112,0.5) 100%);
+  }
+  .streaks i:nth-child(1) { top: 20%; left: 55%; width: 46%; opacity: .5; }
+  .streaks i:nth-child(2) { top: 44%; left: 66%; width: 40%; height: 10px; opacity: .3; }
+  .streaks i:nth-child(3) { top: 70%; left: 60%; width: 34%; height: 6px; opacity: .38; }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--gold);
+    margin: 0 0 18px;
+  }
+  .hero h1 {
+    position: relative;
+    margin: 0;
+    font-size: clamp(30px, 5.6vw, 52px);
+    line-height: 1.02;
+    letter-spacing: -0.03em;
+    font-weight: 800;
+    text-wrap: balance;
+    max-width: 16ch;
+  }
+  .hero p {
+    position: relative;
+    margin: 20px 0 0;
+    max-width: 54ch;
+    font-size: clamp(15px, 1.9vw, 18px);
+    color: var(--onDarkDim);
+    line-height: 1.55;
+  }
+  .hero .badges {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 26px;
+  }
+  .badge {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    color: var(--onDark);
+    padding: 6px 11px;
+    border: 1px solid var(--lineOnDark);
+    border-radius: 999px;
+    background: rgba(0,0,0,0.13);
+  }
+  .badge b { color: var(--gold); font-weight: 700; }
+
+  /* ── section headers ──────────────────────────────── */
+  .shead {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin: 52px 0 20px;
+  }
+  .shead .n {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--goldDeep);
+    letter-spacing: 0.08em;
+  }
+  .shead h2 {
+    margin: 0;
+    font-size: clamp(18px, 2.6vw, 24px);
+    letter-spacing: -0.02em;
+    font-weight: 800;
+  }
+  .shead .rule { flex: 1; height: 1px; background: var(--line); align-self: center; }
+
+  /* ── stack grid ───────────────────────────────────── */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 14px;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 20px 20px 22px;
+    box-shadow: 0 6px 18px var(--lift);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .card .tag {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--inkDim);
+  }
+  .card h3 {
+    margin: 2px 0 0;
+    font-size: 17px;
+    letter-spacing: -0.01em;
+    font-weight: 700;
+  }
+  .card h3 .tech {
+    display: block;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    font-weight: 500;
+    letter-spacing: 0;
+    color: var(--goldDeep);
+    margin-top: 4px;
+  }
+  .card p {
+    margin: 4px 0 0;
+    font-size: 13.5px;
+    color: var(--inkDim);
+    line-height: 1.5;
+  }
+
+  /* the spine — thesis card, navy treatment */
+  .card.spine {
+    grid-column: 1 / -1;
+    background: linear-gradient(135deg, var(--navy) 0%, var(--navyBlue) 100%);
+    border: none;
+    color: var(--onDark);
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 12px 30px rgba(40,40,72,0.2);
+  }
+  .card.spine .tag { color: var(--gold); }
+  .card.spine h3 { color: var(--onDark); font-size: 20px; }
+  .card.spine p { color: var(--onDarkDim); max-width: 62ch; font-size: 14.5px; }
+  .card.spine .streaks i:nth-child(1) { top: 24%; left: 68%; width: 34%; opacity: .34; }
+  .card.spine .streaks i:nth-child(2) { top: 62%; left: 74%; width: 26%; opacity: .2; }
+
+  /* ── integrations row ─────────────────────────────── */
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .chip {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px 15px;
+    box-shadow: 0 4px 12px var(--lift);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 150px;
+    flex: 1 1 150px;
+  }
+  .chip .svc { font-weight: 700; font-size: 14px; letter-spacing: -0.01em; }
+  .chip .role { font-family: var(--mono); font-size: 11px; color: var(--inkDim); letter-spacing: 0.02em; }
+
+  /* ── flow strip ───────────────────────────────────── */
+  .flow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: 0;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    overflow: hidden;
+    background: var(--surface);
+    box-shadow: 0 6px 18px var(--lift);
+  }
+  .flow .node {
+    flex: 1 1 150px;
+    padding: 16px 18px;
+    border-right: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .flow .node:last-child { border-right: none; }
+  .flow .who {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--tealDeep);
+  }
+  .flow .what { font-size: 13.5px; font-weight: 600; }
+  .flow .via { font-size: 11.5px; color: var(--inkDim); }
+
+  footer {
+    margin-top: 56px;
+    padding-top: 20px;
+    border-top: 1px solid var(--line);
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    color: var(--inkDim);
+    text-transform: uppercase;
+  }
+  footer .mark { color: var(--goldDeep); font-weight: 700; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .card, .chip, .flow { animation: rise .5s cubic-bezier(.2,.7,.3,1) both; }
+    .grid .card:nth-child(2) { animation-delay: .04s; }
+    .grid .card:nth-child(3) { animation-delay: .08s; }
+    .grid .card:nth-child(4) { animation-delay: .12s; }
+    .grid .card:nth-child(5) { animation-delay: .16s; }
+    @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  }
+</style>
+
+<div class="wrap">
+
+  <header class="hero">
+    <div class="streaks" aria-hidden="true"><i></i><i></i><i></i></div>
+    <p class="eyebrow">Milez Ahead · Platform</p>
+    <h1>One platform, three ways in, one set of rules.</h1>
+    <p>A control room, a driver app, and WhatsApp for members — all speaking to a single secure database that decides who can see what. Built on standard, portable, enterprise-grade parts.</p>
+    <div class="badges">
+      <span class="badge"><b>PostgreSQL 17</b></span>
+      <span class="badge"><b>Flutter</b> · iOS + Android</span>
+      <span class="badge"><b>React</b> · TypeScript</span>
+      <span class="badge"><b>WhatsApp</b> · Meta Cloud API</span>
+      <span class="badge">Multi-tenant</span>
+    </div>
+  </header>
+
+  <div class="shead">
+    <span class="n">01</span>
+    <h2>The stack, layer by layer</h2>
+    <span class="rule"></span>
+  </div>
+
+  <div class="grid">
+
+    <div class="card spine">
+      <div class="streaks" aria-hidden="true"><i></i><i></i></div>
+      <span class="tag">The spine</span>
+      <h3>Security lives in the database, not the app</h3>
+      <p>Every table is governed by row-level security, and the business logic — pricing, credit balances, driver payouts, allocation — runs as functions inside the database. An insurer can only ever read their own trips; a driver only their own jobs. All three apps get the same answer, and none of them can bypass the rules. Access control isn't something a screen decides.</p>
+    </div>
+
+    <div class="card">
+      <span class="tag">Database</span>
+      <h3>Managed PostgreSQL<span class="tech">Postgres 17 · Supabase</span></h3>
+      <p>A full, standard Postgres database on enterprise infrastructure. Nothing proprietary locked inside — the schema and logic are portable SQL.</p>
+    </div>
+
+    <div class="card">
+      <span class="tag">Control room</span>
+      <h3>Dispatch console<span class="tech">React · TypeScript · Cloudflare</span></h3>
+      <p>Where the team allocates drivers, tracks trips live and manages members. Served on Cloudflare and gated behind Cloudflare Access.</p>
+    </div>
+
+    <div class="card">
+      <span class="tag">Driver</span>
+      <h3>Native driver app<span class="tech">Flutter · iOS + Android</span></h3>
+      <p>One codebase, native on both platforms. Drivers sign in with their cell number and a one-time SMS PIN — no passwords to leak or reset.</p>
+    </div>
+
+    <div class="card">
+      <span class="tag">Member</span>
+      <h3>WhatsApp channel<span class="tech">Meta Cloud API · 360dialog</span></h3>
+      <p>Members book, get driver details and live tracking, and rate their trip — all in WhatsApp, on approved message templates.</p>
+    </div>
+
+    <div class="card">
+      <span class="tag">Logic</span>
+      <h3>Serverless functions<span class="tech">Deno · TypeScript</span></h3>
+      <p>Anything that must not run on a phone — sending messages, payment links, allocation — runs server-side, close to the database.</p>
+    </div>
+
+    <div class="card">
+      <span class="tag">Delivery</span>
+      <h3>Automated releases<span class="tech">GitHub Actions · CI/CD</span></h3>
+      <p>Console, database changes and functions all deploy on merge. Every change is reviewed and traceable to a single commit.</p>
+    </div>
+
+  </div>
+
+  <div class="shead">
+    <span class="n">02</span>
+    <h2>A member's trip, end to end</h2>
+    <span class="rule"></span>
+  </div>
+
+  <div class="flow">
+    <div class="node">
+      <span class="who">Member</span>
+      <span class="what">Books on WhatsApp</span>
+      <span class="via">Meta · 360dialog</span>
+    </div>
+    <div class="node">
+      <span class="who">Control room</span>
+      <span class="what">Allocates a driver</span>
+      <span class="via">React console</span>
+    </div>
+    <div class="node">
+      <span class="who">Driver</span>
+      <span class="what">Accepts & drives</span>
+      <span class="via">Flutter app</span>
+    </div>
+    <div class="node">
+      <span class="who">Member</span>
+      <span class="what">Live tracking + updates</span>
+      <span class="via">WhatsApp</span>
+    </div>
+    <div class="node">
+      <span class="who">System</span>
+      <span class="what">Trip logged & audited</span>
+      <span class="via">Postgres</span>
+    </div>
+  </div>
+
+  <div class="shead">
+    <span class="n">03</span>
+    <h2>What it plugs into</h2>
+    <span class="rule"></span>
+  </div>
+
+  <div class="chips">
+    <div class="chip"><span class="svc">Paystack</span><span class="role">Card payments</span></div>
+    <div class="chip"><span class="svc">Firebase</span><span class="role">Driver push</span></div>
+    <div class="chip"><span class="svc">Google Directions</span><span class="role">Routing &amp; ETAs</span></div>
+    <div class="chip"><span class="svc">BulkSMS</span><span class="role">Login one-time PINs</span></div>
+    <div class="chip"><span class="svc">Cloudflare</span><span class="role">Hosting &amp; access</span></div>
+  </div>
+
+  <div class="shead">
+    <span class="n">04</span>
+    <h2>Built to grow</h2>
+    <span class="rule"></span>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <span class="tag">Multi-tenant</span>
+      <h3>One platform, many partners</h3>
+      <p>Each insurer or partner program carries its own rate card, branding and reporting — all off the same shared infrastructure.</p>
+    </div>
+    <div class="card">
+      <span class="tag">Accountability</span>
+      <h3>Every trip has a paper trail</h3>
+      <p>An append-only audit history on each trip records who changed what, and when. Nothing edited quietly disappears.</p>
+    </div>
+    <div class="card">
+      <span class="tag">Portable</span>
+      <h3>Nothing locked in a black box</h3>
+      <p>Schema, logic and security policies are all versioned SQL in source control — the whole system is rebuildable from code.</p>
+    </div>
+  </div>
+
+  <footer>
+    <span><span class="mark">Milez Ahead</span> · Platform overview</span>
+    <span>Powered by Project Help</span>
+  </footer>
+
+</div>
+</body>
+</html>
