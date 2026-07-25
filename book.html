@@ -125,7 +125,7 @@ function render(){
         <select id="thour"><option value="">Hr</option>${Array.from({length:24},(_,i)=>String(i).padStart(2,'0')).map(h=>`<option>${h}</option>`).join('')}</select>
         <select id="tmin"><option value="">Min</option>${['00','15','30','45'].map(m=>`<option>${m}</option>`).join('')}</select>
       </div></div></div>
-      <div class="field"><label class="lab">Pick-up address</label><div class="acwrap"><input type="text" id="pickup" placeholder="Start typing your address…" autocomplete="off"></div></div>
+      <div class="field"><label class="lab" id="pickupLab">${isAir && f.direction==='arrival' ? 'Drop-off address' : 'Pick-up address'}</label><div class="acwrap"><input type="text" id="pickup" placeholder="Start typing your address…" autocomplete="off"></div></div>
       <div class="field ${isAir?'hide':''}" id="dropWrap"><label class="lab">Drop-off address</label><div class="acwrap"><input type="text" id="drop" placeholder="Where to?" autocomplete="off"></div></div>
       <div class="${isAir?'':'hide'}" id="airWrap">
         <div class="field"><label class="lab">Airport</label><select id="airport">${airOpts}</select></div>
@@ -177,7 +177,7 @@ function render(){
 }
 
 window.setSvc=(s)=>{ f.service=s; render(); };
-window.setDir=(d)=>{ f.direction=d; document.getElementById('dirArr').classList.toggle('sel',d==='arrival'); document.getElementById('dirDep').classList.toggle('sel',d==='departure'); };
+window.setDir=(d)=>{ f.direction=d; document.getElementById('dirArr').classList.toggle('sel',d==='arrival'); document.getElementById('dirDep').classList.toggle('sel',d==='departure'); const lab=document.getElementById('pickupLab'); if(lab) lab.textContent = d==='arrival' ? 'Drop-off address' : 'Pick-up address'; };
 window.setSz=(z)=>{ f.size=z; document.querySelectorAll('.szb').forEach(b=>b.classList.toggle('sel',b.dataset.sz===z)); };
 window.tog=(el)=>{ el.classList.toggle('sel'); };
 window.rebook=(i)=>{ if(i==='')return; const t=(window.RECF||[])[i]; if(!t)return; const p=document.getElementById('pickup'),d=document.getElementById('drop'); if(p&&t.pickup)p.value=t.pickup; if(d&&t.dropoff)d.value=t.dropoff; };
@@ -260,7 +260,7 @@ window.submit=async()=>{
   const isAir=f.service==='airport';
   const pickupEl=document.getElementById('pickup');
   const pickup=(pickupEl.dataset.full||pickupEl.value.trim());
-  if(!pickup){ err.textContent='Please enter a pick-up address.'; err.style.display='block'; return; }
+  if(!pickup){ err.textContent=(isAir && (f.direction||'arrival')==='arrival') ? 'Please enter the drop-off (destination) address.' : 'Please enter a pick-up address.'; err.style.display='block'; return; }
   if(!document.getElementById('thour').value){ err.textContent='Please choose a pick-up time.'; err.style.display='block'; return; }
   if(isAir){
     if(!document.getElementById('airport').value){ err.textContent='Please choose the airport.'; err.style.display='block'; return; }
@@ -281,7 +281,20 @@ window.submit=async()=>{
     indemnity_accepted:true,
     add_escort:!!document.getElementById('escort')?.checked, policy_number:CTX.policy_number||undefined,
   };
-  if(isAir){ booking.airport_code=document.getElementById('airport').value; booking.direction=f.direction||'arrival'; booking.flight_number=document.getElementById('flight').value||undefined; }
+  if(isAir){
+    booking.airport_code=document.getElementById('airport').value; booking.direction=f.direction||'arrival'; booking.flight_number=document.getElementById('flight').value||undefined;
+    // Mirror the console: one leg is the airport (from the dropdown), the other is
+    // the client's own address (the box above). For an ARRIVAL the airport is the
+    // pickup and the box is the destination — so it MUST be captured as the drop-off,
+    // otherwise the trip has no destination and a later rebook has nothing to pre-fill.
+    const airSel=document.getElementById('airport'); const airLabel=(airSel.options[airSel.selectedIndex]&&airSel.options[airSel.selectedIndex].text)||booking.airport_code;
+    if(booking.direction==='arrival'){
+      booking.dropoff_address=pickup; booking.dropoff_lat=place.pickup?.lat??null; booking.dropoff_lng=place.pickup?.lng??null;
+      booking.pickup_address=airLabel; booking.pickup_lat=null; booking.pickup_lng=null;
+    } else {
+      booking.dropoff_address=airLabel; booking.dropoff_lat=null; booking.dropoff_lng=null;
+    }
+  }
   else { const dropEl=document.getElementById('drop'); booking.dropoff_address=(dropEl.dataset.full||dropEl.value.trim())||undefined; booking.dropoff_lat=place.drop?.lat??null; booking.dropoff_lng=place.drop?.lng??null; }
   if(f.service==='drive_home'){ booking.client_vehicle_make=document.getElementById('vmake').value||null; booking.client_vehicle_model=document.getElementById('vmodel').value||null; booking.client_vehicle_colour=document.getElementById('vcolour').value||null; booking.client_vehicle_reg=document.getElementById('vreg').value||null; }
   go.disabled=true; go.innerHTML='<span class="spin"></span>';
