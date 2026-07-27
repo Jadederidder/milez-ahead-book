@@ -81,7 +81,7 @@ const MAPS_KEY = 'AIzaSyAtZvXbiV8BhpC_6dENVYrxoNWdPJlwNiM';
 const AIRPORTS =[['CPT','Cape Town (CPT)'],['JNB','O.R. Tambo (JNB)'],['HLA','Lanseria (HLA)'],['DUR','King Shaka (DUR)'],['PLZ','Gqeberha (PLZ)'],['GRJ','George (GRJ)'],['BFN','Bloemfontein (BFN)'],['ELS','East London (ELS)']];
 const SERVICES = [
   ['airport','Airport','transfer to/from'],['drive_home','Home Safe','drive me & my car home'],
-  ['chauffeur','Chauffeur','executive drive'],['convenient','Convenient','everyday driver'],
+  ['convenient','Convenient','everyday driver'],
   ['manage_booking','Private / Card','pay by card'],['trauma','Other','treatment / medical']
 ];
 const qs = new URLSearchParams(location.search); const S = qs.get('s') || '';
@@ -180,7 +180,7 @@ window.setSvc=(s)=>{ f.service=s; render(); };
 window.setDir=(d)=>{ f.direction=d; document.getElementById('dirArr').classList.toggle('sel',d==='arrival'); document.getElementById('dirDep').classList.toggle('sel',d==='departure'); const lab=document.getElementById('pickupLab'); if(lab) lab.textContent = d==='arrival' ? 'Drop-off address' : 'Pick-up address'; };
 window.setSz=(z)=>{ f.size=z; document.querySelectorAll('.szb').forEach(b=>b.classList.toggle('sel',b.dataset.sz===z)); };
 window.tog=(el)=>{ el.classList.toggle('sel'); };
-window.rebook=(i)=>{ if(i==='')return; const t=(window.RECF||[])[i]; if(!t)return; const p=document.getElementById('pickup'),d=document.getElementById('drop'); if(p&&t.pickup)p.value=t.pickup; if(d&&t.dropoff)d.value=t.dropoff; };
+window.rebook=(i)=>{ if(i==='')return; const t=(window.RECF||[])[i]; if(!t)return; const p=document.getElementById('pickup'),d=document.getElementById('drop'); if(p&&t.pickup){p.value=t.pickup;p.dataset.full=t.pickup;} if(d&&t.dropoff){d.value=t.dropoff;d.dataset.full=t.dropoff;} };
 
 // Modern, lightweight address autocomplete via the Places API (New) over fetch
 // + a custom dropdown — no heavy Maps SDK, no deprecated component (which crashed
@@ -243,10 +243,11 @@ async function pick(s, input, which, box){
     const pd=await r.json();
     if(pd.location){ place[which]={lat:pd.location.latitude,lng:pd.location.longitude}; }
     if(pd.formattedAddress){
-      // Keep the FULL address for the driver/back-office, but SHOW the recognisable
-      // first part (street/place) so the box doesn't scroll to "…7551, South Africa".
+      // Show the FULL address the client picked so they can see it's correct — only
+      // trim the redundant ", South Africa" (and any trailing postcode) tail so the
+      // box reads cleanly. The complete address is also kept for the driver/back-office.
       input.dataset.full=pd.formattedAddress;
-      input.value=pd.formattedAddress.split(',')[0].trim()||pd.formattedAddress;
+      input.value=pd.formattedAddress.replace(/,?\s*South Africa\s*$/i,'').replace(/,\s*\d{4}\s*$/,'').trim()||pd.formattedAddress;
     }
     updatePreview();
   }catch(_){}
