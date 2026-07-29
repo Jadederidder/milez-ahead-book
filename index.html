@@ -16,6 +16,12 @@
   .field { width:100%; border:1px solid #d8dee9; border-radius:.625rem; padding:.65rem .85rem; font-size:.95rem; outline:none; transition:border-color .15s, box-shadow .15s; }
   .field:focus { border-color: var(--teal); box-shadow:0 0 0 3px rgba(0,120,128,.12); }
   .lbl { display:block; font-size:.75rem; font-weight:600; color:#475569; margin-bottom:.3rem; }
+  .req { color:#dc2626; font-weight:700; }
+  .agent-card { background:var(--navy); border:1px solid #24365e; border-radius:.9rem; padding:1rem 1.1rem; }
+  .agent-card .lbl { color:#e5eaf3; }
+  .agent-card .field { background:#fff; color:#0f172a; border-color:#33436b; }
+  .agent-card .field:focus { border-color: var(--gold); box-shadow:0 0 0 3px rgba(192,176,112,.25); }
+  .agent-card .field::placeholder { color:#94a3b8; }
 </style>
 </head>
 <body class="min-h-screen bg-slate-50 text-slate-800">
@@ -60,9 +66,10 @@
         </div>
 
         <div class="grid gap-4 sm:grid-cols-2">
-          <label><span class="lbl">Full name *</span><input name="full_name" class="field" required placeholder="Jane Doe" /></label>
-          <label><span class="lbl">Mobile *</span><input name="phone" class="field" required placeholder="082 123 4567" autocomplete="tel" /></label>
+          <label><span class="lbl">Full name <span class="req">*</span></span><input name="full_name" class="field" required placeholder="Jane Doe" /></label>
+          <label><span class="lbl">Mobile <span class="req">*</span></span><input name="phone" class="field" required placeholder="082 123 4567" autocomplete="tel" /></label>
         </div>
+        <label class="block"><span class="lbl">Alternative contact number <span class="font-normal text-slate-400">— optional</span></span><input name="alt_phone" type="tel" class="field" placeholder="Another number we can reach" autocomplete="tel" /></label>
         <p id="welcome" class="hidden -mt-2 flex items-center gap-1.5 text-xs font-medium text-emerald-600"></p>
         <label class="block"><span class="lbl">Email</span><input name="email" type="email" class="field" placeholder="you@email.com" /></label>
         <label class="block">
@@ -71,6 +78,8 @@
           <span class="mt-1 block text-xs text-slate-400">If your travel is covered by a programme, enter your policy number. Otherwise just leave it blank.</span>
         </label>
 
+        <label class="block"><span class="lbl">ID number <span class="font-normal text-slate-400">— optional</span></span><input name="id_number" class="field" placeholder="e.g. 8501015800089" autocomplete="off" inputmode="numeric" /></label>
+
         <label class="block">
           <span class="lbl">Voucher / gift code <span class="font-normal text-slate-400">— optional</span></span>
           <input name="code" id="code" class="field" placeholder="e.g. MA-XXXXXX" autocomplete="off" autocapitalize="characters" style="text-transform:uppercase" />
@@ -78,8 +87,8 @@
         </label>
 
         <div class="grid gap-4 sm:grid-cols-2">
-          <label><span class="lbl">Date *</span><input name="trip_date" type="date" class="field" required /></label>
-          <label><span class="lbl">Pickup time</span><input name="pickup_time" type="time" class="field" /></label>
+          <label><span class="lbl">Date <span class="req">*</span></span><input name="trip_date" type="date" class="field" required /></label>
+          <label><span class="lbl">Pickup time <span class="req">*</span></span><input name="pickup_time" type="time" class="field" required /></label>
         </div>
 
         <div id="airportPick" class="hidden rounded-xl border border-slate-200 bg-slate-50/60 p-3">
@@ -91,23 +100,21 @@
           <select id="airportSel" class="field mt-2"><option value="">Select airport…</option></select>
         </div>
 
-        <label class="block"><span class="lbl">Pickup address *</span><input name="pickup_address" class="field" required placeholder="Where should we collect you?" /></label>
-        <label class="block"><span class="lbl">Drop-off address *</span><input name="dropoff_address" class="field" required placeholder="Where are you going?" /></label>
+        <label class="block"><span class="lbl">Pickup address <span class="req">*</span></span><input name="pickup_address" class="field" required placeholder="Where should we collect you?" /></label>
+        <label class="block"><span class="lbl">Drop-off address <span class="req">*</span></span><input name="dropoff_address" class="field" required placeholder="Where are you going?" /></label>
 
         <div class="grid gap-4 sm:grid-cols-3">
-          <label><span class="lbl">Passengers</span><input name="passengers" type="number" min="1" value="1" class="field" /></label>
-          <label><span class="lbl">Luggage</span><input name="luggage" type="number" min="0" value="0" class="field" /></label>
+          <label><span class="lbl">Passengers <span class="req">*</span></span><input name="passengers" type="number" min="1" class="field" required placeholder="How many?" /></label>
+          <label><span class="lbl">Luggage <span class="req">*</span></span><input name="luggage" type="number" min="0" class="field" required placeholder="— (0 if none)" /></label>
           <label><span class="lbl">Flight no.</span><input name="flight_number" class="field" placeholder="e.g. BA6321" /></label>
         </div>
 
         <label class="block"><span class="lbl">Notes for the driver</span><textarea name="notes" rows="2" class="field" placeholder="Anything we should know?"></textarea></label>
 
-        <label class="block"><span class="lbl">Alternative contact number <span class="font-normal text-slate-400">— optional</span></span><input name="alt_phone" type="tel" class="field" placeholder="Another number we can reach" autocomplete="tel" /></label>
-
-        <label class="block">
-          <span class="lbl">Your cell number <span class="font-normal text-slate-400">— if you're booking for someone</span></span>
-          <input name="agent_phone" type="tel" class="field" placeholder="082 123 4567" autocomplete="off" />
-          <span class="mt-1 block text-xs text-slate-400">We’ll send you a copy of the booking confirmation as proof.</span>
+        <label class="agent-card block">
+          <span class="lbl">Booking on behalf of someone else?</span>
+          <span class="mb-2 block text-xs leading-snug text-white/70">If this trip is for a friend, family member or colleague, add <span class="font-semibold text-white/90">your own</span> cell number here — we’ll send you a copy of the booking confirmation as proof.</span>
+          <input name="agent_phone" type="tel" class="field" placeholder="Your cell number — 082 123 4567" autocomplete="off" />
         </label>
 
         <label id="indemnityWrap" class="flex items-start gap-2.5 rounded-xl border border-slate-200 bg-slate-50/60 p-3 text-xs leading-snug text-slate-600">
@@ -193,6 +200,14 @@
   const errEl = document.getElementById('error')
   const btn = document.getElementById('submit')
   const welcome = document.getElementById('welcome')
+
+  // Native `required` blocks submit with the browser's own prompt. On top of that,
+  // paint any field the browser flags on submit with a red border so the empty
+  // required field is obvious at a glance, and clear it once the client fixes it.
+  form.querySelectorAll('input, select, textarea').forEach((el) => {
+    el.addEventListener('invalid', () => { el.style.borderColor = '#dc2626' })
+    el.addEventListener('input', () => { if (el.checkValidity()) el.style.borderColor = '' })
+  })
   const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
   const SVC_LABEL = { airport: 'Airport', drive_home: 'Drive home', manage_booking: 'Private' }
 
@@ -297,15 +312,20 @@
     const payload = Object.fromEntries(fd.entries())
     payload.service_type = service
     payload.indemnity_accepted = true // captured at booking — see terms acknowledgment
-    // Fold the optional alternative contact number into the driver notes so the
-    // controller sees it (book-trip stores notes as booking_notes). agent_phone is
-    // sent as-is — book-trip cc's that broker on the confirmation.
+    // Fold the optional alternative contact number and ID number into the driver
+    // notes so the controller sees them (book-trip stores notes as booking_notes).
+    // agent_phone is sent as-is — book-trip cc's that broker on the confirmation.
     const altPhone = (payload.alt_phone || '').trim()
-    if (altPhone) {
+    const idNumber = (payload.id_number || '').trim()
+    const prefix = []
+    if (idNumber) prefix.push('ID: ' + idNumber)
+    if (altPhone) prefix.push('Alt contact: ' + altPhone)
+    if (prefix.length) {
       const rest = (payload.notes || '').trim()
-      payload.notes = 'Alt contact: ' + altPhone + (rest ? ' · ' + rest : '')
+      payload.notes = prefix.join(' · ') + (rest ? ' · ' + rest : '')
     }
     delete payload.alt_phone
+    delete payload.id_number
     // Use the live field value, falling back to the last text we saw it hold
     // (guards against the autocomplete blanking the field after a selection).
     const pickup = (form.pickup_address.value || pickupText || '').trim()
