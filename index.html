@@ -102,6 +102,14 @@
 
         <label class="block"><span class="lbl">Notes for the driver</span><textarea name="notes" rows="2" class="field" placeholder="Anything we should know?"></textarea></label>
 
+        <label class="block"><span class="lbl">Alternative contact number <span class="font-normal text-slate-400">— optional</span></span><input name="alt_phone" type="tel" class="field" placeholder="Another number we can reach" autocomplete="tel" /></label>
+
+        <label class="block">
+          <span class="lbl">Your cell number <span class="font-normal text-slate-400">— if you're booking for someone</span></span>
+          <input name="agent_phone" type="tel" class="field" placeholder="082 123 4567" autocomplete="off" />
+          <span class="mt-1 block text-xs text-slate-400">We’ll send you a copy of the booking confirmation as proof.</span>
+        </label>
+
         <label id="indemnityWrap" class="flex items-start gap-2.5 rounded-xl border border-slate-200 bg-slate-50/60 p-3 text-xs leading-snug text-slate-600">
           <input id="indemnity" type="checkbox" class="mt-0.5 h-4 w-4 shrink-0" style="accent-color:var(--teal)" />
           <span>I confirm my vehicle is adequately insured, including cover for authorised third-party drivers such as Milez Ahead chauffeurs. I accept that Milez Ahead and its service providers are not liable for any loss, damage or delay arising from the service, except in the case of gross negligence or intentional misconduct.</span>
@@ -289,6 +297,15 @@
     const payload = Object.fromEntries(fd.entries())
     payload.service_type = service
     payload.indemnity_accepted = true // captured at booking — see terms acknowledgment
+    // Fold the optional alternative contact number into the driver notes so the
+    // controller sees it (book-trip stores notes as booking_notes). agent_phone is
+    // sent as-is — book-trip cc's that broker on the confirmation.
+    const altPhone = (payload.alt_phone || '').trim()
+    if (altPhone) {
+      const rest = (payload.notes || '').trim()
+      payload.notes = 'Alt contact: ' + altPhone + (rest ? ' · ' + rest : '')
+    }
+    delete payload.alt_phone
     // Use the live field value, falling back to the last text we saw it hold
     // (guards against the autocomplete blanking the field after a selection).
     const pickup = (form.pickup_address.value || pickupText || '').trim()
