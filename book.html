@@ -113,7 +113,7 @@ function render(){
   // silently changes the trip type.
   window.RECF=(CTX.recent||[]).filter(t=>t.service_type===f.service);
   const svcLabel=(SERVICES.find(s=>s[0]===f.service)||[])[1]||'';
-  const recent = RECF.length ? `<div class="field"><label class="lab">Rebook a recent ${esc(svcLabel)} trip</label><select id="rebook" onchange="rebook(this.value)"><option value="">New trip</option>${RECF.map((t,i)=>`<option value="${i}">${esc(t.label)}</option>`).join('')}</select></div>`:'';
+  const recent = RECF.length ? `<div class="field"><label class="lab">Rebook a recent ${esc(svcLabel)} trip</label><select id="rebook" onchange="rebook(this.value)"><option value="">New trip (tap to see recent trips)</option>${RECF.map((t,i)=>`<option value="${i}">${esc(t.label)}</option>`).join('')}</select></div>`:'';
   main.innerHTML = `
     <div class="card">
       <label class="lab">Service</label><div class="svc">${svcBtns}</div>
@@ -158,6 +158,7 @@ function render(){
         <div class="field"><label class="lab">Driver preference</label><select id="driverSex"><option value="">No preference</option><option value="female">Female driver</option><option value="male">Male driver</option></select></div>
         <div class="field"><label class="lab">Vehicle</label><select id="vehClass"><option value="">No preference</option><option value="sedan">Sedan</option><option value="suv">SUV</option><option value="7seater">7-Seater / group</option></select></div>
       </div>
+      <div class="field"><label class="lab">Alternative contact number <span style="font-weight:500;text-transform:none;color:#9aa1ab">(optional)</span></label><input type="tel" id="altphone" inputmode="tel" placeholder="e.g. 082 123 4567"></div>
       <div class="field"><label class="lab">Notes <span style="font-weight:500;text-transform:none;color:#9aa1ab">(optional)</span></label><textarea id="notes" placeholder="Anything we should know?"></textarea></div>
       ${CTX.escort_enabled?`<div class="field"><label class="lab">Security (optional)</label>
         <label class="escort"><input type="checkbox" id="escort">
@@ -276,7 +277,7 @@ window.submit=async()=>{
     service_type:f.service, trip_date:document.getElementById('date').value, pickup_time:(document.getElementById('thour').value?`${document.getElementById('thour').value}:${document.getElementById('tmin').value||'00'}`:undefined),
     passengers:+document.getElementById('pax').value||1, luggage:+document.getElementById('bags').value||0, luggage_size:f.size||'small',
     pickup_address:pickup, pickup_lat:place.pickup?.lat??null, pickup_lng:place.pickup?.lng??null,
-    special_items:special, notes:document.getElementById('notes').value||undefined,
+    special_items:special, notes:[((document.getElementById('altphone').value||'').trim()?('Alt contact: '+document.getElementById('altphone').value.trim()):''),(document.getElementById('notes').value||'').trim()].filter(Boolean).join(' · ')||undefined,
     requested_driver_id:document.getElementById('driver').value||null,
     driver_sex_pref:document.getElementById('driverSex').value||null,
     vehicle_class_pref:document.getElementById('vehClass').value||null,
