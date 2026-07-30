@@ -152,7 +152,7 @@
             </select></label>
         </div>
 
-        <label class="flex items-start gap-2.5 rounded-xl border border-slate-200 bg-slate-50/60 p-3">
+        <label id="escortBlock" class="flex items-start gap-2.5 rounded-xl border border-slate-200 bg-slate-50/60 p-3" style="display:none">
           <input id="escort" name="add_escort" type="checkbox" class="mt-0.5 h-4 w-4 shrink-0" style="accent-color:var(--teal)" />
           <span class="text-xs leading-snug text-slate-600">
             <span class="font-semibold text-slate-800">🛡️ Add armed escort <span style="color:var(--gold)">— from R995 / hr</span></span><br />
@@ -187,6 +187,27 @@
 <script>
   const FN_URL = 'https://izslchhcavckowatgbel.supabase.co/functions/v1/book-trip'
   const ANON = 'sb_publishable_ITCnCcqKXF56UearfrSBYg_SXy3QtE8'
+
+  // Armed Escort is a paid add-on that can be turned OFF in Admin → Fees. This
+  // page has no booking token, so it asks book-trip for the one UI flag and shows
+  // the escort block ONLY when it's on — mirroring book.html's CTX.escort_enabled
+  // gate. The block starts hidden (display:none) so it never flashes before the
+  // flag resolves; if the fetch fails we leave it hidden (safer than offering a
+  // paid add-on that's switched off).
+  ;(async () => {
+    try {
+      const res = await fetch(FN_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': ANON, 'Authorization': 'Bearer ' + ANON },
+        body: JSON.stringify({ config: true }),
+      })
+      const cfg = await res.json()
+      if (cfg && cfg.escort_enabled === true) {
+        const block = document.getElementById('escortBlock')
+        if (block) block.style.display = ''
+      }
+    } catch { /* leave escort hidden on any failure */ }
+  })()
 
   let service = 'airport'
   const svcBtns = [...document.querySelectorAll('.svc')]
@@ -401,7 +422,11 @@
     // same FlowBooking field names every other channel uses, so a web booking is
     // byte-identical to a WhatsApp one.
     payload.luggage_size = luggageSize
-    payload.add_escort = !!document.getElementById('escort')?.checked
+    // Only ever send add_escort=true when the escort block is actually shown
+    // (feature on) AND ticked — never when the add-on is switched off.
+    const escortBlock = document.getElementById('escortBlock')
+    const escortShown = !!escortBlock && escortBlock.style.display !== 'none'
+    payload.add_escort = escortShown && !!document.getElementById('escort')?.checked
     payload.special_items = chipBtns.filter(b => b.dataset.on === '1').map(b => b.dataset.v)
     if (!payload.driver_sex_pref) delete payload.driver_sex_pref
     if (!payload.vehicle_class_pref) delete payload.vehicle_class_pref
