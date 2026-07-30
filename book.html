@@ -22,7 +22,7 @@
   .card{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:0 1px 2px rgba(20,30,50,.05),0 8px 24px rgba(20,30,50,.06);padding:16px;margin-bottom:14px}
   label.lab{display:block;font-size:12px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.4px;margin:0 0 7px}
   .field{margin-bottom:14px}
-  input[type=text],input[type=date],input[type=time],input[type=number],select,textarea{
+  input[type=text],input[type=tel],input[type=email],input[type=date],input[type=time],input[type=number],select,textarea{
     width:100%;padding:13px 14px;border:1.5px solid var(--line);border-radius:12px;font-size:15.5px;font-family:inherit;background:#fff;color:var(--ink)}
   input:focus,select:focus,textarea:focus{outline:none;border-color:var(--teal)}
   textarea{min-height:64px;resize:vertical}
@@ -77,6 +77,11 @@
 window.addEventListener('error', (e)=>{ console.warn('caught', e.message); });
 window.addEventListener('unhandledrejection', (e)=>{ console.warn('caught', e.reason); });
 const FN = 'https://izslchhcavckowatgbel.supabase.co/functions/v1/book-web';
+// Voucher / gift codes are validated by the same context-free check_code action
+// index.html uses (the shared voucher engine), so a code reads "valid" identically
+// on both forms. The code itself is submitted with the booking below.
+const BOOK_TRIP_FN = 'https://izslchhcavckowatgbel.supabase.co/functions/v1/book-trip';
+const ANON = 'sb_publishable_ITCnCcqKXF56UearfrSBYg_SXy3QtE8';
 const MAPS_KEY = 'AIzaSyAtZvXbiV8BhpC_6dENVYrxoNWdPJlwNiM';
 const AIRPORTS =[['CPT','Cape Town (CPT)'],['JNB','O.R. Tambo (JNB)'],['HLA','Lanseria (HLA)'],['DUR','King Shaka (DUR)'],['PLZ','Gqeberha (PLZ)'],['GRJ','George (GRJ)'],['BFN','Bloemfontein (BFN)'],['ELS','East London (ELS)'],['MQP','Kruger Mpumalanga (MQP)'],['PZB','Pietermaritzburg (PZB)'],['KIM','Kimberley (KIM)'],['UTN','Upington (UTN)'],['RCB','Richards Bay (RCB)']];
 const SERVICES = [
@@ -107,6 +112,12 @@ function updatePreview(){
 
 function render(){
   const isAir = f.service==='airport', isHome = f.service==='drive_home';
+  // The "vehicle adequately insured" clause only makes sense for Home Safe, where a
+  // Milez chauffeur drives the CLIENT's own car. For every other service Milez
+  // supplies the vehicle, so we show a plain terms line without that clause.
+  const indemText = isHome
+    ? 'I confirm my vehicle is adequately insured, including cover for authorised third-party drivers such as Milez Ahead chauffeurs. I accept that Milez Ahead and its service providers are not liable for any loss, damage or delay arising from the service, except in the case of gross negligence or intentional misconduct.'
+    : 'I accept the Milez Ahead / MUA terms &amp; indemnity: the service provider is not liable for belongings or late arrival except in cases of gross negligence.';
   const svcBtns = SERVICES.map(s=>`<button type="button" class="${f.service===s[0]?'sel':''}" onclick="setSvc('${s[0]}')">${s[1]}<span class="s">${s[2]}</span></button>`).join('');
   const airOpts = AIRPORTS.map(a=>`<option value="${a[0]}">${a[1]}</option>`).join('');
   // Rebook only shows recents of the SELECTED service, so picking one never
@@ -159,6 +170,9 @@ function render(){
         <div class="field"><label class="lab">Vehicle</label><select id="vehClass"><option value="">No preference</option><option value="sedan">Sedan</option><option value="suv">SUV</option><option value="7seater">7-Seater / group</option></select></div>
       </div>
       <div class="field"><label class="lab">Alternative contact number <span style="font-weight:500;text-transform:none;color:#9aa1ab">(optional)</span></label><input type="tel" id="altphone" inputmode="tel" placeholder="e.g. 082 123 4567"></div>
+      <div class="field"><label class="lab">Voucher / gift code <span style="font-weight:500;text-transform:none;color:#9aa1ab">(optional)</span></label>
+        <input type="text" id="code" placeholder="e.g. MA-XXXXXX" autocomplete="off" autocapitalize="characters" style="text-transform:uppercase">
+        <div class="hint" id="codeMsg" style="display:none"></div></div>
       <div class="field"><label class="lab">Notes <span style="font-weight:500;text-transform:none;color:#9aa1ab">(optional)</span></label><textarea id="notes" placeholder="Anything we should know?"></textarea></div>
       ${CTX.escort_enabled?`<div class="field"><label class="lab">Security (optional)</label>
         <label class="escort"><input type="checkbox" id="escort">
@@ -167,14 +181,36 @@ function render(){
         </label></div>`:''}
     </div>
     <div class="preview" id="preview"></div>
-    <div class="indem" id="indemWrap"><input type="checkbox" id="indemnity"><span>I accept the Milez Ahead / MUA terms & indemnity: the service provider is not liable for the vehicle, belongings or late arrival except in cases of gross negligence, and I confirm the vehicle is adequately insured.</span></div>
+    <div class="indem" id="indemWrap"><input type="checkbox" id="indemnity"><span>${indemText}</span></div>
     <div class="err" id="err"></div>
     <button class="cta" id="go" onclick="submit()">Confirm booking</button>`;
   // wire inputs
   document.getElementById('pax').onchange=e=>f.pax=e.target.value;
   wireDriverSearch();
+  wireCode();
   ['date','time','bags','flight','notes','airport'].forEach(id=>{const el=document.getElementById(id);if(el)el.oninput=()=>{};});
   initMaps();
+}
+
+// Voucher / gift code — uppercase + live validation so the client sees "free trip"
+// before submitting, exactly like index.html. Non-fatal: a failed check just hides
+// the hint; the code still submits with the booking.
+let _codeTimer;
+async function bookCheckCode(){
+  const el=document.getElementById('code'), msg=document.getElementById('codeMsg'); if(!el||!msg) return;
+  const code=(el.value||'').trim();
+  if(!code){ msg.style.display='none'; return; }
+  try{
+    const r=await fetch(BOOK_TRIP_FN,{method:'POST',headers:{'Content-Type':'application/json','apikey':ANON,'Authorization':'Bearer '+ANON},body:JSON.stringify({check_code:code})});
+    const d=await r.json();
+    if(d.valid){ msg.textContent='✓ Valid code — this trip is on us, no payment needed.'; msg.style.color='#059669'; msg.style.display='block'; }
+    else { const m=d.reason==='expired'?'This code has expired.':d.reason==='exhausted'?'This code has already been fully used.':d.reason==='disabled'?'This code is no longer active.':'We couldn’t find that code.'; msg.textContent='✕ '+m; msg.style.color='#b4441f'; msg.style.display='block'; }
+  }catch(_){}
+}
+function wireCode(){
+  const el=document.getElementById('code'); if(!el) return;
+  el.oninput=()=>{ el.value=el.value.toUpperCase(); clearTimeout(_codeTimer); _codeTimer=setTimeout(bookCheckCode,500); };
+  el.onblur=bookCheckCode;
 }
 
 window.setSvc=(s)=>{ f.service=s; render(); };
@@ -283,6 +319,7 @@ window.submit=async()=>{
     vehicle_class_pref:document.getElementById('vehClass').value||null,
     indemnity_accepted:true,
     add_escort:!!document.getElementById('escort')?.checked, policy_number:CTX.policy_number||undefined,
+    code:((document.getElementById('code')||{}).value||'').trim().toUpperCase()||undefined,
   };
   if(isAir){
     booking.airport_code=document.getElementById('airport').value; booking.direction=f.direction||'arrival'; booking.flight_number=document.getElementById('flight').value||undefined;

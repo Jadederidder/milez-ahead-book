@@ -57,10 +57,12 @@
       <form id="form" class="space-y-5">
         <div>
           <span class="lbl">Service</span>
-          <div class="grid grid-cols-3 gap-2" id="service">
+          <div class="grid grid-cols-2 gap-2 sm:grid-cols-3" id="service">
             <button type="button" data-v="airport" class="svc rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium">Airport</button>
-            <button type="button" data-v="drive_home" class="svc rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium">Drive home</button>
-            <button type="button" data-v="manage_booking" class="svc rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium">Private</button>
+            <button type="button" data-v="drive_home" class="svc rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium">Home Safe</button>
+            <button type="button" data-v="convenient" class="svc rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium">Convenient</button>
+            <button type="button" data-v="manage_booking" class="svc rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium">Private / Card</button>
+            <button type="button" data-v="trauma" class="svc rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium">Other</button>
           </div>
           <p id="svcDesc" class="mt-2 text-xs leading-snug text-slate-500"></p>
         </div>
@@ -109,6 +111,55 @@
           <label><span class="lbl">Flight no.</span><input name="flight_number" class="field" placeholder="e.g. BA6321" /></label>
         </div>
 
+        <div>
+          <span class="lbl">Luggage size</span>
+          <div class="mt-1 grid grid-cols-3 gap-2" id="luggageSize">
+            <button type="button" data-sz="small" class="lsz rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium">Small</button>
+            <button type="button" data-sz="medium" class="lsz rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium">Medium</button>
+            <button type="button" data-sz="large" class="lsz rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium">Large</button>
+          </div>
+        </div>
+
+        <div>
+          <span class="lbl">Travelling with <span class="font-normal text-slate-400">— optional</span></span>
+          <div class="mt-1 flex flex-wrap gap-2" id="special">
+            <button type="button" data-v="baby_seat" class="chip rounded-full border border-slate-300 px-3 py-1.5 text-sm font-medium">Baby seat</button>
+            <button type="button" data-v="pram" class="chip rounded-full border border-slate-300 px-3 py-1.5 text-sm font-medium">Pram</button>
+            <button type="button" data-v="wheelchair" class="chip rounded-full border border-slate-300 px-3 py-1.5 text-sm font-medium">Wheelchair</button>
+            <button type="button" data-v="golf_bag" class="chip rounded-full border border-slate-300 px-3 py-1.5 text-sm font-medium">Golf bag</button>
+            <button type="button" data-v="bicycle" class="chip rounded-full border border-slate-300 px-3 py-1.5 text-sm font-medium">Bicycle</button>
+            <button type="button" data-v="surfboard" class="chip rounded-full border border-slate-300 px-3 py-1.5 text-sm font-medium">Surfboard</button>
+            <button type="button" data-v="extra_bags" class="chip rounded-full border border-slate-300 px-3 py-1.5 text-sm font-medium">Lots of luggage</button>
+          </div>
+          <p class="mt-1.5 text-xs text-slate-400">Helps us send a vehicle that fits.</p>
+        </div>
+
+        <label class="block"><span class="lbl">Preferred driver <span class="font-normal text-slate-400">— optional</span></span><input name="preferred_driver" class="field" placeholder="Any available driver — type a name" autocomplete="off" /></label>
+
+        <div class="grid gap-4 sm:grid-cols-2">
+          <label><span class="lbl">Driver preference</span>
+            <select name="driver_sex_pref" class="field">
+              <option value="">No preference</option>
+              <option value="female">Female driver</option>
+              <option value="male">Male driver</option>
+            </select></label>
+          <label><span class="lbl">Vehicle</span>
+            <select name="vehicle_class_pref" class="field">
+              <option value="">No preference</option>
+              <option value="sedan">Sedan</option>
+              <option value="suv">SUV</option>
+              <option value="7seater">7-Seater / group</option>
+            </select></label>
+        </div>
+
+        <label class="flex items-start gap-2.5 rounded-xl border border-slate-200 bg-slate-50/60 p-3">
+          <input id="escort" name="add_escort" type="checkbox" class="mt-0.5 h-4 w-4 shrink-0" style="accent-color:var(--teal)" />
+          <span class="text-xs leading-snug text-slate-600">
+            <span class="font-semibold text-slate-800">🛡️ Add armed escort <span style="color:var(--gold)">— from R995 / hr</span></span><br />
+            A discreet armed-response vehicle follows your car door to door, point A to B. The first hour is added upfront; we confirm the final cost with you.
+          </span>
+        </label>
+
         <label class="block"><span class="lbl">Notes for the driver</span><textarea name="notes" rows="2" class="field" placeholder="Anything we should know?"></textarea></label>
 
         <label class="agent-card block">
@@ -119,7 +170,7 @@
 
         <label id="indemnityWrap" class="flex items-start gap-2.5 rounded-xl border border-slate-200 bg-slate-50/60 p-3 text-xs leading-snug text-slate-600">
           <input id="indemnity" type="checkbox" class="mt-0.5 h-4 w-4 shrink-0" style="accent-color:var(--teal)" />
-          <span>I confirm my vehicle is adequately insured, including cover for authorised third-party drivers such as Milez Ahead chauffeurs. I accept that Milez Ahead and its service providers are not liable for any loss, damage or delay arising from the service, except in the case of gross negligence or intentional misconduct.</span>
+          <span id="indemnityText">I confirm my vehicle is adequately insured, including cover for authorised third-party drivers such as Milez Ahead chauffeurs. I accept that Milez Ahead and its service providers are not liable for any loss, damage or delay arising from the service, except in the case of gross negligence or intentional misconduct.</span>
         </label>
 
         <div id="error" class="hidden rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700"></div>
@@ -144,9 +195,18 @@
   const SVC_DESC = {
     airport: 'Door-to-door airport transfers. We watch your flight and time the pickup so you’re never rushed.',
     drive_home: 'Home Safe Chauffeur — had a few drinks? A two-driver team comes to you: one drives you home in your own car, the other follows. You and your car both arrive safely.',
-    manage_booking: 'A private, pay-as-you-go trip — book a professional Milez Ahead driver for any errand, transfer or appointment.',
+    convenient: 'Your everyday professional driver — errands, appointments, school runs or any trip around town, on demand.',
+    manage_booking: 'A private, pay-as-you-go trip you settle by card — book a professional Milez Ahead driver for any errand, transfer or appointment.',
+    trauma: 'Any other trip, including treatment, medical or hospital transport. Tell us what you need in the notes below.',
   }
   const svcDescEl = document.getElementById('svcDesc')
+
+  // The "vehicle adequately insured" clause only applies to Home Safe, where a Milez
+  // chauffeur drives the CLIENT's own car. Every other service uses a Milez vehicle,
+  // so we show a plain terms line without that clause. Switches with the service.
+  const INDEM_HOME = 'I confirm my vehicle is adequately insured, including cover for authorised third-party drivers such as Milez Ahead chauffeurs. I accept that Milez Ahead and its service providers are not liable for any loss, damage or delay arising from the service, except in the case of gross negligence or intentional misconduct.'
+  const INDEM_PLAIN = 'I accept the Milez Ahead / MUA terms & indemnity: the service provider is not liable for belongings or late arrival except in cases of gross negligence.'
+  const indemTextEl = document.getElementById('indemnityText')
 
   // SA airports — picking one fills the chosen leg's address + coordinates, so the
   // fare estimates server-side the same way it does in the console.
@@ -176,6 +236,7 @@
       b.style.borderColor = on ? '#007880' : '#cbd5e1'
     })
     if (svcDescEl) svcDescEl.textContent = SVC_DESC[service] || ''
+    if (indemTextEl) indemTextEl.textContent = service === 'drive_home' ? INDEM_HOME : INDEM_PLAIN
     airportPick.classList.toggle('hidden', service !== 'airport')
     legBtns.forEach(b => {
       const on = b.dataset.leg === airportLeg
@@ -209,7 +270,31 @@
     el.addEventListener('input', () => { if (el.checkValidity()) el.style.borderColor = '' })
   })
   const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
-  const SVC_LABEL = { airport: 'Airport', drive_home: 'Drive home', manage_booking: 'Private' }
+  const SVC_LABEL = { airport: 'Airport', drive_home: 'Home Safe', convenient: 'Convenient', manage_booking: 'Private / Card', trauma: 'Other' }
+
+  // Luggage size — segmented picker mirroring book.html (small | medium | large).
+  let luggageSize = 'small'
+  const lszBtns = [...document.querySelectorAll('.lsz')]
+  function paintLuggage() {
+    lszBtns.forEach(b => {
+      const on = b.dataset.sz === luggageSize
+      b.style.background = on ? '#007880' : ''
+      b.style.color = on ? '#fff' : ''
+      b.style.borderColor = on ? '#007880' : '#cbd5e1'
+    })
+  }
+  lszBtns.forEach(b => b.addEventListener('click', () => { luggageSize = b.dataset.sz; paintLuggage() }))
+  paintLuggage()
+
+  // "Travelling with" chips → special_items[] (same values as book.html).
+  const chipBtns = [...document.querySelectorAll('#special .chip')]
+  chipBtns.forEach(b => b.addEventListener('click', () => {
+    const on = b.dataset.on === '1'
+    b.dataset.on = on ? '' : '1'
+    b.style.background = on ? '' : 'rgba(0,120,128,.10)'
+    b.style.color = on ? '' : '#007880'
+    b.style.borderColor = on ? '#cbd5e1' : '#007880'
+  }))
 
   // Prefill from a deep link — e.g. "Book my return trip" on the live tracker
   // passes name, phone and the reversed pickup/drop-off so the client only adds a date.
@@ -312,20 +397,33 @@
     const payload = Object.fromEntries(fd.entries())
     payload.service_type = service
     payload.indemnity_accepted = true // captured at booking — see terms acknowledgment
-    // Fold the optional alternative contact number and ID number into the driver
-    // notes so the controller sees them (book-trip stores notes as booking_notes).
+    // Structured trip preferences flow through the shared booking payload with the
+    // same FlowBooking field names every other channel uses, so a web booking is
+    // byte-identical to a WhatsApp one.
+    payload.luggage_size = luggageSize
+    payload.add_escort = !!document.getElementById('escort')?.checked
+    payload.special_items = chipBtns.filter(b => b.dataset.on === '1').map(b => b.dataset.v)
+    if (!payload.driver_sex_pref) delete payload.driver_sex_pref
+    if (!payload.vehicle_class_pref) delete payload.vehicle_class_pref
+    // Fold the optional alternative contact, ID number and preferred-driver name into
+    // the driver notes so the controller sees them (book-trip stores notes as
+    // booking_notes). The public page has no authenticated driver directory, so the
+    // preferred driver is captured by name rather than resolved to a driver id.
     // agent_phone is sent as-is — book-trip cc's that broker on the confirmation.
     const altPhone = (payload.alt_phone || '').trim()
     const idNumber = (payload.id_number || '').trim()
+    const prefDriver = (payload.preferred_driver || '').trim()
     const prefix = []
     if (idNumber) prefix.push('ID: ' + idNumber)
     if (altPhone) prefix.push('Alt contact: ' + altPhone)
+    if (prefDriver) prefix.push('Preferred driver: ' + prefDriver)
     if (prefix.length) {
       const rest = (payload.notes || '').trim()
       payload.notes = prefix.join(' · ') + (rest ? ' · ' + rest : '')
     }
     delete payload.alt_phone
     delete payload.id_number
+    delete payload.preferred_driver
     // Use the live field value, falling back to the last text we saw it hold
     // (guards against the autocomplete blanking the field after a selection).
     const pickup = (form.pickup_address.value || pickupText || '').trim()
