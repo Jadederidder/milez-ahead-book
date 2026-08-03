@@ -19,8 +19,9 @@
   .card h2{margin:0 0 12px;font-size:15px;color:var(--navy)}
   label.lab{display:block;font-size:12px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.4px;margin:14px 0 6px}
   label.lab:first-of-type{margin-top:0}
-  input,textarea{width:100%;font:15px inherit;padding:11px 12px;border:1px solid var(--line);border-radius:11px;background:#fff;color:var(--ink)}
-  input:focus,textarea:focus{outline:none;border-color:var(--teal)}
+  input,textarea,select{width:100%;font:15px inherit;padding:11px 12px;border:1px solid var(--line);border-radius:11px;background:#fff;color:var(--ink)}
+  input:focus,textarea:focus,select:focus{outline:none;border-color:var(--teal)}
+  .rm{border:none;background:none;color:#c0392b;font-size:22px;line-height:1;cursor:pointer;padding:0 4px;align-self:center}
   input[readonly]{background:#f6f5f1;color:var(--muted)}
   textarea{min-height:74px;resize:vertical}
   .hint{font-size:12px;color:var(--muted);margin:5px 0 0}
@@ -65,9 +66,28 @@ async function load(){
   document.getElementById('sub').textContent=p.full_name?('Hi '+p.full_name.split(' ')[0]+' 👋'):'Welcome';
   if(r.credits){const b=document.getElementById('bal');b.style.display='inline-block';b.textContent=`🎟 ${r.credits.left} of ${r.credits.total} rides left this year`;}
   window._data=r;
-  render(p,r.trips||[]);
+  render(p,r.trips||[],r.places||[]);
 }
-function render(p,trips){
+function placesRows(list){
+  if(!list||!list.length)return '<div class="hint" style="padding:6px 0 2px">No saved places yet — add your Home, Work or airport below.</div>';
+  return list.map(pl=>`<div class="trip"><div><div class="when">📍 ${esc(pl.label)}</div><div class="route">${esc(pl.address)}</div></div><button class="rm" onclick="delPlace('${pl.id}')" aria-label="Remove ${esc(pl.label)}">×</button></div>`).join('');
+}
+async function addPlace(){
+  const label=document.getElementById('pl_label').value;
+  const address=document.getElementById('pl_addr').value.trim();
+  if(!address){alert('Please enter an address.');return;}
+  const btn=document.getElementById('addPlace');btn.disabled=true;btn.textContent='Adding…';
+  const r=await call({action:'place_add',label,address});
+  btn.disabled=false;btn.textContent='Add place';
+  if(r.error){alert(r.error);return;}
+  window._data.places=r.places;document.getElementById('placesList').innerHTML=placesRows(r.places);document.getElementById('pl_addr').value='';
+}
+async function delPlace(id){
+  const r=await call({action:'place_delete',id});
+  if(r.error){alert(r.error);return;}
+  window._data.places=r.places;document.getElementById('placesList').innerHTML=placesRows(r.places);
+}
+function render(p,trips,places){
   const tripsHtml=trips.length?trips.map(t=>{
     const to=t.dropoff_address||t.airport_code||'';const from=(t.pickup_address||'').split(',')[0];
     return `<div class="trip"><div><div class="when">${fmt(t.trip_date)}${t.pickup_time?' · '+String(t.pickup_time).slice(0,5):''} ${pill(t.status)}</div><div class="route">${esc(from)}${to?' → '+esc(String(to).split(',')[0]):''}</div></div><div class="fare">${money(t.fare)}</div></div>`;
@@ -84,6 +104,15 @@ function render(p,trips){
       <label class="lab">Phone</label><input value="${esc(p.phone)}" readonly>
       ${p.policy_number?`<label class="lab">Policy number</label><input value="${esc(p.policy_number)}" readonly>`:''}
       <button class="btn" id="save" onclick="save()">Save my details</button>
+    </div>
+    <div class="card">
+      <h2>My places</h2>
+      <div class="hint" style="margin:-6px 0 10px">Save the addresses you use most — Home, Work, your airport — so booking is one tap.</div>
+      <div id="placesList">${placesRows(places)}</div>
+      <label class="lab">Add a place</label>
+      <select id="pl_label"><option>Home</option><option>Work</option><option>Airport</option><option>Gym</option><option>Family</option><option>Other</option></select>
+      <input id="pl_addr" placeholder="Start typing the address" style="margin-top:8px">
+      <button class="btn" id="addPlace" onclick="addPlace()" style="margin-top:12px">Add place</button>
     </div>
     <div class="card"><h2>My trips</h2>${trips.length?'<button class="btn" id="pdfBtn" onclick="savePdf()" style="margin:0 0 16px;background:var(--navy)">📄 Download my statement (PDF)</button>':''}${tripsHtml}</div>
   `);
