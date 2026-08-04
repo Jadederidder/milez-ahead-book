@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Milez Ahead — Driver onboarding clean-up</title>
+<style>
+  :root{
+    --navy:#0E1E3A; --navy2:#0C5C5A; --gold:#C0B070; --gold-deep:#A8894A;
+    --canvas:#F7F5F0; --card:#FFFFFF; --ink:#1F2430; --muted:#6B7280; --faint:#9AA1AC;
+    --line:#E7E3DA; --green:#137A45; --green-bg:#E7F3EC; --amber:#9A6A08; --amber-bg:#FFF4E0;
+    --red:#B23A2E; --red-bg:#FBECEA;
+    --shadow:0 1px 2px rgba(16,30,58,.04), 0 10px 30px rgba(16,30,58,.06);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --canvas:#0B1524; --card:#12213A; --ink:#EAF0F7; --muted:#9DB0C9; --faint:#6C7C93;
+      --line:#22344F; --green:#54D08C; --green-bg:#14342A; --amber:#F0C36B; --amber-bg:#3A2E12;
+      --red:#F09A8E; --red-bg:#3A1E1A; --shadow:0 1px 2px rgba(0,0,0,.3), 0 12px 30px rgba(0,0,0,.35); }
+  }
+  :root[data-theme="light"]{ --canvas:#F7F5F0; --card:#FFFFFF; --ink:#1F2430; --muted:#6B7280; --faint:#9AA1AC; --line:#E7E3DA; --green:#137A45; --green-bg:#E7F3EC; --amber:#9A6A08; --amber-bg:#FFF4E0; --red:#B23A2E; --red-bg:#FBECEA; --shadow:0 1px 2px rgba(16,30,58,.04),0 10px 30px rgba(16,30,58,.06);}
+  :root[data-theme="dark"]{ --canvas:#0B1524; --card:#12213A; --ink:#EAF0F7; --muted:#9DB0C9; --faint:#6C7C93; --line:#22344F; --green:#54D08C; --green-bg:#14342A; --amber:#F0C36B; --amber-bg:#3A2E12; --red:#F09A8E; --red-bg:#3A1E1A; --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px rgba(0,0,0,.35);}
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--canvas);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.5;font-size:15px}
+  .tnum{font-variant-numeric:tabular-nums}
+  main{max-width:940px;margin:0 auto;padding:18px 16px 60px}
+
+  header.hd{background:linear-gradient(135deg,var(--navy),var(--navy2));color:#fff;border-radius:18px;padding:26px 26px 22px;position:relative;overflow:hidden}
+  header.hd::after{content:"";position:absolute;right:-40px;top:-40px;width:180px;height:180px;border-radius:50%;background:radial-gradient(circle at 30% 30%, rgba(192,176,112,.35), transparent 70%)}
+  .kick{font-size:11px;letter-spacing:2.6px;text-transform:uppercase;color:var(--gold);font-weight:700}
+  header.hd h1{margin:8px 0 4px;font-size:26px;font-weight:800;letter-spacing:-.3px;text-wrap:balance}
+  header.hd p{margin:0;color:#cfe0e2;font-size:13.5px;max-width:62ch}
+  .hd-row{display:flex;align-items:center;gap:22px;flex-wrap:wrap;margin-top:18px;position:relative;z-index:1}
+  .ring{--v:0;width:78px;height:78px;border-radius:50%;display:grid;place-items:center;flex:none;
+    background:conic-gradient(var(--gold) calc(var(--v)*1%), rgba(255,255,255,.14) 0)}
+  .ring>div{width:60px;height:60px;border-radius:50%;background:var(--navy);display:grid;place-items:center;font-weight:800;font-size:16px}
+  .hd-stats{display:flex;gap:10px;flex-wrap:wrap}
+  .chip{background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.16);border-radius:12px;padding:8px 12px;min-width:74px}
+  .chip b{display:block;font-size:19px;font-weight:800}
+  .chip span{font-size:10px;letter-spacing:.4px;text-transform:uppercase;color:#bcd0d2}
+  .synced{margin-top:12px;font-size:11.5px;color:#a9bfc1;position:relative;z-index:1}
+  .synced a{color:var(--gold);cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+
+  .why{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;box-shadow:var(--shadow);margin:16px 0;font-size:13.5px;color:var(--muted)}
+  .why b{color:var(--ink)}
+  .pill{display:inline-flex;gap:6px;align-items:center;border-radius:8px;padding:2px 9px;font-weight:700;font-size:12px}
+  .pill.g{background:var(--green-bg);color:var(--green)}
+
+  section.sec{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);margin:16px 0;overflow:hidden}
+  .sec-hd{display:flex;align-items:center;gap:12px;padding:16px 18px;border-bottom:1px solid var(--line);user-select:none}
+  .sec-hd.click{cursor:pointer}
+  .sec-badge{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;font-weight:800;color:#fff;flex:none;font-size:13px}
+  .sec-hd h2{margin:0;font-size:16px;font-weight:800;flex:1;min-width:0}
+  .sec-hd h2 small{display:block;font-weight:500;font-size:12px;color:var(--muted);margin-top:1px}
+  .sec-count{font-weight:800;font-size:13px;color:var(--muted);white-space:nowrap}
+  .caret{color:var(--faint);transition:transform .2s;font-size:13px}
+  .sec.collapsed .caret{transform:rotate(-90deg)}
+  .sec.collapsed .rows{display:none}
+  .rows{padding:4px 8px 12px}
+
+  .row{display:grid;grid-template-columns:1fr auto;align-items:center;gap:12px 14px;padding:12px 10px}
+  .row+.row{border-top:1px solid var(--line)}
+  .row .name{font-weight:600;min-width:0}
+  .row .sub{font-size:12px;color:var(--muted);margin-top:1px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .cell{font-variant-numeric:tabular-nums}
+  .flag{color:var(--amber);background:var(--amber-bg);border-radius:6px;padding:1px 7px;font-size:11px;font-weight:700;white-space:nowrap}
+  .controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+  input.f,select.f{font:inherit;font-size:13px;padding:7px 9px;border:1px solid var(--line);border-radius:9px;background:var(--canvas);color:var(--ink)}
+  input.f{width:140px} select.f{cursor:pointer;max-width:150px}
+  input.f:focus,select.f:focus{outline:2px solid var(--gold);outline-offset:1px;border-color:var(--gold)}
+  button{font:inherit;cursor:pointer;border:none;border-radius:9px}
+  .save{background:var(--navy);color:#fff;font-weight:700;font-size:13px;padding:8px 14px}
+  .save:hover{background:#122a4e}
+  .save:disabled{opacity:.5;cursor:default}
+  .link{background:none;color:var(--muted);font-size:12px;text-decoration:underline;text-underline-offset:2px;padding:6px 4px}
+  .link:hover{color:var(--red)}
+  .row.saved{background:color-mix(in srgb, var(--green) 8%, transparent)}
+  .row.saved .name{color:var(--muted)}
+  .rowmsg{font-size:12.5px;font-weight:700;color:var(--green);display:flex;align-items:center;gap:6px}
+  .rowmsg.err{color:var(--red)}
+  .rowmsg.gone{color:var(--muted)}
+  .cbx{appearance:none;width:20px;height:20px;border:2px solid var(--faint);border-radius:6px;cursor:pointer;position:relative;flex:none}
+  .cbx:checked{background:var(--green);border-color:var(--green)}
+  .cbx:checked::after{content:"";position:absolute;left:5px;top:1px;width:5px;height:10px;border:solid #fff;border-width:0 2.5px 2.5px 0;transform:rotate(45deg)}
+  .nudge-row{display:grid;grid-template-columns:22px 1fr auto;gap:12px;align-items:center}
+  .nudge-row.done .name{color:var(--faint);text-decoration:line-through}
+  .copy{background:var(--card);border:1px solid var(--line);color:var(--ink);font-size:12px;font-weight:600;padding:6px 11px}
+  .copy:hover{border-color:var(--gold)}
+
+  .state{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:40px 24px;text-align:center;color:var(--muted);margin:16px 0}
+  .state h3{margin:0 0 6px;color:var(--ink);font-size:17px}
+  .spin{width:26px;height:26px;border:3px solid var(--line);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 14px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @media (prefers-reduced-motion:reduce){.spin{animation:none}}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:var(--navy);color:#fff;padding:11px 18px;border-radius:11px;font-size:13.5px;font-weight:600;box-shadow:0 8px 30px rgba(0,0,0,.3);opacity:0;pointer-events:none;transition:.25s;z-index:9}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  @media (max-width:600px){ .row{grid-template-columns:1fr} .controls{justify-content:flex-start} input.f{width:100%} select.f{max-width:none;flex:1} }
+</style>
+</head>
+<body>
+<main>
+  <header class="hd">
+    <div class="kick">Milez Ahead · Operations</div>
+    <h1>Driver onboarding — clean-up</h1>
+    <p>The driver app is live on Google Play. A driver can sign in the moment their profile has a <b style="color:#fff">valid cell number</b>. Add cells and regions below — <b style="color:#fff">every save goes straight into the system</b>, and drivers drop off this list automatically once they log in.</p>
+    <div class="hd-row">
+      <div class="ring" id="ring"><div id="ringpct">—</div></div>
+      <div class="hd-stats">
+        <div class="chip"><b class="tnum" id="stCell">—</b><span>Need cell</span></div>
+        <div class="chip"><b class="tnum" id="stRegion">—</b><span>Need region</span></div>
+        <div class="chip"><b class="tnum" id="stReady">—</b><span>Ready to nudge</span></div>
+        <div class="chip"><b class="tnum" id="stApp">—</b><span>On the app</span></div>
+      </div>
+    </div>
+    <div class="synced" id="synced"></div>
+  </header>
+
+  <div class="why">
+    <span class="pill g">How</span> &nbsp;Type the driver's cell (any format is fine — the system matches on the last 9 digits) and pick their region, then hit <b>Save to system</b>. For team pairs, enter the cell of the <b>one</b> driver who'll run the app. If a record isn't a real driver, use <b>Not a real driver</b> to remove it.
+  </div>
+
+  <div id="content">
+    <div class="state"><div class="spin"></div><div>Loading the live list…</div></div>
+  </div>
+</main>
+<div class="toast" id="toast"></div>
+
+<script>
+const FN = 'https://izslchhcavckowatgbel.supabase.co/functions/v1/driver-cleanup';
+const REGION_ORDER = ['Western Cape','Gauteng','KwaZulu-Natal','Eastern Cape','Garden Route','Free State','Mpumalanga','Limpopo','North West','Northern Cape'];
+const NUDGE_TEXT = "Hi! Milez Ahead Driver is now live on the Google Play Store. Please download it and sign in with your cell number — you'll start receiving trips in the app. Search \"Milez Ahead Driver\" or ask us for the link.";
+
+function getToken(){
+  const h = new URLSearchParams((location.hash||'').replace(/^#/,''));
+  return h.get('t') || new URLSearchParams(location.search).get('t') || '';
+}
+const TOKEN = getToken();
+let REGIONS = REGION_ORDER;
+const nudged = JSON.parse(localStorage.getItem('mua_nudged')||'{}');
+
+function esc(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function fmtCell(raw){let d=(raw||'').replace(/\D/g,'');if(d.startsWith('27'))d=d.slice(2);else if(d.startsWith('0'))d=d.slice(1);if(d.length!==9)return raw||'';return '+27 '+d.slice(0,2)+' '+d.slice(2,5)+' '+d.slice(5);}
+function looksFake(raw){let d=(raw||'').replace(/\D/g,'').slice(-9);return /(\d)\1{4,}/.test(d)||/012345|123456|234567|345678|456789|987654|654321/.test(d);}
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),2200);}
+
+async function call(payload){
+  const r = await fetch(FN,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({token:TOKEN,...payload})});
+  let d={}; try{d=await r.json();}catch(e){}
+  if(!r.ok) throw new Error(d.error||('Error '+r.status));
+  return d;
+}
+
+function regionSelect(sel){
+  return '<select class="f reg"><option value="">Region…</option>'+
+    REGIONS.map(r=>`<option ${sel===r?'selected':''}>${r}</option>`).join('')+'</select>';
+}
+
+function fixRow(d){
+  const el=document.createElement('div'); el.className='row'; el.dataset.id=d.id;
+  const fake = looksFake(d.phone)?' <span class="flag">check number</span>':'';
+  const cellField = d.bucket==='cell'
+    ? `<input class="f cell-in" inputmode="tel" placeholder="Cell number" value="${esc(d.phone||'')}">`
+    : `<span class="cell">${fmtCell(d.phone)}</span>${fake}`;
+  el.innerHTML=`
+    <div>
+      <div class="name">${esc(d.name)}</div>
+      <div class="sub">${d.bucket==='cell'?'No cell on file — add one to let them log in':'Has a cell — set their region'+fake}</div>
+    </div>
+    <div class="controls">
+      ${cellField}
+      ${regionSelect(d.region)}
+      <button class="save">Save to system</button>
+      <button class="link suspend">Not a real driver</button>
+    </div>`;
+  const saveBtn=el.querySelector('.save');
+  saveBtn.addEventListener('click',async()=>{
+    const payload={action:'save',driver_id:d.id,region:el.querySelector('.reg').value};
+    const cin=el.querySelector('.cell-in'); if(cin) payload.phone=cin.value;
+    saveBtn.disabled=true; saveBtn.textContent='Saving…';
+    try{
+      const res=await call(payload);
+      el.classList.add('saved');
+      const canLogin=(res.driver&&res.driver.bucket!=='cell');
+      el.querySelector('.controls').innerHTML=`<span class="rowmsg">✓ Saved${canLogin?' — can log in now':''}</span>`;
+      toast('Saved to system');
+      refreshSummary();
+    }catch(e){
+      saveBtn.disabled=false; saveBtn.textContent='Save to system';
+      toast(e.message);
+    }
+  });
+  el.querySelector('.suspend').addEventListener('click',async()=>{
+    if(!confirm(`Remove "${d.name}" from the roster? This suspends the record — it won't receive trips.`))return;
+    try{
+      await call({action:'suspend',driver_id:d.id});
+      el.classList.add('saved');
+      el.querySelector('.controls').innerHTML='<span class="rowmsg gone">Removed from roster</span>';
+      toast('Removed from roster');
+      refreshSummary();
+    }catch(e){ toast(e.message); }
+  });
+  return el;
+}
+
+function nudgeRow(d){
+  const el=document.createElement('div'); el.className='row';
+  const done=nudged[d.id]?' done':'';
+  const fake=looksFake(d.phone)?' <span class="flag">check number</span>':'';
+  el.innerHTML=`<div class="nudge-row${done}">
+    <input type="checkbox" class="cbx" ${nudged[d.id]?'checked':''} aria-label="Nudged ${esc(d.name)}">
+    <div><div class="name">${esc(d.name)}</div><div class="sub">${esc(d.region||'—')} · <span class="cell">${fmtCell(d.phone)}</span>${fake}</div></div>
+    <button class="copy">Copy nudge</button>
+  </div>`;
+  el.querySelector('.cbx').addEventListener('change',e=>{
+    nudged[d.id]=e.target.checked; localStorage.setItem('mua_nudged',JSON.stringify(nudged));
+    el.querySelector('.nudge-row').classList.toggle('done',e.target.checked);
+  });
+  el.querySelector('.copy').addEventListener('click',async()=>{
+    try{ await navigator.clipboard.writeText(NUDGE_TEXT); toast('Nudge message copied'); }
+    catch(e){ toast('Copy not available'); }
+  });
+  return el;
+}
+
+function section(id,color,title,sub,rows,builder,collapsed){
+  const sec=document.createElement('section'); sec.className='sec'+(collapsed?' collapsed':'');
+  sec.innerHTML=`<div class="sec-hd${collapsed?' click':''}">
+    <span class="sec-badge" style="background:${color}">${id}</span>
+    <h2>${title}<small>${sub}</small></h2>
+    <span class="sec-count tnum">${rows.length}</span>
+    ${collapsed!==undefined?'<span class="caret">▾</span>':''}</div>
+    <div class="rows"></div>`;
+  const box=sec.querySelector('.rows');
+  if(rows.length===0){ box.innerHTML='<div style="padding:14px 10px;color:var(--faint);font-size:13.5px">Nothing here — all done. 🎉</div>'; }
+  else rows.forEach(d=>box.appendChild(builder(d)));
+  if(collapsed!==undefined){ sec.querySelector('.sec-hd').addEventListener('click',()=>sec.classList.toggle('collapsed')); }
+  return sec;
+}
+
+let LAST=null;
+function refreshSummary(){ // recompute chips from current DOM minus saved rows
+  if(!LAST)return;
+}
+
+function render(data){
+  LAST=data; REGIONS=data.regions&&data.regions.length?data.regions:REGION_ORDER;
+  const s=data.summary;
+  document.getElementById('stCell').textContent=s.needsCell;
+  document.getElementById('stRegion').textContent=s.needsRegion;
+  document.getElementById('stReady').textContent=s.ready;
+  document.getElementById('stApp').textContent=s.onApp;
+  const reachable=s.total? Math.round((s.total-s.needsCell)/s.total*100):0;
+  document.getElementById('ring').style.setProperty('--v',reachable);
+  document.getElementById('ringpct').textContent=reachable+'%';
+  const now=new Date();
+  document.getElementById('synced').innerHTML=`Live from the system · synced ${now.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})} · <a onclick="location.reload()">Refresh</a>`;
+
+  const cell=data.drivers.filter(d=>d.bucket==='cell').sort((a,b)=>a.name.localeCompare(b.name));
+  const region=data.drivers.filter(d=>d.bucket==='region').sort((a,b)=>a.name.localeCompare(b.name));
+  const ready=data.drivers.filter(d=>d.bucket==='ready').sort((a,b)=>(a.region||'').localeCompare(b.region||'')||a.name.localeCompare(b.name));
+
+  const c=document.getElementById('content'); c.innerHTML='';
+  c.appendChild(section('A','#0E1E3A','Add a cell number','No cell on file — nobody can log in yet. Add the lead driver\'s cell (+ region).',cell,fixRow));
+  c.appendChild(section('B','#A8894A','Set a region — or verify','Has a cell but no region. Set it; if it isn\'t a real driver, remove it.',region,fixRow));
+  c.appendChild(section('C','#0C8B86','Ready to onboard — nudge them','Cell + region are set. Just tell them to download the app.',ready,nudgeRow,true));
+}
+
+async function boot(){
+  if(!TOKEN){ document.getElementById('content').innerHTML='<div class="state"><h3>This link is missing its access code</h3><div>Please open the exact link Jade sent you.</div></div>'; return; }
+  try{
+    const data=await call({action:'list'});
+    render(data);
+  }catch(e){
+    document.getElementById('content').innerHTML=`<div class="state"><h3>Couldn\'t load the list</h3><div>${esc(e.message)}</div></div>`;
+  }
+}
+boot();
+</script>
+</body>
+</html>
