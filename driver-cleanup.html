@@ -96,6 +96,22 @@
   @media (prefers-reduced-motion:reduce){.spin{animation:none}}
   .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:var(--navy);color:#fff;padding:11px 18px;border-radius:11px;font-size:13.5px;font-weight:600;box-shadow:0 8px 30px rgba(0,0,0,.3);opacity:0;pointer-events:none;transition:.25s;z-index:9}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .cd{display:inline-flex;align-items:center;gap:9px;margin-top:14px;background:rgba(210,60,50,.18);border:1px solid rgba(240,120,110,.45);color:#ffdcd6;font-weight:700;font-size:13px;letter-spacing:.2px;padding:8px 14px;border-radius:11px;position:relative;z-index:1}
+  .cd b{font-variant-numeric:tabular-nums;color:#fff;font-size:15px;letter-spacing:.5px}
+  .cd .dot{width:8px;height:8px;border-radius:50%;background:#ff5c48;animation:pulse 1.8s infinite}
+  .cd.warn{background:rgba(210,55,45,.34);border-color:rgba(255,120,110,.75)}
+  .cd.pending{background:rgba(192,176,112,.16);border-color:rgba(192,176,112,.5);color:#f0e6c8}
+  .cd.pending .dot{background:var(--gold)}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(255,92,72,.55)}70%{box-shadow:0 0 0 8px rgba(255,92,72,0)}100%{box-shadow:0 0 0 0 rgba(255,92,72,0)}}
+  @media (prefers-reduced-motion:reduce){.cd .dot{animation:none}}
+  .lock{position:fixed;inset:0;background:rgba(11,21,36,.88);backdrop-filter:blur(4px);display:none;place-items:center;z-index:20;padding:24px}
+  .lock.show{display:grid}
+  .lockcard{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);max-width:430px;width:100%;padding:32px 28px;text-align:center}
+  .lockcard .ic{width:56px;height:56px;border-radius:50%;background:var(--red-bg);color:var(--red);display:grid;place-items:center;font-size:27px;margin:0 auto 15px}
+  .lockcard.pend .ic{background:var(--amber-bg);color:var(--amber)}
+  .lockcard h3{margin:0 0 8px;font-size:20px;color:var(--ink)}
+  .lockcard p{margin:0;color:var(--muted);font-size:14px}
+  .lockcard .big{font-variant-numeric:tabular-nums;font-weight:800;font-size:24px;color:var(--ink);margin:12px 0 2px;letter-spacing:.5px}
   @media (max-width:600px){ .row{grid-template-columns:1fr} .controls{justify-content:flex-start} input.f{width:100%} select.f{max-width:none;flex:1} }
 </style>
 </head>
@@ -114,6 +130,7 @@
         <div class="chip"><b class="tnum" id="stApp">—</b><span>On the app</span></div>
       </div>
     </div>
+    <div class="cd" id="cd" style="display:none"><span class="dot"></span><span id="cdlabel">Link locks in</span> <b id="cdclock">—</b></div>
     <div class="synced" id="synced"></div>
   </header>
 
@@ -126,6 +143,12 @@
   </div>
 </main>
 <div class="toast" id="toast"></div>
+<div class="lock" id="lock"><div class="lockcard" id="lockcard">
+  <div class="ic" id="lockic">⏳</div>
+  <h3 id="locktitle">This link has expired</h3>
+  <div class="big" id="lockbig" style="display:none">—</div>
+  <p id="lockmsg">Please ask Jade for a fresh link.</p>
+</div></div>
 
 <script>
 const FN = 'https://izslchhcavckowatgbel.supabase.co/functions/v1/driver-cleanup';
@@ -137,6 +160,14 @@ function getToken(){
   return h.get('t') || new URLSearchParams(location.search).get('t') || '';
 }
 const TOKEN = getToken();
+// token = <nbfMs>.<expMs>.<sig> — read the active window locally for countdown/lock.
+function tokenWindow(t){
+  const p=(t||'').split('.'); if(p.length!==3) return null;
+  const nbf=Number(p[0]), exp=Number(p[1]);
+  if(!isFinite(nbf)||!isFinite(exp)||exp<=nbf) return null;
+  return {nbf,exp};
+}
+const WIN = tokenWindow(TOKEN);
 let REGIONS = REGION_ORDER;
 const nudged = JSON.parse(localStorage.getItem('mua_nudged')||'{}');
 
@@ -145,10 +176,68 @@ function fmtCell(raw){let d=(raw||'').replace(/\D/g,'');if(d.startsWith('27'))d=
 function looksFake(raw){let d=(raw||'').replace(/\D/g,'').slice(-9);return /(\d)\1{4,}/.test(d)||/012345|123456|234567|345678|456789|987654|654321/.test(d);}
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),2200);}
 
+let LOCKED=false, tickTimer=null;
+function fmtDur(ms){
+  if(ms<0)ms=0; let s=Math.floor(ms/1000);
+  const d=Math.floor(s/86400); s-=d*86400;
+  const h=Math.floor(s/3600); s-=h*3600;
+  const m=Math.floor(s/60); s-=m*60;
+  const pad=n=>String(n).padStart(2,'0');
+  return (d>0?d+'d ':'')+pad(h)+':'+pad(m)+':'+pad(s);
+}
+function showLock(kind, until){
+  LOCKED=true; clearInterval(tickTimer);
+  document.getElementById('content').innerHTML='';
+  document.getElementById('cd').style.display='none';
+  const card=document.getElementById('lockcard');
+  const big=document.getElementById('lockbig');
+  if(kind==='pending'){
+    card.classList.add('pend');
+    document.getElementById('lockic').textContent='⏳';
+    document.getElementById('locktitle').textContent='This link isn’t active yet';
+    document.getElementById('lockmsg').textContent='It opens tomorrow at 08:00. Come back then — this page will be ready.';
+    big.style.display='block';
+    const upd=()=>{ big.textContent='Opens in '+fmtDur(until-Date.now()); if(Date.now()>=until) location.reload(); };
+    upd(); tickTimer=setInterval(upd,1000);
+  } else if(kind==='invalid'){
+    card.classList.remove('pend');
+    document.getElementById('lockic').textContent='🔒';
+    document.getElementById('locktitle').textContent='This link is invalid';
+    big.style.display='none';
+    document.getElementById('lockmsg').textContent='Please open the exact link Jade sent you.';
+  } else {
+    card.classList.remove('pend');
+    document.getElementById('lockic').textContent='🔒';
+    document.getElementById('locktitle').textContent='This link has expired';
+    big.style.display='none';
+    document.getElementById('lockmsg').textContent='For security the 72-hour window has closed. Please ask Jade for a fresh link.';
+  }
+  document.getElementById('lock').classList.add('show');
+}
+function startCountdown(exp){
+  const cd=document.getElementById('cd'), clock=document.getElementById('cdclock');
+  cd.style.display='inline-flex';
+  const upd=()=>{
+    if(LOCKED)return;
+    const left=exp-Date.now();
+    if(left<=0){ clock.textContent='00:00:00'; showLock('expired'); return; }
+    clock.textContent=fmtDur(left);
+    cd.classList.toggle('warn', left < 6*3600*1000);
+  };
+  upd(); clearInterval(tickTimer); tickTimer=setInterval(upd,1000);
+}
+
 async function call(payload){
   const r = await fetch(FN,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({token:TOKEN,...payload})});
   let d={}; try{d=await r.json();}catch(e){}
-  if(!r.ok) throw new Error(d.error||('Error '+r.status));
+  if(!r.ok){
+    const err=new Error(d.error||('Error '+r.status));
+    err.state=d.state;
+    if(d.state==='expired'){ showLock('expired'); }
+    else if(d.state==='pending'){ showLock('pending', d.nbf||(WIN&&WIN.nbf)); }
+    else if(d.state==='invalid'){ showLock('invalid'); }
+    throw err;
+  }
   return d;
 }
 
@@ -268,11 +357,16 @@ function render(data){
 }
 
 async function boot(){
-  if(!TOKEN){ document.getElementById('content').innerHTML='<div class="state"><h3>This link is missing its access code</h3><div>Please open the exact link Jade sent you.</div></div>'; return; }
+  if(!TOKEN || !WIN){ showLock('invalid'); return; }
+  const now=Date.now();
+  if(now < WIN.nbf){ showLock('pending', WIN.nbf); return; }
+  if(now > WIN.exp){ showLock('expired'); return; }
   try{
     const data=await call({action:'list'});
     render(data);
+    startCountdown(data.exp||WIN.exp);
   }catch(e){
+    if(LOCKED) return; // showLock already handled expired/pending/invalid
     document.getElementById('content').innerHTML=`<div class="state"><h3>Couldn\'t load the list</h3><div>${esc(e.message)}</div></div>`;
   }
 }
