@@ -135,7 +135,7 @@
   </header>
 
   <div class="why">
-    <span class="pill g">How</span> &nbsp;Type the driver's cell (any format is fine — the system matches on the last 9 digits) and pick their region, then hit <b>Save to system</b>. For team pairs, enter the cell of the <b>one</b> driver who'll run the app. If a record isn't a real driver, use <b>Not a real driver</b> to remove it.
+    <span class="pill g">How</span> &nbsp;Type the driver's cell (any format is fine — the system matches on the last 9 digits) and pick their region, then hit <b>Save to system</b>. For team pairs, enter the cell of the <b>one</b> driver who'll run the app. If a record isn't a real driver, use <b>Not a real driver</b> to remove it. For a third-party operator we still use but who won't go on the app (e.g. Sober, Jackson Tours), use <b>Outsourced</b> — they keep working but drop off this list.
   </div>
 
   <div id="content">
@@ -153,7 +153,7 @@
 <script>
 const FN = 'https://izslchhcavckowatgbel.supabase.co/functions/v1/driver-cleanup';
 const REGION_ORDER = ['Western Cape','Gauteng','KwaZulu-Natal','Eastern Cape','Garden Route','Free State','Mpumalanga','Limpopo','North West','Northern Cape'];
-const NUDGE_TEXT = "Hi! Milez Ahead Driver is now live on the Google Play Store. Please download it and sign in with your cell number — you'll start receiving trips in the app. Search \"Milez Ahead Driver\" or ask us for the link.";
+const NUDGE_TEXT = "Hi! The Milez Ahead Driver app is now live on Google Play. Download it here: https://play.google.com/store/apps/details?id=za.co.milezahead.milez_driver — then sign in with your cell number and you'll start receiving trips in the app.";
 
 function getToken(){
   const h = new URLSearchParams((location.hash||'').replace(/^#/,''));
@@ -261,6 +261,7 @@ function fixRow(d){
       ${cellField}
       ${regionSelect(d.region)}
       <button class="save">Save to system</button>
+      <button class="link outsource">Outsourced</button>
       <button class="link suspend">Not a real driver</button>
     </div>`;
   const saveBtn=el.querySelector('.save');
@@ -279,6 +280,16 @@ function fixRow(d){
       saveBtn.disabled=false; saveBtn.textContent='Save to system';
       toast(e.message);
     }
+  });
+  el.querySelector('.outsource').addEventListener('click',async()=>{
+    if(!confirm(`Mark "${d.name}" as an outsourced, off-app operator?\n\nThey stay active and keep receiving trips — they just won't be onboarded to the app, and drop off this list. Use this for third parties like Sober or Jackson Tours.`))return;
+    try{
+      await call({action:'outsource',driver_id:d.id});
+      el.classList.add('saved');
+      el.querySelector('.controls').innerHTML='<span class="rowmsg gone">Marked outsourced · off-app</span>';
+      toast('Marked outsourced');
+      refreshSummary();
+    }catch(e){ toast(e.message); }
   });
   el.querySelector('.suspend').addEventListener('click',async()=>{
     if(!confirm(`Remove "${d.name}" from the roster? This suspends the record — it won't receive trips.`))return;
