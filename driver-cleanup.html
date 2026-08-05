@@ -66,6 +66,7 @@
   .row .sub{font-size:12px;color:var(--muted);margin-top:1px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
   .cell{font-variant-numeric:tabular-nums}
   .flag{color:var(--amber);background:var(--amber-bg);border-radius:6px;padding:1px 7px;font-size:11px;font-weight:700;white-space:nowrap}
+  .sent{color:var(--green);font-weight:700}
   .controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
   input.f,select.f{font:inherit;font-size:13px;padding:7px 9px;border:1px solid var(--line);border-radius:9px;background:var(--canvas);color:var(--ink)}
   input.f{width:140px} select.f{cursor:pointer;max-width:150px}
@@ -153,7 +154,7 @@
 <script>
 const FN = 'https://izslchhcavckowatgbel.supabase.co/functions/v1/driver-cleanup';
 const REGION_ORDER = ['Western Cape','Gauteng','KwaZulu-Natal','Eastern Cape','Garden Route','Free State','Mpumalanga','Limpopo','North West','Northern Cape'];
-const NUDGE_TEXT = "Hi! The Milez Ahead Driver app is now live. Download it here: https://onelink.to/e3vswy — then sign in with your cell number and you'll start receiving trips in the app. (On iPhone? iOS is available from next week.)";
+const NUDGE_TEXT = "Hi! The Milez Ahead Driver app is now live. Download it here: https://onelink.to/e3vswy — then sign in with your cell number and you'll start receiving trips in the app. (On iPhone? iOS is available from next week.)\n\nOnce you're in, please check your profile and vehicle details are up to date and correct — it's how we match you to the right trips.";
 
 function getToken(){
   const h = new URLSearchParams((location.hash||'').replace(/^#/,''));
@@ -308,17 +309,34 @@ function nudgeRow(d){
   const el=document.createElement('div'); el.className='row';
   const done=nudged[d.id]?' done':'';
   const fake=looksFake(d.phone)?' <span class="flag">check number</span>':'';
+  const sent=d.nudgedAt?' · <span class="sent">✓ SMS sent</span>':'';
   el.innerHTML=`<div class="nudge-row${done}">
     <input type="checkbox" class="cbx" ${nudged[d.id]?'checked':''} aria-label="Nudged ${esc(d.name)}">
-    <div><div class="name">${esc(d.name)}</div><div class="sub">${esc(d.region||'—')} · <span class="cell">${fmtCell(d.phone)}</span>${fake}</div></div>
-    <button class="copy">Copy nudge</button>
+    <div><div class="name">${esc(d.name)}</div><div class="sub">${esc(d.region||'—')} · <span class="cell">${fmtCell(d.phone)}</span>${fake}${sent}</div></div>
+    <div class="controls">
+      <button class="save sms">${d.nudgedAt?'Resend SMS':'Send SMS'}</button>
+      <button class="link copy">Copy</button>
+    </div>
   </div>`;
   el.querySelector('.cbx').addEventListener('change',e=>{
     nudged[d.id]=e.target.checked; localStorage.setItem('mua_nudged',JSON.stringify(nudged));
     el.querySelector('.nudge-row').classList.toggle('done',e.target.checked);
   });
+  el.querySelector('.sms').addEventListener('click',async()=>{
+    const b=el.querySelector('.sms');
+    if(!confirm(`Text ${d.name} the app-invite link at ${fmtCell(d.phone)}?`))return;
+    b.disabled=true; b.textContent='Sending…';
+    try{
+      await call({action:'send_nudge',driver_id:d.id});
+      b.disabled=false; b.textContent='Resend SMS';
+      nudged[d.id]=true; localStorage.setItem('mua_nudged',JSON.stringify(nudged));
+      const cb=el.querySelector('.cbx'); if(cb) cb.checked=true;
+      const sub=el.querySelector('.sub'); if(sub && !sub.querySelector('.sent')) sub.insertAdjacentHTML('beforeend',' · <span class="sent">✓ SMS sent</span>');
+      toast('SMS sent to '+d.name);
+    }catch(e){ b.disabled=false; b.textContent=d.nudgedAt?'Resend SMS':'Send SMS'; toast(e.message); }
+  });
   el.querySelector('.copy').addEventListener('click',async()=>{
-    try{ await navigator.clipboard.writeText(NUDGE_TEXT); toast('Nudge message copied'); }
+    try{ await navigator.clipboard.writeText(NUDGE_TEXT); toast('Message copied'); }
     catch(e){ toast('Copy not available'); }
   });
   return el;
