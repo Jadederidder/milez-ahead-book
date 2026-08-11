@@ -68,6 +68,15 @@
 
   #summary { color: var(--muted); font-size: 14px; margin: 14px 0 2px; }
 
+  #viewbar { display: flex; gap: 6px; margin-top: 14px; }
+  #viewbar button {
+    background: none; border: 1px solid var(--line); color: var(--muted);
+    font-size: 13px; font-weight: 550; padding: 6px 14px; border-radius: 999px;
+  }
+  #viewbar button.active { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+
+  .org h3 .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 7px; }
+
   .add-card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px; margin: 18px 0 28px; }
   .add-card h2 { font-size: 15px; margin-bottom: 12px; }
   .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -136,6 +145,10 @@
   </header>
 
   <div id="summary"></div>
+  <div id="viewbar" role="tablist">
+    <button type="button" data-view="org">By organisation</button>
+    <button type="button" data-view="person">By person</button>
+  </div>
 
   <form class="add-card" id="add-form">
     <h2>Add a contact</h2>
@@ -184,6 +197,16 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<"
 const $ = (id) => document.getElementById(id);
 let session = null;
 let channel = null;
+let lastRows = [];
+let viewMode = localStorage.getItem("ttp_view") === "person" ? "person" : "org";
+
+document.querySelectorAll("#viewbar button").forEach(btn => {
+  btn.addEventListener("click", () => {
+    viewMode = btn.dataset.view;
+    localStorage.setItem("ttp_view", viewMode);
+    drawList(lastRows);
+  });
+});
 
 /* ---------- sign-in: same message whatever happens (no address probing) ---------- */
 $("signin-form").addEventListener("submit", async (e) => {
@@ -249,13 +272,34 @@ async function loadContacts() {
   drawList(data || []);
 }
 
+function contactHtml(c, mode) {
+  const coveredBit = c.covered && c.covered_at ? ` · covered ${new Date(c.covered_at).toLocaleDateString("en-ZA", { day: "numeric", month: "short" })}` : "";
+  const meta = mode === "person"
+    ? `${esc(c.organisation)}${coveredBit}`
+    : `<span class="dot" style="background:${THREAD_COLOURS[c.added_by_email] || "var(--muted)"}"></span>added by ${esc(firstName(c.added_by_email))}${coveredBit}`;
+  return `
+    <div class="contact ${c.covered ? "covered" : ""}">
+      <label class="tick" title="${c.covered ? "Covered" : "Mark as covered"}">
+        <input type="checkbox" data-id="${c.id}" ${c.covered ? "checked" : ""}>
+      </label>
+      <div class="c-body">
+        <div class="c-name">${esc(c.name)}${c.role ? ` <span class="role">— ${esc(c.role)}</span>` : ""}</div>
+        ${c.note ? `<div class="c-note">${esc(c.note)}</div>` : ""}
+        <div class="c-meta">${meta}</div>
+      </div>
+      ${c.added_by_email === session.user.email ? `<button class="del" data-del="${c.id}" title="Remove this contact">remove</button>` : ""}
+    </div>`;
+}
+
 function drawList(rows) {
+  lastRows = rows;
   const total = rows.length;
   const covered = rows.filter(r => r.covered).length;
   $("summary").textContent = total
     ? `${total} contact${total === 1 ? "" : "s"} across ${new Set(rows.map(r => r.organisation)).size} organisations — ${covered} covered, ${total - covered} to go`
     : "";
   $("empty").hidden = total > 0;
+  document.querySelectorAll("#viewbar button").forEach(b => b.classList.toggle("active", b.dataset.view === viewMode));
 
   const orgs = new Map();
   for (const r of rows) {
@@ -264,24 +308,28 @@ function drawList(rows) {
   }
   $("org-list").innerHTML = [...orgs.keys()].map(o => `<option value="${esc(o)}">`).join("");
 
-  const html = [...orgs.entries()].map(([org, contacts]) => `
-    <section class="org">
-      <h3>${esc(org)}</h3>
-      ${contacts.map(c => `
-        <div class="contact ${c.covered ? "covered" : ""}">
-          <label class="tick" title="${c.covered ? "Covered" : "Mark as covered"}">
-            <input type="checkbox" data-id="${c.id}" ${c.covered ? "checked" : ""}>
-          </label>
-          <div class="c-body">
-            <div class="c-name">${esc(c.name)}${c.role ? ` <span class="role">— ${esc(c.role)}</span>` : ""}</div>
-            ${c.note ? `<div class="c-note">${esc(c.note)}</div>` : ""}
-            <div class="c-meta">
-              <span class="dot" style="background:${THREAD_COLOURS[c.added_by_email] || "var(--muted)"}"></span>added by ${esc(firstName(c.added_by_email))}${c.covered && c.covered_at ? ` · covered ${new Date(c.covered_at).toLocaleDateString("en-ZA", { day: "numeric", month: "short" })}` : ""}
-            </div>
-          </div>
-          ${c.added_by_email === session.user.email ? `<button class="del" data-del="${c.id}" title="Remove this contact">remove</button>` : ""}
-        </div>`).join("")}
-    </section>`).join("");
+  let html;
+  if (viewMode === "person") {
+    // fixed member order first, then anyone unexpected; org order within each
+    const order = Object.keys(DISPLAY_NAMES);
+    const people = new Map();
+    for (const email of order) people.set(email, []);
+    for (const r of rows) {
+      if (!people.has(r.added_by_email)) people.set(r.added_by_email, []);
+      people.get(r.added_by_email).push(r);
+    }
+    html = [...people.entries()].filter(([, cs]) => cs.length).map(([email, cs]) => `
+      <section class="org">
+        <h3><span class="dot" style="background:${THREAD_COLOURS[email] || "var(--muted)"}"></span>${esc(firstName(email))} — ${cs.length} contact${cs.length === 1 ? "" : "s"}, ${cs.filter(c => c.covered).length} covered</h3>
+        ${cs.map(c => contactHtml(c, "person")).join("")}
+      </section>`).join("");
+  } else {
+    html = [...orgs.entries()].map(([org, contacts]) => `
+      <section class="org">
+        <h3>${esc(org)}</h3>
+        ${contacts.map(c => contactHtml(c, "org")).join("")}
+      </section>`).join("");
+  }
   $("list").innerHTML = html;
 
   $("list").querySelectorAll("input[type=checkbox]").forEach(cb => {
