@@ -20,10 +20,18 @@
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
-    background: var(--paper);
+    background:
+      radial-gradient(1100px 560px at 88% -8%, rgba(15,107,100,.10), transparent 62%),
+      radial-gradient(950px 520px at -8% 24%, rgba(141,74,134,.09), transparent 60%),
+      radial-gradient(900px 520px at 52% 112%, rgba(201,138,45,.10), transparent 62%),
+      var(--paper);
+    background-attachment: fixed;
     color: var(--ink);
     font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     min-height: 100vh;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
   }
   .wrap { max-width: 880px; margin: 0 auto; padding: 24px 20px 80px; }
 
@@ -39,9 +47,24 @@
   #threads .t2 { stroke: var(--thread-2); animation-delay: .45s; }
   #threads .t3 { stroke: var(--thread-3); animation-delay: .75s; }
   @keyframes draw { to { stroke-dashoffset: 0; } }
-  #signin h1 { font-size: 30px; font-weight: 650; letter-spacing: -.02em; margin: 6px 0 4px; }
+  #threads { animation: sway 7s ease-in-out 2s infinite alternate; }
+  @keyframes sway { from { transform: translateY(-4px) rotate(-.6deg); } to { transform: translateY(4px) rotate(.6deg); } }
+  #signin h1 { font-size: 32px; font-weight: 700; letter-spacing: -.02em; margin: 6px 0 4px; }
+  @supports (-webkit-background-clip: text) or (background-clip: text) {
+    #signin h1 {
+      background: linear-gradient(92deg, var(--thread-1) 8%, var(--thread-2) 50%, var(--thread-3) 92%);
+      -webkit-background-clip: text; background-clip: text;
+      color: transparent; -webkit-text-fill-color: transparent;
+    }
+  }
   #signin .sub { color: var(--muted); margin-bottom: 28px; }
-  .signin-card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 22px; width: min(400px, 90vw); box-shadow: 0 1px 3px rgba(35,32,28,.05); }
+  .signin-card {
+    border: 1px solid transparent; border-radius: 14px; padding: 22px; width: min(400px, 90vw);
+    background:
+      linear-gradient(var(--card), var(--card)) padding-box,
+      linear-gradient(120deg, rgba(15,107,100,.55), rgba(141,74,134,.5), rgba(201,138,45,.55)) border-box;
+    box-shadow: 0 8px 28px -18px rgba(35,32,28,.35);
+  }
   .signin-card label { display: block; text-align: left; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
   input, textarea, select {
     width: 100%; border: 1px solid var(--line); border-radius: 9px; background: #fff;
@@ -50,23 +73,42 @@
   input:focus, textarea:focus { outline: 2px solid var(--thread-1); outline-offset: -1px; border-color: transparent; }
   button {
     font: inherit; font-weight: 600; border: 0; border-radius: 9px; cursor: pointer;
-    background: var(--ink); color: var(--paper); padding: 11px 16px;
+    background: linear-gradient(120deg, var(--ink) 30%, #0d4a44 130%); color: var(--paper); padding: 11px 16px;
+    transition: transform .12s, box-shadow .12s;
   }
-  button:hover { opacity: .92; }
+  button:hover { transform: translateY(-1px); box-shadow: 0 6px 16px -10px rgba(15,107,100,.7); }
   button:disabled { opacity: .5; cursor: default; }
   .signin-card button { width: 100%; margin-top: 12px; }
   #signin-msg { margin-top: 16px; color: var(--thread-1); font-weight: 550; min-height: 1.5em; }
 
   /* ---------- app ---------- */
   #app { display: none; }
-  header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 18px 0 14px; border-bottom: 2px solid var(--ink); flex-wrap: wrap; }
+  header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 18px 0 14px; position: relative; flex-wrap: wrap; }
+  header::after {
+    content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 3px; border-radius: 2px;
+    background: linear-gradient(90deg, var(--thread-1), var(--thread-2), var(--thread-3));
+  }
   header h1 { font-size: 22px; letter-spacing: -.02em; }
   header .who { color: var(--muted); font-size: 14px; }
   header .who b { color: var(--ink); }
   .linkbtn { background: none; color: var(--muted); font-weight: 500; padding: 0 0 0 10px; text-decoration: underline; }
   .linkbtn:hover { color: var(--ink); }
 
-  #summary { color: var(--muted); font-size: 14px; margin: 14px 0 2px; }
+  #summary { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 16px 0 2px; }
+  #summary:empty { display: none; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--card); border: 1px solid var(--line); border-radius: 999px;
+    padding: 4px 12px; font-size: 13px; color: var(--muted); font-weight: 550;
+  }
+  .chip b { color: var(--ink); }
+  .chip .dot { width: 8px; height: 8px; border-radius: 50%; }
+  #progress { flex: 1 1 120px; min-width: 90px; height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+  #progress i {
+    display: block; height: 100%; border-radius: 3px;
+    background: linear-gradient(90deg, var(--thread-1), var(--thread-2), var(--thread-3));
+    transition: width .5s ease;
+  }
 
   #viewbar { display: flex; gap: 6px; margin-top: 14px; }
   #viewbar button {
@@ -77,20 +119,39 @@
 
   .org h3 .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 7px; }
 
-  .add-card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px; margin: 18px 0 28px; }
-  .add-card h2 { font-size: 15px; margin-bottom: 12px; }
+  .add-card {
+    border: 1px solid transparent; border-radius: 14px; padding: 18px; margin: 18px 0 28px;
+    background:
+      linear-gradient(var(--card), var(--card)) padding-box,
+      linear-gradient(120deg, rgba(15,107,100,.35), rgba(141,74,134,.3), rgba(201,138,45,.35)) border-box;
+    box-shadow: 0 6px 22px -18px rgba(35,32,28,.3);
+  }
+  .add-card h2 { font-size: 15px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+  .add-card h2::after {
+    content: ""; width: 34px; height: 3px; border-radius: 2px;
+    background: linear-gradient(90deg, var(--thread-1), var(--thread-2), var(--thread-3));
+  }
   .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .grid .full { grid-column: 1 / -1; }
   @media (max-width: 560px) { .grid { grid-template-columns: 1fr; } }
   .add-card button { margin-top: 12px; }
   #add-err { color: var(--danger); font-size: 14px; margin-top: 8px; min-height: 1em; }
 
-  .org { margin: 26px 0; }
+  .org { margin: 26px 0; animation: rise .4s ease both; }
+  @keyframes rise { from { opacity: 0; transform: translateY(8px); } }
   .org h3 {
     font-size: 13px; text-transform: uppercase; letter-spacing: .09em; color: var(--muted);
-    border-bottom: 1px solid var(--line); padding-bottom: 6px; margin-bottom: 4px;
+    border-bottom: 1px solid var(--line); padding-bottom: 6px; margin-bottom: 4px; position: relative;
   }
-  .contact { display: flex; align-items: flex-start; gap: 12px; padding: 12px 4px; border-bottom: 1px dashed var(--line); }
+  .org h3::before {
+    content: ""; position: absolute; left: 0; bottom: -1px; width: 46px; height: 2px; border-radius: 1px;
+    background: linear-gradient(90deg, var(--thread-1), var(--thread-3));
+  }
+  .contact {
+    display: flex; align-items: flex-start; gap: 12px; padding: 12px 8px; border-bottom: 1px dashed var(--line);
+    border-radius: 10px; transition: background .15s, box-shadow .15s;
+  }
+  .contact:hover { background: var(--card); box-shadow: 0 2px 10px -8px rgba(35,32,28,.4); }
   .contact:last-child { border-bottom: 0; }
   .tick { flex: 0 0 auto; margin-top: 3px; }
   .tick input { width: 19px; height: 19px; accent-color: var(--thread-1); cursor: pointer; }
@@ -102,8 +163,13 @@
   .c-meta .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: baseline; }
   .covered .c-name, .covered .c-note { color: var(--muted); }
   .covered .c-name { text-decoration: line-through; text-decoration-thickness: 1px; text-decoration-color: var(--muted); }
-  .del { background: none; color: var(--muted); font-size: 13px; font-weight: 500; padding: 2px 6px; }
-  .del:hover { color: var(--danger); }
+  .del, .edit { background: none; color: var(--muted); font-size: 13px; font-weight: 500; padding: 2px 6px; box-shadow: none; }
+  .del:hover { color: var(--danger); transform: none; box-shadow: none; }
+  .edit:hover { color: var(--thread-1); transform: none; box-shadow: none; }
+  .edit-actions { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+  .edit-actions .save { padding: 8px 16px; }
+  .edit-actions .cancel { background: none; color: var(--muted); text-decoration: underline; padding: 0; box-shadow: none; }
+  .edit-actions .cancel:hover { color: var(--ink); transform: none; }
   #empty { color: var(--muted); text-align: center; padding: 40px 0; }
 
   #denied { display: none; text-align: center; padding-top: 20vh; }
@@ -198,6 +264,7 @@ const $ = (id) => document.getElementById(id);
 let session = null;
 let channel = null;
 let lastRows = [];
+let editingId = null;
 let viewMode = localStorage.getItem("ttp_view") === "person" ? "person" : "org";
 
 document.querySelectorAll("#viewbar button").forEach(btn => {
@@ -254,7 +321,9 @@ async function render() {
   await loadContacts();
   if (!channel) {
     channel = sb.channel("ttp_contacts_changes")
-      .on("postgres_changes", { event: "*", schema: "public", table: "ttp_contacts" }, () => loadContacts())
+      .on("postgres_changes", { event: "*", schema: "public", table: "ttp_contacts" }, () => {
+        if (!editingId) loadContacts(); // don't wipe an edit in progress
+      })
       .subscribe();
   }
 }
@@ -273,6 +342,23 @@ async function loadContacts() {
 }
 
 function contactHtml(c, mode) {
+  if (c.id === editingId) {
+    return `
+    <div class="contact" data-editing="${c.id}">
+      <div class="c-body">
+        <div class="grid">
+          <input class="e-name" value="${esc(c.name)}" placeholder="Name *">
+          <input class="e-org" value="${esc(c.organisation)}" placeholder="Organisation *" list="org-list">
+          <input class="e-role full" value="${esc(c.role || "")}" placeholder="Role / title (optional)">
+          <textarea class="e-note full" rows="2" placeholder="Note (optional)">${esc(c.note || "")}</textarea>
+        </div>
+        <div class="edit-actions">
+          <button type="button" class="save" data-save="${c.id}">Save</button>
+          <button type="button" class="cancel" data-cancel>cancel</button>
+        </div>
+      </div>
+    </div>`;
+  }
   const coveredBit = c.covered && c.covered_at ? ` · covered ${new Date(c.covered_at).toLocaleDateString("en-ZA", { day: "numeric", month: "short" })}` : "";
   const meta = mode === "person"
     ? `${esc(c.organisation)}${coveredBit}`
@@ -280,13 +366,14 @@ function contactHtml(c, mode) {
   return `
     <div class="contact ${c.covered ? "covered" : ""}">
       <label class="tick" title="${c.covered ? "Covered" : "Mark as covered"}">
-        <input type="checkbox" data-id="${c.id}" ${c.covered ? "checked" : ""}>
+        <input type="checkbox" data-id="${c.id}" ${c.covered ? "checked" : ""} style="accent-color:${THREAD_COLOURS[c.added_by_email] || "var(--thread-1)"}">
       </label>
       <div class="c-body">
         <div class="c-name">${esc(c.name)}${c.role ? ` <span class="role">— ${esc(c.role)}</span>` : ""}</div>
         ${c.note ? `<div class="c-note">${esc(c.note)}</div>` : ""}
         <div class="c-meta">${meta}</div>
       </div>
+      <button class="edit" data-edit="${c.id}" title="Edit this contact">edit</button>
       ${c.added_by_email === session.user.email ? `<button class="del" data-del="${c.id}" title="Remove this contact">remove</button>` : ""}
     </div>`;
 }
@@ -295,9 +382,13 @@ function drawList(rows) {
   lastRows = rows;
   const total = rows.length;
   const covered = rows.filter(r => r.covered).length;
-  $("summary").textContent = total
-    ? `${total} contact${total === 1 ? "" : "s"} across ${new Set(rows.map(r => r.organisation)).size} organisations — ${covered} covered, ${total - covered} to go`
-    : "";
+  const orgCount = new Set(rows.map(r => r.organisation)).size;
+  const pct = total ? Math.round((covered / total) * 100) : 0;
+  $("summary").innerHTML = total ? `
+    <span class="chip"><b>${total}</b> contact${total === 1 ? "" : "s"}</span>
+    <span class="chip"><b>${orgCount}</b> organisation${orgCount === 1 ? "" : "s"}</span>
+    <span class="chip"><span class="dot" style="background:var(--thread-1)"></span><b>${covered}</b> covered</span>
+    <span id="progress" title="${pct}% covered"><i style="width:${pct}%"></i></span>` : "";
   $("empty").hidden = total > 0;
   document.querySelectorAll("#viewbar button").forEach(b => b.classList.toggle("active", b.dataset.view === viewMode));
 
@@ -347,6 +438,29 @@ function drawList(rows) {
       if (!confirm("Remove this contact?")) return;
       const { error } = await sb.from("ttp_contacts").delete().eq("id", btn.dataset.del);
       if (error) { console.error(error); return; }
+      loadContacts();
+    });
+  });
+  $("list").querySelectorAll("[data-edit]").forEach(btn => {
+    btn.addEventListener("click", () => { editingId = btn.dataset.edit; drawList(lastRows); });
+  });
+  $("list").querySelectorAll("[data-cancel]").forEach(btn => {
+    btn.addEventListener("click", () => { editingId = null; drawList(lastRows); });
+  });
+  $("list").querySelectorAll("[data-save]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const box = btn.closest(".contact");
+      const patch = {
+        name: box.querySelector(".e-name").value.trim(),
+        organisation: box.querySelector(".e-org").value.trim(),
+        role: box.querySelector(".e-role").value.trim() || null,
+        note: box.querySelector(".e-note").value.trim() || null,
+      };
+      if (!patch.name || !patch.organisation) return;
+      btn.disabled = true;
+      const { error } = await sb.from("ttp_contacts").update(patch).eq("id", btn.dataset.save);
+      if (error) { console.error(error); btn.disabled = false; return; }
+      editingId = null;
       loadContacts();
     });
   });
