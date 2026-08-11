@@ -83,7 +83,12 @@
 
   /* ---------- app ---------- */
   #app { display: none; }
-  header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 18px 0 14px; position: relative; flex-wrap: wrap; }
+  header {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 18px 0 14px;
+    position: sticky; top: 0; z-index: 10; flex-wrap: wrap;
+    background: color-mix(in srgb, var(--paper) 86%, transparent);
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  }
   header::after {
     content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 3px; border-radius: 2px;
     background: linear-gradient(90deg, var(--thread-1), var(--thread-2), var(--thread-3));
@@ -106,9 +111,23 @@
   #progress { flex: 1 1 120px; min-width: 90px; height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
   #progress i {
     display: block; height: 100%; border-radius: 3px;
-    background: linear-gradient(90deg, var(--thread-1), var(--thread-2), var(--thread-3));
+    background: linear-gradient(90deg, var(--thread-1), var(--thread-2), var(--thread-3), var(--thread-1));
+    background-size: 220% 100%;
+    animation: shimmer 5s linear infinite;
     transition: width .5s ease;
   }
+  @keyframes shimmer { to { background-position: -220% 0; } }
+
+  /* covered-tick burst */
+  .tick { position: relative; }
+  .tick.burst::after {
+    content: ""; position: absolute; inset: -7px; border-radius: 50%; pointer-events: none;
+    border: 2px solid var(--burst, var(--thread-1));
+    animation: ring .55s ease-out forwards;
+  }
+  @keyframes ring { from { opacity: .9; transform: scale(.4); } to { opacity: 0; transform: scale(1.5); } }
+  .tick input { transition: transform .15s; }
+  .tick.burst input { transform: scale(1.25); }
 
   #viewbar { display: flex; gap: 6px; margin-top: 14px; }
   #viewbar button {
@@ -137,16 +156,28 @@
   .add-card button { margin-top: 12px; }
   #add-err { color: var(--danger); font-size: 14px; margin-top: 8px; min-height: 1em; }
 
-  .org { margin: 26px 0; animation: rise .4s ease both; }
+  .org {
+    margin: 22px 0; animation: rise .4s ease both;
+    background: linear-gradient(var(--card-tint, transparent), transparent 70%), var(--card);
+    border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px 8px;
+    box-shadow: 0 4px 18px -16px rgba(35,32,28,.35);
+  }
   @keyframes rise { from { opacity: 0; transform: translateY(8px); } }
   .org h3 {
     font-size: 13px; text-transform: uppercase; letter-spacing: .09em; color: var(--muted);
-    border-bottom: 1px solid var(--line); padding-bottom: 6px; margin-bottom: 4px; position: relative;
+    border-bottom: 1px solid var(--line); padding-bottom: 8px; margin-bottom: 4px; position: relative;
+    display: flex; align-items: center; gap: 8px;
   }
   .org h3::before {
     content: ""; position: absolute; left: 0; bottom: -1px; width: 46px; height: 2px; border-radius: 1px;
     background: linear-gradient(90deg, var(--thread-1), var(--thread-3));
   }
+  .ava {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 22px; height: 22px; border-radius: 50%; color: #fff;
+    font-size: 11px; font-weight: 700; letter-spacing: 0; text-transform: none; flex: 0 0 auto;
+  }
+  .ava.sm { width: 15px; height: 15px; font-size: 9px; vertical-align: middle; margin-top: -2px; }
   .contact {
     display: flex; align-items: flex-start; gap: 12px; padding: 12px 8px; border-bottom: 1px dashed var(--line);
     border-radius: 10px; transition: background .15s, box-shadow .15s;
@@ -171,6 +202,8 @@
   .edit-actions .cancel { background: none; color: var(--muted); text-decoration: underline; padding: 0; box-shadow: none; }
   .edit-actions .cancel:hover { color: var(--ink); transform: none; }
   #empty { color: var(--muted); text-align: center; padding: 40px 0; }
+  #empty svg { width: 150px; height: auto; display: block; margin: 0 auto 14px; opacity: .8; }
+  #empty svg path { fill: none; stroke-width: 3; stroke-linecap: round; }
 
   #denied { display: none; text-align: center; padding-top: 20vh; }
   #denied p { color: var(--muted); margin: 10px 0 20px; }
@@ -230,7 +263,14 @@
   </form>
 
   <div id="list"></div>
-  <div id="empty" hidden>No contacts yet — add the first one above.</div>
+  <div id="empty" hidden>
+    <svg viewBox="0 0 150 56" aria-hidden="true">
+      <path d="M6 46 C 40 8, 75 52, 144 20" stroke="var(--thread-1)"/>
+      <path d="M6 28 C 48 48, 95 6, 144 34" stroke="var(--thread-2)"/>
+      <path d="M6 12 C 52 20, 90 42, 144 46" stroke="var(--thread-3)"/>
+    </svg>
+    No contacts yet — add the first one above and start weaving the network.
+  </div>
 
   <footer>Tick a contact once they’ve been reached. Entries can only be removed by whoever added them.</footer>
 </div>
@@ -257,7 +297,16 @@ const DISPLAY_NAMES = {
   "maryke@thetalkingpoint.co.za": "Maryke",
   "elzabe@thetalkingpoint.co.za": "Elzabe",
 };
+const THREAD_TINTS = {
+  "jd@projecthelp.co.za": "rgba(15,107,100,.07)",
+  "maryke@thetalkingpoint.co.za": "rgba(141,74,134,.07)",
+  "elzabe@thetalkingpoint.co.za": "rgba(201,138,45,.09)",
+};
 const firstName = (email) => DISPLAY_NAMES[email] || (email || "").split("@")[0].replace(/^\w/, c => c.toUpperCase());
+const ava = (email, cls = "") => {
+  const n = firstName(email);
+  return `<span class="ava ${cls}" style="background:${THREAD_COLOURS[email] || "var(--muted)"}">${esc(n === "JD" ? "JD" : n[0])}</span>`;
+};
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
 const $ = (id) => document.getElementById(id);
@@ -362,7 +411,7 @@ function contactHtml(c, mode) {
   const coveredBit = c.covered && c.covered_at ? ` · covered ${new Date(c.covered_at).toLocaleDateString("en-ZA", { day: "numeric", month: "short" })}` : "";
   const meta = mode === "person"
     ? `${esc(c.organisation)}${coveredBit}`
-    : `<span class="dot" style="background:${THREAD_COLOURS[c.added_by_email] || "var(--muted)"}"></span>added by ${esc(firstName(c.added_by_email))}${coveredBit}`;
+    : `${ava(c.added_by_email, "sm")}&nbsp;added by ${esc(firstName(c.added_by_email))}${coveredBit}`;
   return `
     <div class="contact ${c.covered ? "covered" : ""}">
       <label class="tick" title="${c.covered ? "Covered" : "Mark as covered"}">
@@ -410,8 +459,8 @@ function drawList(rows) {
       people.get(r.added_by_email).push(r);
     }
     html = [...people.entries()].filter(([, cs]) => cs.length).map(([email, cs]) => `
-      <section class="org">
-        <h3><span class="dot" style="background:${THREAD_COLOURS[email] || "var(--muted)"}"></span>${esc(firstName(email))} — ${cs.length} contact${cs.length === 1 ? "" : "s"}, ${cs.filter(c => c.covered).length} covered</h3>
+      <section class="org" style="--card-tint:${THREAD_TINTS[email] || "transparent"}">
+        <h3>${ava(email)}${esc(firstName(email))} — ${cs.length} contact${cs.length === 1 ? "" : "s"}, ${cs.filter(c => c.covered).length} covered</h3>
         ${cs.map(c => contactHtml(c, "person")).join("")}
       </section>`).join("");
   } else {
@@ -426,6 +475,11 @@ function drawList(rows) {
   $("list").querySelectorAll("input[type=checkbox]").forEach(cb => {
     cb.addEventListener("change", async () => {
       const on = cb.checked;
+      if (on) {
+        const label = cb.closest(".tick");
+        label.style.setProperty("--burst", cb.style.accentColor);
+        label.classList.add("burst");
+      }
       const { error } = await sb.from("ttp_contacts")
         .update({ covered: on, covered_at: on ? new Date().toISOString() : null })
         .eq("id", cb.dataset.id);
