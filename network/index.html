@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>TTP Network — The Talking Point</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M3 26 C 10 6, 18 26, 29 10' fill='none' stroke='%230f6b64' stroke-width='3' stroke-linecap='round'/%3E%3Cpath d='M3 16 C 12 24, 20 6, 29 19' fill='none' stroke='%238d4a86' stroke-width='3' stroke-linecap='round'/%3E%3Cpath d='M3 7 C 12 10, 20 20, 29 26' fill='none' stroke='%23c98a2d' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --paper: #faf7f2;
+    --ink: #23201c;
+    --muted: #8a8072;
+    --line: #e6dfd3;
+    --card: #ffffff;
+    --thread-1: #0f6b64; /* JD */
+    --thread-2: #8d4a86; /* Maryke */
+    --thread-3: #c98a2d; /* Elzabe */
+    --danger: #a63d2f;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    min-height: 100vh;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 24px 20px 80px; }
+
+  /* ---------- sign-in ---------- */
+  #signin { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 92vh; text-align: center; }
+  #threads { width: min(420px, 86vw); height: auto; margin-bottom: 8px; }
+  #threads path {
+    fill: none; stroke-width: 3.5; stroke-linecap: round;
+    stroke-dasharray: 700; stroke-dashoffset: 700;
+    animation: draw 1.6s ease-out forwards;
+  }
+  #threads .t1 { stroke: var(--thread-1); animation-delay: .15s; }
+  #threads .t2 { stroke: var(--thread-2); animation-delay: .45s; }
+  #threads .t3 { stroke: var(--thread-3); animation-delay: .75s; }
+  @keyframes draw { to { stroke-dashoffset: 0; } }
+  #signin h1 { font-size: 30px; font-weight: 650; letter-spacing: -.02em; margin: 6px 0 4px; }
+  #signin .sub { color: var(--muted); margin-bottom: 28px; }
+  .signin-card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 22px; width: min(400px, 90vw); box-shadow: 0 1px 3px rgba(35,32,28,.05); }
+  .signin-card label { display: block; text-align: left; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+  input, textarea, select {
+    width: 100%; border: 1px solid var(--line); border-radius: 9px; background: #fff;
+    padding: 10px 12px; font: inherit; color: var(--ink);
+  }
+  input:focus, textarea:focus { outline: 2px solid var(--thread-1); outline-offset: -1px; border-color: transparent; }
+  button {
+    font: inherit; font-weight: 600; border: 0; border-radius: 9px; cursor: pointer;
+    background: var(--ink); color: var(--paper); padding: 11px 16px;
+  }
+  button:hover { opacity: .92; }
+  button:disabled { opacity: .5; cursor: default; }
+  .signin-card button { width: 100%; margin-top: 12px; }
+  #signin-msg { margin-top: 16px; color: var(--thread-1); font-weight: 550; min-height: 1.5em; }
+
+  /* ---------- app ---------- */
+  #app { display: none; }
+  header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 18px 0 14px; border-bottom: 2px solid var(--ink); flex-wrap: wrap; }
+  header h1 { font-size: 22px; letter-spacing: -.02em; }
+  header .who { color: var(--muted); font-size: 14px; }
+  header .who b { color: var(--ink); }
+  .linkbtn { background: none; color: var(--muted); font-weight: 500; padding: 0 0 0 10px; text-decoration: underline; }
+  .linkbtn:hover { color: var(--ink); }
+
+  #summary { color: var(--muted); font-size: 14px; margin: 14px 0 2px; }
+
+  .add-card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px; margin: 18px 0 28px; }
+  .add-card h2 { font-size: 15px; margin-bottom: 12px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .grid .full { grid-column: 1 / -1; }
+  @media (max-width: 560px) { .grid { grid-template-columns: 1fr; } }
+  .add-card button { margin-top: 12px; }
+  #add-err { color: var(--danger); font-size: 14px; margin-top: 8px; min-height: 1em; }
+
+  .org { margin: 26px 0; }
+  .org h3 {
+    font-size: 13px; text-transform: uppercase; letter-spacing: .09em; color: var(--muted);
+    border-bottom: 1px solid var(--line); padding-bottom: 6px; margin-bottom: 4px;
+  }
+  .contact { display: flex; align-items: flex-start; gap: 12px; padding: 12px 4px; border-bottom: 1px dashed var(--line); }
+  .contact:last-child { border-bottom: 0; }
+  .tick { flex: 0 0 auto; margin-top: 3px; }
+  .tick input { width: 19px; height: 19px; accent-color: var(--thread-1); cursor: pointer; }
+  .c-body { flex: 1 1 auto; min-width: 0; }
+  .c-name { font-weight: 620; }
+  .c-name .role { font-weight: 400; color: var(--muted); }
+  .c-note { color: var(--muted); font-size: 14px; margin-top: 2px; white-space: pre-wrap; }
+  .c-meta { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .c-meta .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: baseline; }
+  .covered .c-name, .covered .c-note { color: var(--muted); }
+  .covered .c-name { text-decoration: line-through; text-decoration-thickness: 1px; text-decoration-color: var(--muted); }
+  .del { background: none; color: var(--muted); font-size: 13px; font-weight: 500; padding: 2px 6px; }
+  .del:hover { color: var(--danger); }
+  #empty { color: var(--muted); text-align: center; padding: 40px 0; }
+
+  #denied { display: none; text-align: center; padding-top: 20vh; }
+  #denied p { color: var(--muted); margin: 10px 0 20px; }
+  footer { margin-top: 60px; color: var(--muted); font-size: 12px; text-align: center; }
+</style>
+</head>
+<body>
+
+<!-- ======== sign-in ======== -->
+<div id="signin">
+  <svg id="threads" viewBox="0 0 420 160" aria-hidden="true">
+    <path class="t1" d="M20 130 C 120 20, 220 150, 400 55"/>
+    <path class="t2" d="M20 80 C 140 140, 260 10, 400 95"/>
+    <path class="t3" d="M20 35 C 150 60, 250 120, 400 130"/>
+  </svg>
+  <h1>TTP Network</h1>
+  <div class="sub">The Talking Point — shared contact register</div>
+  <form class="signin-card" id="signin-form">
+    <label for="email">Your email address</label>
+    <input id="email" type="email" autocomplete="email" placeholder="you@thetalkingpoint.co.za" required>
+    <button id="send-btn" type="submit">Send me a sign-in link</button>
+  </form>
+  <div id="signin-msg" role="status"></div>
+</div>
+
+<!-- ======== no access ======== -->
+<div id="denied" class="wrap">
+  <h1>No access</h1>
+  <p>This register is limited to The Talking Point team.</p>
+  <button id="denied-signout">Sign out</button>
+</div>
+
+<!-- ======== app ======== -->
+<div id="app" class="wrap">
+  <header>
+    <h1>TTP Network</h1>
+    <div class="who">signed in as <b id="who-email"></b><button class="linkbtn" id="signout">sign out</button></div>
+  </header>
+
+  <div id="summary"></div>
+
+  <form class="add-card" id="add-form">
+    <h2>Add a contact</h2>
+    <div class="grid">
+      <input id="f-name" placeholder="Name *" required>
+      <input id="f-org" placeholder="Organisation *" required list="org-list">
+      <datalist id="org-list"></datalist>
+      <input id="f-role" class="full" placeholder="Role / title (optional)">
+      <textarea id="f-note" class="full" rows="2" placeholder="Note — context, who knows them, what to raise (optional)"></textarea>
+    </div>
+    <button type="submit">Add contact</button>
+    <div id="add-err"></div>
+  </form>
+
+  <div id="list"></div>
+  <div id="empty" hidden>No contacts yet — add the first one above.</div>
+
+  <footer>Tick a contact once they’ve been reached. Entries can only be removed by whoever added them.</footer>
+</div>
+
+<!-- vendored @supabase/supabase-js v2 UMD build — same-origin, no third-party CDN -->
+<script src="./supabase.js"></script>
+<script>
+"use strict";
+if (!window.supabase) {
+  document.getElementById("signin-msg").textContent = "Could not load — refresh the page.";
+  throw new Error("supabase.js failed to load");
+}
+const SUPABASE_URL = "https://psmmwsrkhxdggabgcyxj.supabase.co";
+const SUPABASE_KEY = "sb_publishable_SmOFb9j_e0GlezkVB0zCiQ_JyMVOAmy";
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const THREAD_COLOURS = {
+  "jd@projecthelp.co.za": "var(--thread-1)",
+  "maryke@thetalkingpoint.co.za": "var(--thread-2)",
+  "elzabe@thetalkingpoint.co.za": "var(--thread-3)",
+};
+const DISPLAY_NAMES = {
+  "jd@projecthelp.co.za": "JD",
+  "maryke@thetalkingpoint.co.za": "Maryke",
+  "elzabe@thetalkingpoint.co.za": "Elzabe",
+};
+const firstName = (email) => DISPLAY_NAMES[email] || (email || "").split("@")[0].replace(/^\w/, c => c.toUpperCase());
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+const $ = (id) => document.getElementById(id);
+let session = null;
+let channel = null;
+
+/* ---------- sign-in: same message whatever happens (no address probing) ---------- */
+$("signin-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const email = $("email").value.trim().toLowerCase();
+  if (!email) return;
+  $("send-btn").disabled = true;
+  try {
+    await sb.auth.signInWithOtp({
+      email,
+      options: { shouldCreateUser: false, emailRedirectTo: location.origin + location.pathname },
+    });
+  } catch (err) {
+    console.error(err); // deliberately not shown — same message for everyone
+  }
+  $("signin-msg").textContent = "If that address is on the team, a sign-in link is on its way — check your inbox.";
+  setTimeout(() => { $("send-btn").disabled = false; }, 4000);
+});
+
+/* ---------- auth state ---------- */
+sb.auth.onAuthStateChange((_event, s) => {
+  session = s;
+  render();
+});
+
+async function render() {
+  if (!session) {
+    $("signin").style.display = "flex";
+    $("app").style.display = "none";
+    $("denied").style.display = "none";
+    if (channel) { sb.removeChannel(channel); channel = null; }
+    return;
+  }
+  const { data: isMember, error } = await sb.rpc("is_ttp_member");
+  if (error || !isMember) {
+    $("signin").style.display = "none";
+    $("app").style.display = "none";
+    $("denied").style.display = "block";
+    return;
+  }
+  $("signin").style.display = "none";
+  $("denied").style.display = "none";
+  $("app").style.display = "block";
+  $("who-email").textContent = session.user.email;
+  await loadContacts();
+  if (!channel) {
+    channel = sb.channel("ttp_contacts_changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "ttp_contacts" }, () => loadContacts())
+      .subscribe();
+  }
+}
+
+$("signout").addEventListener("click", () => sb.auth.signOut());
+$("denied-signout").addEventListener("click", () => sb.auth.signOut());
+
+/* ---------- contacts ---------- */
+async function loadContacts() {
+  const { data, error } = await sb.from("ttp_contacts")
+    .select("*")
+    .order("organisation", { ascending: true })
+    .order("created_at", { ascending: true });
+  if (error) { console.error(error); return; }
+  drawList(data || []);
+}
+
+function drawList(rows) {
+  const total = rows.length;
+  const covered = rows.filter(r => r.covered).length;
+  $("summary").textContent = total
+    ? `${total} contact${total === 1 ? "" : "s"} across ${new Set(rows.map(r => r.organisation)).size} organisations — ${covered} covered, ${total - covered} to go`
+    : "";
+  $("empty").hidden = total > 0;
+
+  const orgs = new Map();
+  for (const r of rows) {
+    if (!orgs.has(r.organisation)) orgs.set(r.organisation, []);
+    orgs.get(r.organisation).push(r);
+  }
+  $("org-list").innerHTML = [...orgs.keys()].map(o => `<option value="${esc(o)}">`).join("");
+
+  const html = [...orgs.entries()].map(([org, contacts]) => `
+    <section class="org">
+      <h3>${esc(org)}</h3>
+      ${contacts.map(c => `
+        <div class="contact ${c.covered ? "covered" : ""}">
+          <label class="tick" title="${c.covered ? "Covered" : "Mark as covered"}">
+            <input type="checkbox" data-id="${c.id}" ${c.covered ? "checked" : ""}>
+          </label>
+          <div class="c-body">
+            <div class="c-name">${esc(c.name)}${c.role ? ` <span class="role">— ${esc(c.role)}</span>` : ""}</div>
+            ${c.note ? `<div class="c-note">${esc(c.note)}</div>` : ""}
+            <div class="c-meta">
+              <span class="dot" style="background:${THREAD_COLOURS[c.added_by_email] || "var(--muted)"}"></span>added by ${esc(firstName(c.added_by_email))}${c.covered && c.covered_at ? ` · covered ${new Date(c.covered_at).toLocaleDateString("en-ZA", { day: "numeric", month: "short" })}` : ""}
+            </div>
+          </div>
+          ${c.added_by_email === session.user.email ? `<button class="del" data-del="${c.id}" title="Remove this contact">remove</button>` : ""}
+        </div>`).join("")}
+    </section>`).join("");
+  $("list").innerHTML = html;
+
+  $("list").querySelectorAll("input[type=checkbox]").forEach(cb => {
+    cb.addEventListener("change", async () => {
+      const on = cb.checked;
+      const { error } = await sb.from("ttp_contacts")
+        .update({ covered: on, covered_at: on ? new Date().toISOString() : null })
+        .eq("id", cb.dataset.id);
+      if (error) { console.error(error); cb.checked = !on; return; }
+      loadContacts();
+    });
+  });
+  $("list").querySelectorAll("[data-del]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      if (!confirm("Remove this contact?")) return;
+      const { error } = await sb.from("ttp_contacts").delete().eq("id", btn.dataset.del);
+      if (error) { console.error(error); return; }
+      loadContacts();
+    });
+  });
+}
+
+$("add-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  $("add-err").textContent = "";
+  const row = {
+    name: $("f-name").value.trim(),
+    organisation: $("f-org").value.trim(),
+    role: $("f-role").value.trim() || null,
+    note: $("f-note").value.trim() || null,
+    added_by_email: session.user.email,
+  };
+  if (!row.name || !row.organisation) return;
+  const { error } = await sb.from("ttp_contacts").insert(row);
+  if (error) {
+    console.error(error);
+    $("add-err").textContent = "Could not save — try again.";
+    return;
+  }
+  $("add-form").reset();
+  loadContacts();
+});
+
+/* initial session pickup (incl. magic-link return) */
+sb.auth.getSession().then(({ data }) => { session = data.session; render(); });
+</script>
+</body>
+</html>
