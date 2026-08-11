@@ -19,11 +19,19 @@ system of record — start there for the full picture).
 | `gift.html` | Gift a trip to a friend | Shared by members |
 | `profile.html` | Member self-service profile | WhatsApp "My profile" |
 | `index.html` | Landing / marketing entry | Direct |
+| `network/` | TTP Network — three-person contact register for The Talking Point (JD, Maryke, Elzabe) | Direct; Supabase magic-link sign-in |
 
 All page access is via **signed/HMAC tokens** minted by the edge functions
 (`book-web`, `track`, etc.) — there is no login here and no secret in the client.
 The one embedded key is a **Google Maps browser key**, which is referrer-locked to
 this domain.
+
+The exception is `network/`, which does have a login: Supabase email magic links
+against the **ListenUp** project, with access enforced by RLS + a three-address
+allow-list in Postgres. Its embedded key is the publishable key (safe in the
+client); `network/supabase.js` is the vendored supabase-js v2 UMD bundle. System
+of record and docs: `project-help-drive` repo, `ttp-network/` +
+`handover/ttp-network.md`.
 
 ## Local preview
 
