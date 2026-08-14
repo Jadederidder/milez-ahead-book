@@ -87,11 +87,51 @@ async function delPlace(id){
   if(r.error){alert(r.error);return;}
   window._data.places=r.places;document.getElementById('placesList').innerHTML=placesRows(r.places);
 }
+const CHANGEABLE=['captured','awaiting_driver','driver_assigned','driver_confirmed'];
+function isUpcoming(t){return CHANGEABLE.includes(t.status)&&t.trip_date>=new Date().toISOString().slice(0,10);}
+function tripRow(t,i){
+  const to=t.dropoff_address||t.airport_code||'';const from=(t.pickup_address||'').split(',')[0];
+  const canEdit=isUpcoming(t);
+  return `<div class="trip" id="trip-${i}"><div style="min-width:0;flex:1">
+    <div class="when">${fmt(t.trip_date)}${t.pickup_time?' · '+String(t.pickup_time).slice(0,5):''} ${pill(t.status)}</div>
+    <div class="route">${esc(from)}${to?' → '+esc(String(to).split(',')[0]):''}</div>
+    ${canEdit?`<div style="margin-top:8px;display:flex;gap:8px">
+      <button type="button" onclick="editTrip(${i})" style="border:1px solid var(--teal);background:#fff;color:var(--teal);font-weight:700;font-size:12px;padding:6px 12px;border-radius:999px">✏️ Change</button>
+      <button type="button" onclick="cancelTrip(${i})" style="border:1px solid #e3b8b8;background:#fff;color:#c0392b;font-weight:700;font-size:12px;padding:6px 12px;border-radius:999px">✕ Cancel</button>
+    </div>
+    <div id="edit-${i}" style="display:none;margin-top:10px;background:#f6f5f1;border:1px solid var(--line);border-radius:12px;padding:12px">
+      <label class="lab">Date</label><input type="date" id="e-date-${i}" value="${esc(t.trip_date)}">
+      <label class="lab">Pick-up time</label><input type="time" id="e-time-${i}" value="${t.pickup_time?String(t.pickup_time).slice(0,5):''}">
+      <label class="lab">Pick-up address</label><input id="e-pick-${i}" value="${esc(t.pickup_address||'')}">
+      <label class="lab">Drop-off address</label><input id="e-drop-${i}" value="${esc(t.dropoff_address||'')}">
+      <button class="btn" style="margin-top:12px" onclick="saveTrip(${i})">Save changes</button>
+      <div class="hint" style="text-align:center;margin-top:6px">We'll send your updated confirmation on WhatsApp.</div>
+    </div>`:''}
+  </div><div class="fare">${money(t.fare)}</div></div>`;
+}
+async function saveTrip(i){
+  const t=(window._data.trips||[])[i]; if(!t) return;
+  const payload={action:'trip_amend',trip_id:t.id,trip_date:val('e-date-'+i),pickup_time:val('e-time-'+i),pickup_address:val('e-pick-'+i),dropoff_address:val('e-drop-'+i)};
+  const r=await call(payload);
+  if(r.error){alert(r.error);return;}
+  await load();
+  window.scrollTo(0,0);
+}
+async function cancelTrip(i){
+  const t=(window._data.trips||[])[i]; if(!t) return;
+  if(!confirm('Cancel this trip on '+fmt(t.trip_date)+'? This can\'t be undone.'))return;
+  const r=await call({action:'trip_cancel',trip_id:t.id});
+  if(r.error){alert(r.error);return;}
+  await load();
+}
+function editTrip(i){const el=document.getElementById('edit-'+i);if(el)el.style.display=el.style.display==='none'?'block':'none';}
+function val(id){const el=document.getElementById(id);return el?el.value:'';}
 function render(p,trips,places){
-  const tripsHtml=trips.length?trips.map(t=>{
-    const to=t.dropoff_address||t.airport_code||'';const from=(t.pickup_address||'').split(',')[0];
-    return `<div class="trip"><div><div class="when">${fmt(t.trip_date)}${t.pickup_time?' · '+String(t.pickup_time).slice(0,5):''} ${pill(t.status)}</div><div class="route">${esc(from)}${to?' → '+esc(String(to).split(',')[0]):''}</div></div><div class="fare">${money(t.fare)}</div></div>`;
-  }).join(''):'<div class="center">No trips yet.</div>';
+  const upcoming=trips.filter(isUpcoming), past=trips.filter(t=>!isUpcoming(t));
+  const tripsHtml=trips.length?(
+    (upcoming.length?`<div class="lab" style="margin:0 0 4px">UPCOMING</div>`+upcoming.map(t=>tripRow(t,trips.indexOf(t))).join(''):'')+
+    (past.length?`<div class="lab" style="margin:14px 0 4px">PAST</div>`+past.map(t=>tripRow(t,trips.indexOf(t))).join(''):'')
+  ):'<div class="center">No trips yet.</div>';
   show(`
     <div class="card">
       <h2>Your details</h2>
