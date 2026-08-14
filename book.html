@@ -138,6 +138,10 @@ function render(){
       </div></div></div>
       <div class="field"><label class="lab" id="pickupLab">${isAir && f.direction==='arrival' ? 'Drop-off address' : 'Pick-up address'}</label><div class="acwrap"><input type="text" id="pickup" placeholder="Start typing your address…" autocomplete="off"></div></div>
       <div class="field ${isAir?'hide':''}" id="dropWrap"><label class="lab">Drop-off address</label><div class="acwrap"><input type="text" id="drop" placeholder="Where to?" autocomplete="off"></div></div>
+      <div class="field" id="stopsWrap"><label class="lab">Extra stops <span style="font-weight:500;text-transform:none;color:#9aa1ab">(optional · 1 credit each)</span></label>
+        <div id="stopsList"></div>
+        <button type="button" onclick="addStop()" style="border:1px dashed #c9ccd4;background:#fff;color:#6b7280;font-weight:600;font-size:13px;padding:8px 14px;border-radius:10px;width:100%">+ Add a stop</button>
+      </div>
       <div class="${isAir?'':'hide'}" id="airWrap">
         <div class="field"><label class="lab">Airport</label><select id="airport">${airOpts}</select></div>
         <div class="field"><label class="lab">Direction</label><div class="seg"><button type="button" id="dirArr" class="sel" onclick="setDir('arrival')">Arrival</button><button type="button" id="dirDep" onclick="setDir('departure')">Departure</button></div></div>
@@ -217,6 +221,21 @@ window.setSvc=(s)=>{ f.service=s; render(); };
 window.setDir=(d)=>{ f.direction=d; document.getElementById('dirArr').classList.toggle('sel',d==='arrival'); document.getElementById('dirDep').classList.toggle('sel',d==='departure'); const lab=document.getElementById('pickupLab'); if(lab) lab.textContent = d==='arrival' ? 'Drop-off address' : 'Pick-up address'; };
 window.setSz=(z)=>{ f.size=z; document.querySelectorAll('.szb').forEach(b=>b.classList.toggle('sel',b.dataset.sz===z)); };
 window.tog=(el)=>{ el.classList.toggle('sel'); };
+window.STOPS=[];
+window.addStop=function(){ if(window.STOPS.length>=5)return; window.STOPS.push({kind:'dropoff',address:''}); renderStops(); };
+window.delStop=function(i){ window.STOPS.splice(i,1); renderStops(); };
+window.setStop=function(i,k,v){ if(window.STOPS[i]) window.STOPS[i][k]=v; };
+function renderStops(){
+  const el=document.getElementById('stopsList'); if(!el) return;
+  el.innerHTML=window.STOPS.map((st,i)=>`<div style="display:flex;gap:6px;margin-bottom:8px">
+    <select onchange="setStop(${i},'kind',this.value)" style="border:1px solid #c9ccd4;border-radius:10px;padding:8px;font-size:13px">
+      <option value="dropoff" ${st.kind==='dropoff'?'selected':''}>Drop-off</option>
+      <option value="pickup" ${st.kind==='pickup'?'selected':''}>Pick-up</option>
+    </select>
+    <input value="${st.address.replace(/"/g,'&quot;')}" oninput="setStop(${i},'address',this.value)" placeholder="Stop address…" style="flex:1;border:1px solid #c9ccd4;border-radius:10px;padding:8px;font-size:14px">
+    <button type="button" onclick="delStop(${i})" style="border:none;background:none;color:#c0392b;font-size:16px">✕</button>
+  </div>`).join('');
+}
 window.rebook=(i)=>{ if(i==='')return; const t=(window.RECF||[])[i]; if(!t)return; const p=document.getElementById('pickup'),d=document.getElementById('drop'); if(p&&t.pickup){p.value=t.pickup;p.dataset.full=t.pickup;} if(d&&t.dropoff){d.value=t.dropoff;d.dataset.full=t.dropoff;} };
 
 // Modern, lightweight address autocomplete via the Places API (New) over fetch
@@ -339,6 +358,7 @@ window.submit=async()=>{
   if(f.service==='drive_home'){ booking.client_vehicle_make=document.getElementById('vmake').value||null; booking.client_vehicle_model=document.getElementById('vmodel').value||null; booking.client_vehicle_colour=document.getElementById('vcolour').value||null; booking.client_vehicle_reg=document.getElementById('vreg').value||null; }
   go.disabled=true; go.innerHTML='<span class="spin"></span>';
   try{
+    booking.stops=(window.STOPS||[]).filter(st=>st.address.trim());
     const res=await call({action:'submit',booking,save_preferred:document.getElementById('savePref')?.checked});
     if(res.ok){ showState('✅','Booking received','Trip '+res.ref+' is in — taking you back to WhatsApp…'); setTimeout(()=>{location.href='https://wa.me/27799722798';},2000); return; }
     throw new Error(res.error||'Something went wrong.');
