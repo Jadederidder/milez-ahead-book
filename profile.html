@@ -101,7 +101,7 @@ function tripRow(t,i){
     </div>
     <div id="edit-${i}" style="display:none;margin-top:10px;background:#f6f5f1;border:1px solid var(--line);border-radius:12px;padding:12px">
       <label class="lab">Date</label><input type="date" id="e-date-${i}" value="${esc(t.trip_date)}">
-      <label class="lab">Pick-up time</label><input type="time" id="e-time-${i}" value="${t.pickup_time?String(t.pickup_time).slice(0,5):''}">
+      <label class="lab">Pick-up time</label><select id="e-time-${i}">${timeOptions(t.pickup_time?String(t.pickup_time).slice(0,5):'')}</select>
       <label class="lab">Pick-up address</label><input id="e-pick-${i}" value="${esc(t.pickup_address||'')}">
       <label class="lab">Drop-off address</label><input id="e-drop-${i}" value="${esc(t.dropoff_address||'')}">
       <button class="btn" style="margin-top:12px" onclick="saveTrip(${i})">Save changes</button>
@@ -123,6 +123,16 @@ async function cancelTrip(i){
   const r=await call({action:'trip_cancel',trip_id:t.id});
   if(r.error){alert(r.error);return;}
   await load();
+}
+// WhatsApp's Android in-app browser CRASHES on native <input type=time> —
+// a plain <select> of 15-min slots is bulletproof (and quicker to use).
+function timeOptions(cur){
+  let out=cur?'':'<option value="">Choose a time…</option>';
+  const opts=[];
+  for(let h=0;h<24;h++)for(let m=0;m<60;m+=15)opts.push(String(h).padStart(2,'0')+':'+String(m).padStart(2,'0'));
+  if(cur&&!opts.includes(cur))opts.push(cur),opts.sort();
+  for(const t of opts)out+='<option value="'+t+'"'+(t===cur?' selected':'')+'>'+t+'</option>';
+  return out;
 }
 function editTrip(i){const el=document.getElementById('edit-'+i);if(el)el.style.display=el.style.display==='none'?'block':'none';}
 function val(id){const el=document.getElementById(id);return el?el.value:'';}
