@@ -93,6 +93,8 @@ const SERVICES = [
 const qs = new URLSearchParams(location.search); const S = qs.get('s') || '';
 // Part of the client portal now: give the form a way home.
 if(S){const b=document.getElementById('backHome');if(b){b.href='profile.html?s='+encodeURIComponent(S);b.style.display='block';}}
+// Book-again prefill (from the portal): pick/drop/svc arrive as params.
+window.PREFILL={pick:new URLSearchParams(location.search).get('pick')||'',drop:new URLSearchParams(location.search).get('drop')||'',svc:new URLSearchParams(location.search).get('svc')||''};
 const main = document.getElementById('main');
 let CTX = {}, place = { pickup:null, drop:null };
 const f = {}; // current form values
@@ -239,6 +241,19 @@ function renderStops(){
     <button type="button" onclick="delStop(${i})" style="border:none;background:none;color:#c0392b;font-size:16px">✕</button>
   </div>`).join('');
 }
+(function applyPrefill(){
+  if(!window.PREFILL||(!PREFILL.pick&&!PREFILL.drop)) return;
+  let tries=0; const iv=setInterval(()=>{
+    tries++;
+    const p=document.getElementById('pickup'),d=document.getElementById('drop');
+    if(p||d){
+      if(p&&PREFILL.pick){p.value=PREFILL.pick;p.dataset.full=PREFILL.pick;}
+      if(d&&PREFILL.drop){d.value=PREFILL.drop;d.dataset.full=PREFILL.drop;}
+      clearInterval(iv);
+    }
+    if(tries>40)clearInterval(iv);
+  },250);
+})();
 window.rebook=(i)=>{ if(i==='')return; const t=(window.RECF||[])[i]; if(!t)return; const p=document.getElementById('pickup'),d=document.getElementById('drop'); if(p&&t.pickup){p.value=t.pickup;p.dataset.full=t.pickup;} if(d&&t.dropoff){d.value=t.dropoff;d.dataset.full=t.dropoff;} };
 
 // Modern, lightweight address autocomplete via the Places API (New) over fetch

@@ -3,7 +3,12 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
-<title>Milez Ahead — My profile</title>
+<title>Milez Ahead — My Trips</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#1d2a4d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Milez">
+<link rel="apple-touch-icon" href="milez-icon-192.png">
 <style>
   :root{ --navy:#1d2a4d; --teal:#0c8b86; --teal2:#13a89c; --gold:#c79a3b; --ink:#1f2430; --muted:#6b7280; --bg:#f4f1ea; --line:#e7e3da; }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -52,14 +57,18 @@
 <script>
 const FN='https://izslchhcavckowatgbel.supabase.co/functions/v1/client-profile';
 const S=new URLSearchParams(location.search).get('s')||'';
+// Home-screen app support: remember the newest token so the installed icon
+// works without a fresh WhatsApp link (tokens now live 30 days).
+let TOKEN=S;
+try{ if(S){localStorage.setItem('mz_s',S);} else {TOKEN=localStorage.getItem('mz_s')||'';} }catch(_){}
 const esc=s=>(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const money=n=>n==null?'':'R'+Number(n).toFixed(0);
-async function call(payload){const r=await fetch(FN,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({token:S,...payload})});return r.json();}
+async function call(payload){const r=await fetch(FN,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({token:TOKEN,...payload})});return r.json();}
 function pill(st){const m={completed:['done','Completed'],in_progress:['live','In progress'],driver_confirmed:['live','Driver confirmed'],driver_assigned:['live','Driver allocated'],captured:['pend','Received'],awaiting_driver:['pend','Arranging'],cancelled:['cxl','Cancelled'],no_show:['cxl','No-show']};const[c,l]=m[st]||['pend',st];return `<span class="pill ${c}">${l}</span>`;}
 function fmt(d){if(!d)return '';const dt=new Date(d+'T00:00:00');return dt.toLocaleDateString('en-ZA',{day:'numeric',month:'short',year:'numeric'});}
 
 async function load(){
-  if(!S){show('<div class="msg err">This link is missing its code. Please reopen <b>My profile</b> from WhatsApp.</div>');return;}
+  if(!TOKEN){show('<div class="msg err">This link is missing its code. Please reopen <b>My profile</b> from WhatsApp.</div>');return;}
   const r=await call({action:'context'});
   if(r.error){document.getElementById('sub').textContent='';show('<div class="msg err">'+esc(r.error)+'</div>');return;}
   const p=r.profile;
@@ -95,6 +104,7 @@ function tripRow(t,i){
   return `<div class="trip" id="trip-${i}"><div style="min-width:0;flex:1">
     <div class="when">${fmt(t.trip_date)}${t.pickup_time?' · '+String(t.pickup_time).slice(0,5):''} ${pill(t.status)}</div>
     <div class="route">${esc(from)}${to?' → '+esc(String(to).split(',')[0]):''}</div>
+    ${!canEdit&&t.status==='completed'?`<div style="margin-top:8px"><button type="button" onclick="bookAgain(${i})" style="border:1px solid var(--teal);background:#fff;color:var(--teal);font-weight:700;font-size:12px;padding:6px 12px;border-radius:999px">↻ Book again</button></div>`:''}
     ${canEdit?`<div style="margin-top:8px;display:flex;gap:8px">
       <button type="button" onclick="editTrip(${i})" style="border:1px solid var(--teal);background:#fff;color:var(--teal);font-weight:700;font-size:12px;padding:6px 12px;border-radius:999px">✏️ Change</button>
       <button type="button" onclick="cancelTrip(${i})" style="border:1px solid #e3b8b8;background:#fff;color:#c0392b;font-weight:700;font-size:12px;padding:6px 12px;border-radius:999px">✕ Cancel</button>
@@ -184,7 +194,10 @@ function render(p,trips,places){
       ${flightChip}
       ${driverCard}
       ${liveRow}
-      <div style="margin-top:12px;display:flex;gap:8px">
+      <div style="margin-top:10px;display:flex;gap:8px">
+        <button type="button" onclick="addToCal(${nextIdx})" style="flex:1;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.22);color:#fff;font-weight:700;font-size:13px;padding:10px;border-radius:11px">🗓 Add to calendar</button>
+      </div>
+      <div style="margin-top:8px;display:flex;gap:8px">
         <button type="button" onclick="openSec('trips');editTrip(${nextIdx})" style="flex:1;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.25);color:#fff;font-weight:700;font-size:13px;padding:10px;border-radius:11px">✏️ Change</button>
         <button type="button" onclick="cancelTrip(${nextIdx})" style="flex:1;background:rgba(255,255,255,.06);border:1px solid rgba(255,120,120,.4);color:#ffd9d9;font-weight:700;font-size:13px;padding:10px;border-radius:11px">✕ Cancel</button>
       </div>
@@ -200,10 +213,18 @@ function render(p,trips,places){
       ${badge?`<div style="font-size:11px;color:var(--muted);margin-top:2px">${badge}</div>`:''}
     </button>`;
 
+  const rp=(window._data&&window._data.rate_prompt)||null;
+  const rateHtml=rp?`
+    <div class="card" id="rateCard" style="text-align:center">
+      <div style="font-weight:800;color:var(--navy);font-size:14px">How was your trip on ${fmt(rp.trip_date)}?</div>
+      <div style="margin-top:8px;font-size:30px;letter-spacing:6px">${[1,2,3,4,5].map(n=>`<span style="cursor:pointer" onclick="rateTrip(${n})">☆</span>`).join('')}</div>
+      <div class="hint" style="margin-top:4px">Tap a star — it takes one second.</div>
+    </div>`:'';
   show(`
     ${heroHtml}
+    ${rateHtml}
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">
-      <a href="book.html?s=${encodeURIComponent(S)}" style="display:block;background:linear-gradient(135deg,var(--teal),var(--teal2));color:#fff;border-radius:16px;padding:16px 8px;text-align:center;text-decoration:none;box-shadow:0 1px 2px rgba(20,30,50,.08)">
+      <a href="book.html?s=${encodeURIComponent(TOKEN)}" style="display:block;background:linear-gradient(135deg,var(--teal),var(--teal2));color:#fff;border-radius:16px;padding:16px 8px;text-align:center;text-decoration:none;box-shadow:0 1px 2px rgba(20,30,50,.08)">
         <div style="font-size:24px">📅</div><div style="font-size:13px;font-weight:800;margin-top:6px">Book a trip</div>
       </a>
       ${tile('trips','🧳','My trips', upcoming.length+' upcoming')}
@@ -265,6 +286,34 @@ function openSec(k){
     const tl=document.getElementById('tile-'+k); if(tl){tl.style.borderColor='var(--teal)';tl.style.boxShadow='0 0 0 2px rgba(12,139,134,.18)';}
     target.scrollIntoView({behavior:'smooth',block:'start'});
   }
+}
+function bookAgain(i){
+  const t=(window._data.trips||[])[i]; if(!t) return;
+  const q=new URLSearchParams({s:TOKEN,pick:t.pickup_address||'',drop:t.dropoff_address||t.airport_code||'',svc:t.service_type||''});
+  location.href='book.html?'+q.toString();
+}
+function icsEsc(x){return String(x||'').replace(/[\\;,]/g,m=>'\\'+m).replace(/\n/g,'\\n');}
+function addToCal(i){
+  const t=(window._data.trips||[])[i]; if(!t) return;
+  const d=t.trip_date.replace(/-/g,'');const hm=(t.pickup_time||'09:00').slice(0,5).replace(':','');
+  const dtStart=d+'T'+hm+'00';
+  const ics=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Milez Ahead//Trips//EN','BEGIN:VEVENT',
+    'UID:'+t.id+'@milezahead','DTSTART;TZID=Africa/Johannesburg:'+dtStart,
+    'SUMMARY:'+icsEsc('Milez Ahead trip — '+(t.pickup_address||'').split(',')[0]+' → '+String(t.dropoff_address||t.airport_code||'').split(',')[0]),
+    'LOCATION:'+icsEsc(t.pickup_address||''),
+    'DESCRIPTION:'+icsEsc('Booking '+t.ref+'. Your driver will meet you at the pickup. Manage the trip: '+location.origin+'/profile.html'),
+    'END:VEVENT','END:VCALENDAR'].join('\r\n');
+  const a=document.createElement('a');
+  a.href='data:text/calendar;charset=utf-8,'+encodeURIComponent(ics);
+  a.download='milez-trip-'+t.ref+'.ics';document.body.appendChild(a);a.click();a.remove();
+}
+async function rateTrip(n){
+  const rp=window._data&&window._data.rate_prompt; if(!rp) return;
+  const card=document.getElementById('rateCard');
+  try{
+    await fetch('https://izslchhcavckowatgbel.supabase.co/functions/v1/submit-feedback',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({token:rp.tracking_token,trip_id:rp.trip_id,rating:n})});
+    if(card)card.innerHTML='<div style="font-weight:800;color:var(--navy)">'+'★'.repeat(n)+'</div><div class="hint" style="margin-top:4px">Thank you! Your feedback keeps Milez world-class. 🌟</div>';
+  }catch(_){ if(card)card.innerHTML='<div class="hint">Could not save just now — please try again later.</div>'; }
 }
 async function shareRide(i){
   const t=(window._data.trips||[])[i]; if(!t||!t.tracking_token) return;

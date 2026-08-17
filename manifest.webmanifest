@@ -1,0 +1,13 @@
+{
+  "name": "Milez Ahead",
+  "short_name": "Milez",
+  "description": "Your trips, your driver, one tap away.",
+  "start_url": "/profile.html",
+  "display": "standalone",
+  "background_color": "#f4f1ea",
+  "theme_color": "#1d2a4d",
+  "icons": [
+    { "src": "/milez-icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/milez-icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
