@@ -63,6 +63,7 @@
 <body>
 <div class="wrap">
   <header>
+    <a id="backHome" href="#" style="display:none;color:#cfe0e2;text-decoration:none;font-size:13px;font-weight:700;margin-bottom:8px">← My Trips</a>
     <div class="kick"><span>Milez Ahead</span><span id="coBadge" class="mua-badge hide"><b>MUA</b><i>Member benefit</i></span></div>
     <h1 id="hi">Book a trip</h1>
     <p id="sub">Loading…</p>
@@ -90,6 +91,8 @@ const SERVICES = [
   ['manage_booking','Private / Card','pay by card'],['trauma','Other','treatment / medical']
 ];
 const qs = new URLSearchParams(location.search); const S = qs.get('s') || '';
+// Part of the client portal now: give the form a way home.
+if(S){const b=document.getElementById('backHome');if(b){b.href='profile.html?s='+encodeURIComponent(S);b.style.display='inline-block';}}
 const main = document.getElementById('main');
 let CTX = {}, place = { pickup:null, drop:null };
 const f = {}; // current form values
