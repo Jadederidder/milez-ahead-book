@@ -231,10 +231,13 @@ function render(p,trips,places){
       ${tile('statement','📄','Statement','')}
       ${tile('details','👤','My details','')}
       ${tile('places','📍','My places', places.length? places.length+' saved':'')}
-      <button type="button" onclick="callMe(this)" style="background:#fff;border:1.5px solid var(--teal);border-radius:16px;padding:16px 8px;text-align:center">
+      ${p.gift_token?`<a href="gift.html?m=${encodeURIComponent(p.gift_token)}" style="display:block;background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px 8px;text-align:center;text-decoration:none;box-shadow:0 1px 2px rgba(20,30,50,.05)">
+        <div style="font-size:24px">🎁</div><div style="font-size:13px;font-weight:800;color:var(--navy);margin-top:6px">Gift a trip</div>
+      </a>`:`<button type="button" onclick="callMe(this)" style="background:#fff;border:1.5px solid var(--teal);border-radius:16px;padding:16px 8px;text-align:center">
         <div style="font-size:24px">📞</div><div style="font-size:13px;font-weight:800;color:var(--teal);margin-top:6px">Call me</div>
-      </button>
+      </button>`}
     </div>
+    ${p.gift_token?`<button type="button" onclick="callMe(this)" style="display:block;width:100%;margin-bottom:14px;background:#fff;border:1.5px solid var(--teal);color:var(--teal);font-weight:800;font-size:14px;padding:13px;border-radius:14px">📞 Call me</button>`:''}
 
     <a href="https://wa.me/27799722798" style="display:block;margin-bottom:14px;background:#25D366;color:#fff;font-weight:800;font-size:14px;padding:13px;border-radius:14px;text-align:center;text-decoration:none;box-shadow:0 1px 2px rgba(20,30,50,.08)">💬 Chat to us on WhatsApp</a>
 
