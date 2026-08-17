@@ -143,29 +143,54 @@ function render(p,trips,places){
     (past.length?`<div class="lab" style="margin:14px 0 4px">PAST</div>`+past.map(t=>tripRow(t,trips.indexOf(t))).join(''):'')
   ):'<div class="center">No trips yet.</div>';
   show(`
-    <div class="card">
-      <h2>Your details</h2>
-      <div class="msg ok" id="saved" style="display:none">Saved ✓</div>
-      <label class="lab">Full name</label><input id="full_name" value="${esc(p.full_name)}">
-      <label class="lab">Email</label><input id="email" type="email" value="${esc(p.email)}" placeholder="you@example.com">
-      <label class="lab">Alternative contact</label><input id="alt_contact" value="${esc(p.alt_contact)}" placeholder="A second number / next of kin">
-      <label class="lab">Special requirements</label><textarea id="special_requirements" placeholder="e.g. wheelchair access · male driver · no music">${esc(p.special_requirements)}</textarea>
-      <div class="hint">Shown to your controller on every trip.</div>
-      <label class="lab">Phone</label><input value="${esc(p.phone)}" readonly>
-      ${p.policy_number?`<label class="lab">Policy number</label><input value="${esc(p.policy_number)}" readonly>`:''}
-      <button class="btn" id="save" onclick="save()">Save my details</button>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px">
+      <a href="book.html?s=${encodeURIComponent(S)}" style="display:block;text-align:center;background:linear-gradient(135deg,var(--teal),var(--teal2));color:#fff;font-weight:800;font-size:15px;padding:14px;border-radius:14px;text-decoration:none">📅 Book a trip</a>
+      <button type="button" onclick="callMe(this)" style="background:#fff;border:1.5px solid var(--teal);color:var(--teal);font-weight:800;font-size:15px;padding:14px;border-radius:14px">📞 Call me</button>
     </div>
+
+    <div class="card"><h2>My trips</h2>${tripsHtml}</div>
+
     <div class="card">
-      <h2>My places</h2>
-      <div class="hint" style="margin:-6px 0 10px">Save the addresses you use most — Home, Work, your airport — so booking is one tap.</div>
-      <div id="placesList">${placesRows(places)}</div>
-      <label class="lab">Add a place</label>
-      <select id="pl_label"><option>Home</option><option>Work</option><option>Airport</option><option>Gym</option><option>Family</option><option>Other</option></select>
-      <input id="pl_addr" placeholder="Start typing the address" style="margin-top:8px">
-      <button class="btn" id="addPlace" onclick="addPlace()" style="margin-top:12px">Add place</button>
+      <h2 style="display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="toggleSec('statement')">My statement <span style="color:#9aa1ab;font-weight:600;font-size:12px">▾</span></h2>
+      <div id="sec-statement" style="display:none;padding-top:6px">
+        ${trips.length?'<button class="btn" id="pdfBtn" onclick="savePdf()" style="margin:0;background:var(--navy)">📄 Download my statement (PDF)</button>':'<div class="hint">Your statement appears once you have trips.</div>'}
+      </div>
     </div>
-    <div class="card"><h2>My trips</h2>${trips.length?'<button class="btn" id="pdfBtn" onclick="savePdf()" style="margin:0 0 16px;background:var(--navy)">📄 Download my statement (PDF)</button>':''}${tripsHtml}</div>
+
+    <div class="card">
+      <h2 style="display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="toggleSec('details')">Your details <span style="color:#9aa1ab;font-weight:600;font-size:12px">▾</span></h2>
+      <div id="sec-details" style="display:none;padding-top:6px">
+        <div class="msg ok" id="saved" style="display:none">Saved ✓</div>
+        <label class="lab">Full name</label><input id="full_name" value="${esc(p.full_name)}">
+        <label class="lab">Email</label><input id="email" type="email" value="${esc(p.email)}" placeholder="you@example.com">
+        <label class="lab">Alternative contact</label><input id="alt_contact" value="${esc(p.alt_contact)}" placeholder="A second number / next of kin">
+        <label class="lab">Special requirements</label><textarea id="special_requirements" placeholder="e.g. wheelchair access · male driver · no music">${esc(p.special_requirements)}</textarea>
+        <div class="hint">Shown to your controller on every trip.</div>
+        <label class="lab">Phone</label><input value="${esc(p.phone)}" readonly>
+        ${p.policy_number?`<label class="lab">Policy number</label><input value="${esc(p.policy_number)}" readonly>`:''}
+        <button class="btn" id="save" onclick="save()">Save my details</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 style="display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="toggleSec('places')">My places <span style="color:#9aa1ab;font-weight:600;font-size:12px">▾</span></h2>
+      <div id="sec-places" style="display:none;padding-top:6px">
+        <div class="hint" style="margin:0 0 10px">Save the addresses you use most — Home, Work, your airport — so booking is one tap.</div>
+        <div id="placesList">${placesRows(places)}</div>
+        <label class="lab">Add a place</label>
+        <select id="pl_label"><option>Home</option><option>Work</option><option>Airport</option><option>Gym</option><option>Family</option><option>Other</option></select>
+        <input id="pl_addr" placeholder="Start typing the address" style="margin-top:8px">
+        <button class="btn" id="addPlace" onclick="addPlace()" style="margin-top:12px">Add place</button>
+      </div>
+    </div>
   `);
+}
+function toggleSec(k){const el=document.getElementById('sec-'+k);if(el)el.style.display=el.style.display==='none'?'block':'none';}
+async function callMe(btn){
+  btn.disabled=true;const was=btn.textContent;btn.textContent='Requesting…';
+  const r=await call({action:'callback'});
+  btn.textContent=r&&!r.error?'✓ We\'ll phone you shortly':was;
+  if(r&&r.error){alert(r.error);btn.disabled=false;btn.textContent=was;}
 }
 async function savePdf(){
   const d=window._data; if(!d) return;
