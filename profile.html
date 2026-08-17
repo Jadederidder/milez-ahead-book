@@ -142,50 +142,99 @@ function render(p,trips,places){
     (upcoming.length?`<div class="lab" style="margin:0 0 4px">UPCOMING</div>`+upcoming.map(t=>tripRow(t,trips.indexOf(t))).join(''):'')+
     (past.length?`<div class="lab" style="margin:14px 0 4px">PAST</div>`+past.map(t=>tripRow(t,trips.indexOf(t))).join(''):'')
   ):'<div class="center">No trips yet.</div>';
+  const next=upcoming[0];
+  const nextIdx=next?trips.indexOf(next):-1;
+  const daysTo=next?Math.ceil((new Date(next.trip_date+'T00:00:00')-new Date().setHours(0,0,0,0))/864e5):0;
+  const when=next?(daysTo<=0?'Today':daysTo===1?'Tomorrow':'In '+daysTo+' days'):'';
+  const heroHtml=next?`
+    <div style="background:linear-gradient(135deg,var(--navy),#0c5c5a);border-radius:18px;padding:18px;color:#fff;margin-bottom:14px;box-shadow:0 8px 24px rgba(20,30,50,.18)">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+        <span style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);font-weight:700">Your next trip</span>
+        <span style="background:rgba(255,255,255,.16);padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700">${when}</span>
+      </div>
+      <div style="font-size:22px;font-weight:800;margin:10px 0 2px">${fmt(next.trip_date)}${next.pickup_time?' · '+String(next.pickup_time).slice(0,5):''}</div>
+      <div style="font-size:14px;color:#cfe0e2;line-height:1.45">${esc((next.pickup_address||'').split(',')[0])} → ${esc(String(next.dropoff_address||next.airport_code||'').split(',')[0])}</div>
+      <div style="margin-top:6px">${pill(next.status)}</div>
+      <div style="margin-top:12px;display:flex;gap:8px">
+        <button type="button" onclick="openSec('trips');editTrip(${nextIdx})" style="flex:1;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.25);color:#fff;font-weight:700;font-size:13px;padding:10px;border-radius:11px">✏️ Change</button>
+        <button type="button" onclick="cancelTrip(${nextIdx})" style="flex:1;background:rgba(255,255,255,.06);border:1px solid rgba(255,120,120,.4);color:#ffd9d9;font-weight:700;font-size:13px;padding:10px;border-radius:11px">✕ Cancel</button>
+      </div>
+    </div>`:`
+    <div style="background:linear-gradient(135deg,var(--navy),#0c5c5a);border-radius:18px;padding:22px;color:#fff;margin-bottom:14px;text-align:center">
+      <div style="font-size:19px;font-weight:800">Where to next?</div>
+      <div style="font-size:13px;color:#cfe0e2;margin-top:4px">No upcoming trips — your driver is a few taps away.</div>
+    </div>`;
+
+  const tile=(id,icon,label,badge)=>`<button type="button" onclick="openSec('${id}')" id="tile-${id}" style="background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px 8px;text-align:center;box-shadow:0 1px 2px rgba(20,30,50,.05)">
+      <div style="font-size:24px">${icon}</div>
+      <div style="font-size:13px;font-weight:800;color:var(--navy);margin-top:6px">${label}</div>
+      ${badge?`<div style="font-size:11px;color:var(--muted);margin-top:2px">${badge}</div>`:''}
+    </button>`;
+
   show(`
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px">
-      <a href="book.html?s=${encodeURIComponent(S)}" style="display:block;text-align:center;background:linear-gradient(135deg,var(--teal),var(--teal2));color:#fff;font-weight:800;font-size:15px;padding:14px;border-radius:14px;text-decoration:none">📅 Book a trip</a>
-      <button type="button" onclick="callMe(this)" style="background:#fff;border:1.5px solid var(--teal);color:var(--teal);font-weight:800;font-size:15px;padding:14px;border-radius:14px">📞 Call me</button>
+    ${heroHtml}
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">
+      <a href="book.html?s=${encodeURIComponent(S)}" style="display:block;background:linear-gradient(135deg,var(--teal),var(--teal2));color:#fff;border-radius:16px;padding:16px 8px;text-align:center;text-decoration:none;box-shadow:0 1px 2px rgba(20,30,50,.08)">
+        <div style="font-size:24px">📅</div><div style="font-size:13px;font-weight:800;margin-top:6px">Book a trip</div>
+      </a>
+      ${tile('trips','🧳','My trips', upcoming.length+' upcoming')}
+      ${tile('statement','📄','Statement','')}
+      ${tile('details','👤','My details','')}
+      ${tile('places','📍','My places', places.length? places.length+' saved':'')}
+      <button type="button" onclick="callMe(this)" style="background:#fff;border:1.5px solid var(--teal);border-radius:16px;padding:16px 8px;text-align:center">
+        <div style="font-size:24px">📞</div><div style="font-size:13px;font-weight:800;color:var(--teal);margin-top:6px">Call me</div>
+      </button>
     </div>
 
-    <div class="card"><h2>My trips</h2>${tripsHtml}</div>
-
-    <div class="card">
-      <h2 style="display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="toggleSec('statement')">My statement <span style="color:#9aa1ab;font-weight:600;font-size:12px">▾</span></h2>
-      <div id="sec-statement" style="display:none;padding-top:6px">
-        ${trips.length?'<button class="btn" id="pdfBtn" onclick="savePdf()" style="margin:0;background:var(--navy)">📄 Download my statement (PDF)</button>':'<div class="hint">Your statement appears once you have trips.</div>'}
-      </div>
+    <div class="card sec" id="sec-trips" style="display:none">
+      <h2>My trips</h2>
+      ${upcoming.length?`<div class="lab" style="margin:0 0 4px">UPCOMING</div>`+upcoming.map(t=>tripRow(t,trips.indexOf(t))).join(''):'<div class="hint">No upcoming trips.</div>'}
+      ${past.length?`
+        <button type="button" onclick="toggleSec('past')" style="margin-top:14px;width:100%;text-align:left;background:#f6f5f1;border:1px solid var(--line);border-radius:12px;padding:11px 14px;font-weight:700;font-size:13px;color:var(--navy)">Past trips · ${past.length} <span style="float:right;color:#9aa1ab">▾</span></button>
+        <div id="sec-past" style="display:none;margin-top:8px">${past.map(t=>tripRow(t,trips.indexOf(t))).join('')}</div>`:''}
     </div>
 
-    <div class="card">
-      <h2 style="display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="toggleSec('details')">Your details <span style="color:#9aa1ab;font-weight:600;font-size:12px">▾</span></h2>
-      <div id="sec-details" style="display:none;padding-top:6px">
-        <div class="msg ok" id="saved" style="display:none">Saved ✓</div>
-        <label class="lab">Full name</label><input id="full_name" value="${esc(p.full_name)}">
-        <label class="lab">Email</label><input id="email" type="email" value="${esc(p.email)}" placeholder="you@example.com">
-        <label class="lab">Alternative contact</label><input id="alt_contact" value="${esc(p.alt_contact)}" placeholder="A second number / next of kin">
-        <label class="lab">Special requirements</label><textarea id="special_requirements" placeholder="e.g. wheelchair access · male driver · no music">${esc(p.special_requirements)}</textarea>
-        <div class="hint">Shown to your controller on every trip.</div>
-        <label class="lab">Phone</label><input value="${esc(p.phone)}" readonly>
-        ${p.policy_number?`<label class="lab">Policy number</label><input value="${esc(p.policy_number)}" readonly>`:''}
-        <button class="btn" id="save" onclick="save()">Save my details</button>
-      </div>
+    <div class="card sec" id="sec-statement" style="display:none">
+      <h2>My statement</h2>
+      ${trips.length?'<button class="btn" id="pdfBtn" onclick="savePdf()" style="margin:0;background:var(--navy)">📄 Download my statement (PDF)</button>':'<div class="hint">Your statement appears once you have trips.</div>'}
     </div>
 
-    <div class="card">
-      <h2 style="display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="toggleSec('places')">My places <span style="color:#9aa1ab;font-weight:600;font-size:12px">▾</span></h2>
-      <div id="sec-places" style="display:none;padding-top:6px">
-        <div class="hint" style="margin:0 0 10px">Save the addresses you use most — Home, Work, your airport — so booking is one tap.</div>
-        <div id="placesList">${placesRows(places)}</div>
-        <label class="lab">Add a place</label>
-        <select id="pl_label"><option>Home</option><option>Work</option><option>Airport</option><option>Gym</option><option>Family</option><option>Other</option></select>
-        <input id="pl_addr" placeholder="Start typing the address" style="margin-top:8px">
-        <button class="btn" id="addPlace" onclick="addPlace()" style="margin-top:12px">Add place</button>
-      </div>
+    <div class="card sec" id="sec-details" style="display:none">
+      <h2>Your details</h2>
+      <div class="msg ok" id="saved" style="display:none">Saved ✓</div>
+      <label class="lab">Full name</label><input id="full_name" value="${esc(p.full_name)}">
+      <label class="lab">Email</label><input id="email" type="email" value="${esc(p.email)}" placeholder="you@example.com">
+      <label class="lab">Alternative contact</label><input id="alt_contact" value="${esc(p.alt_contact)}" placeholder="A second number / next of kin">
+      <label class="lab">Special requirements</label><textarea id="special_requirements" placeholder="e.g. wheelchair access · male driver · no music">${esc(p.special_requirements)}</textarea>
+      <div class="hint">Shown to your controller on every trip.</div>
+      <label class="lab">Phone</label><input value="${esc(p.phone)}" readonly>
+      ${p.policy_number?`<label class="lab">Policy number</label><input value="${esc(p.policy_number)}" readonly>`:''}
+      <button class="btn" id="save" onclick="save()">Save my details</button>
+    </div>
+
+    <div class="card sec" id="sec-places" style="display:none">
+      <h2>My places</h2>
+      <div class="hint" style="margin:-6px 0 10px">Save the addresses you use most — Home, Work, your airport — so booking is one tap.</div>
+      <div id="placesList">${placesRows(places)}</div>
+      <label class="lab">Add a place</label>
+      <select id="pl_label"><option>Home</option><option>Work</option><option>Airport</option><option>Gym</option><option>Family</option><option>Other</option></select>
+      <input id="pl_addr" placeholder="Start typing the address" style="margin-top:8px">
+      <button class="btn" id="addPlace" onclick="addPlace()" style="margin-top:12px">Add place</button>
     </div>
   `);
 }
 function toggleSec(k){const el=document.getElementById('sec-'+k);if(el)el.style.display=el.style.display==='none'?'block':'none';}
+function openSec(k){
+  const target=document.getElementById('sec-'+k); if(!target) return;
+  const wasOpen=target.style.display!=='none';
+  document.querySelectorAll('.sec').forEach(el=>{el.style.display='none';});
+  document.querySelectorAll('[id^="tile-"]').forEach(el=>{el.style.borderColor='var(--line)';el.style.boxShadow='0 1px 2px rgba(20,30,50,.05)';});
+  if(!wasOpen){
+    target.style.display='block';
+    const tl=document.getElementById('tile-'+k); if(tl){tl.style.borderColor='var(--teal)';tl.style.boxShadow='0 0 0 2px rgba(12,139,134,.18)';}
+    target.scrollIntoView({behavior:'smooth',block:'start'});
+  }
+}
 async function callMe(btn){
   btn.disabled=true;const was=btn.textContent;btn.textContent='Requesting…';
   const r=await call({action:'callback'});
