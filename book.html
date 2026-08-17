@@ -63,12 +63,12 @@
 <body>
 <div class="wrap">
   <header>
-    <a id="backHome" href="#" style="display:none;color:#cfe0e2;text-decoration:none;font-size:13px;font-weight:700;margin-bottom:8px">← My Trips</a>
     <div class="kick"><span>Milez Ahead</span><span id="coBadge" class="mua-badge hide"><b>MUA</b><i>Member benefit</i></span></div>
     <h1 id="hi">Book a trip</h1>
     <p id="sub">Loading…</p>
     <div class="bal hide" id="bal"></div>
   </header>
+  <a id="backHome" href="#" style="display:none;margin:12px 16px 0;background:#fff;border:1.5px solid var(--teal, #0c8b86);color:var(--teal, #0c8b86);font-weight:800;font-size:14px;padding:12px;border-radius:14px;text-align:center;text-decoration:none;box-shadow:0 1px 2px rgba(20,30,50,.06)">🧳 My Trips</a>
   <main id="main"><div class="state"><div class="spin" style="border-color:#cdd6e6;border-top-color:#0c8b86"></div></div></main>
   <div class="foot">Milez Ahead Executive Drive · secure booking</div>
 </div>
@@ -92,7 +92,7 @@ const SERVICES = [
 ];
 const qs = new URLSearchParams(location.search); const S = qs.get('s') || '';
 // Part of the client portal now: give the form a way home.
-if(S){const b=document.getElementById('backHome');if(b){b.href='profile.html?s='+encodeURIComponent(S);b.style.display='inline-block';}}
+if(S){const b=document.getElementById('backHome');if(b){b.href='profile.html?s='+encodeURIComponent(S);b.style.display='block';}}
 const main = document.getElementById('main');
 let CTX = {}, place = { pickup:null, drop:null };
 const f = {}; // current form values
