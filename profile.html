@@ -61,6 +61,9 @@ const S=new URLSearchParams(location.search).get('s')||'';
 // works without a fresh WhatsApp link (tokens now live 30 days).
 let TOKEN=S;
 try{ if(S){localStorage.setItem('mz_s',S);} else {TOKEN=localStorage.getItem('mz_s')||'';} }catch(_){}
+// Hardening: the token never lingers in the address bar / browser history —
+// stored above, then stripped. The link itself still works everywhere.
+try{ if(S){const u=new URL(location.href);u.searchParams.delete('s');history.replaceState(null,'',u.pathname+(u.searchParams.toString()?'?'+u.searchParams.toString():'')+u.hash);} }catch(_){}
 const esc=s=>(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const money=n=>n==null?'':'R'+Number(n).toFixed(0);
 async function call(payload){const r=await fetch(FN,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({token:TOKEN,...payload})});return r.json();}

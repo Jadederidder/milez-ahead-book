@@ -91,6 +91,8 @@ const SERVICES = [
   ['manage_booking','Private / Card','pay by card'],['trauma','Other','treatment / medical']
 ];
 const qs = new URLSearchParams(location.search); const S = qs.get('s') || '';
+// Same hardening as the portal: keep the token in memory, off the address bar.
+try{ if(S){const u=new URL(location.href);u.searchParams.delete('s');history.replaceState(null,'',u.pathname+(u.searchParams.toString()?'?'+u.searchParams.toString():'')+u.hash);} }catch(_){}
 // Part of the client portal now: give the form a way home.
 if(S){const b=document.getElementById('backHome');if(b){b.href='profile.html?s='+encodeURIComponent(S);b.style.display='block';}}
 // Book-again prefill (from the portal): pick/drop/svc arrive as params.
