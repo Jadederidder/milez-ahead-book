@@ -14,11 +14,11 @@
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
   .wrap{max-width:540px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column}
-  header{background:linear-gradient(135deg,var(--navy),#0c5c5a);color:#fff;padding:24px 22px 26px;border-radius:0 0 22px 22px}
-  header .kick{font-size:11px;letter-spacing:2.5px;text-transform:uppercase;color:var(--gold);font-weight:700}
-  header h1{margin:8px 0 2px;font-size:23px;font-weight:800}
-  header p{margin:0;color:#cfe0e2;font-size:14px}
-  header .bal{margin-top:12px;display:inline-block;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.18);padding:6px 12px;border-radius:999px;font-size:13px;font-weight:700}
+  /* Slim header band: brand + greeting left, credits pill right — one screen is the goal. */
+  header{background:linear-gradient(135deg,var(--navy),#0c5c5a);color:#fff;padding:13px 18px 15px;border-radius:0 0 18px 18px}
+  header .kick{font-size:10px;letter-spacing:2.2px;text-transform:uppercase;color:var(--gold);font-weight:700}
+  header p{margin:2px 0 0;color:#fff;font-size:17px;font-weight:800}
+  header .bal{display:inline-block;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.18);padding:5px 11px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap}
   main{padding:16px 16px 30px;flex:1}
   .card{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:0 1px 2px rgba(20,30,50,.05),0 8px 24px rgba(20,30,50,.06);padding:16px;margin-bottom:14px}
   .card h2{margin:0 0 12px;font-size:15px;color:var(--navy)}
@@ -47,10 +47,13 @@
 <body>
 <div class="wrap">
   <header>
-    <div class="kick">MILEZ AHEAD</div>
-    <h1>My profile</h1>
-    <p id="sub">Loading your details…</p>
-    <span class="bal" id="bal" style="display:none"></span>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+      <div style="min-width:0">
+        <div class="kick">MILEZ AHEAD</div>
+        <p id="sub">Loading your details…</p>
+      </div>
+      <span class="bal" id="bal" style="display:none"></span>
+    </div>
   </header>
   <main id="main"><div class="center">Loading…</div></main>
 </div>
@@ -76,7 +79,7 @@ async function load(){
   if(r.error){document.getElementById('sub').textContent='';show('<div class="msg err">'+esc(r.error)+'</div>');return;}
   const p=r.profile;
   document.getElementById('sub').textContent=p.full_name?('Hi '+p.full_name.split(' ')[0]+' 👋'):'Welcome';
-  if(r.credits){const b=document.getElementById('bal');b.style.display='inline-block';b.textContent=`🎟 ${r.credits.left} of ${r.credits.total} rides left this year`;}
+  if(r.credits){const b=document.getElementById('bal');b.style.display='inline-block';b.textContent=`🎟 ${r.credits.left} of ${r.credits.total} rides left`;}
   window._data=r;
   render(p,r.trips||[],r.places||[]);
 }
@@ -180,40 +183,41 @@ function render(p,trips,places){
         ${drv.phone?`<a href="tel:${esc(drv.phone)}" style="background:#22c55e;box-shadow:0 2px 8px rgba(34,197,94,.45);border-radius:999px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;color:#fff;text-decoration:none;font-size:17px">📞</a>`:''}
         ${next.tracking_token?`<a href="driver.html?t=${encodeURIComponent(next.tracking_token)}" style="background:var(--gold);box-shadow:0 2px 8px rgba(199,154,59,.45);border-radius:999px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;color:#fff;text-decoration:none;font-size:17px">👤</a>`:''}
       </div>`:'';
-  const liveRow=next&&next.tracking_token?`
-      <div style="margin-top:10px;display:flex;gap:8px">
-        <a href="track.html?token=${encodeURIComponent(next.tracking_token)}" style="flex:1;text-align:center;background:${isLive?'linear-gradient(135deg,var(--teal),var(--teal2))':'rgba(255,255,255,.14)'};border:1px solid rgba(255,255,255,.2);color:#fff;font-weight:800;font-size:13px;padding:10px;border-radius:11px;text-decoration:none">${isLive?'🔴 Track live':'🗺 Track my trip'}</a>
-        <button type="button" onclick="shareRide(${nextIdx})" style="flex:1;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.22);color:#fff;font-weight:800;font-size:13px;padding:10px;border-radius:11px">📤 Share my ride</button>
-      </div>`:'';
-  const heroHtml=next?`
-    <div style="background:linear-gradient(135deg,var(--navy),#0c5c5a);border-radius:18px;padding:18px;color:#fff;margin-bottom:14px;box-shadow:0 8px 24px rgba(20,30,50,.18)">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
-        <span style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);font-weight:700">${isLive?'Trip in progress':'Your next trip'}</span>
-        <span style="background:${isLive?'rgba(74,222,128,.25)':'rgba(255,255,255,.16)'};padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700">${when}</span>
+  // ONE compact action row (Track / Share / Calendar / Change) + a quiet Cancel
+  // text link — cancelling is the rare action and shouldn't rank with Change.
+  const act=(inner,on,primary)=>`<button type="button" onclick="${on}" style="flex:1;min-width:0;background:${primary?'linear-gradient(135deg,var(--teal),var(--teal2))':'rgba(255,255,255,.10)'};border:1px solid rgba(255,255,255,${primary?'.2':'.22'});color:#fff;font-weight:700;font-size:11.5px;padding:8px 2px;border-radius:10px;line-height:1.25">${inner}</button>`;
+  const actionsRow=next?`
+      <div style="margin-top:10px;display:flex;gap:6px">
+        ${next.tracking_token?`<a href="track.html?token=${encodeURIComponent(next.tracking_token)}" style="flex:1;min-width:0;text-align:center;background:${isLive?'linear-gradient(135deg,var(--teal),var(--teal2))':'rgba(255,255,255,.14)'};border:1px solid rgba(255,255,255,.2);color:#fff;font-weight:700;font-size:11.5px;padding:8px 2px;border-radius:10px;text-decoration:none;line-height:1.25">${isLive?'🔴<br>Live':'🗺<br>Track'}</a>`:''}
+        ${next.tracking_token?act('📤<br>Share',`shareRide(${nextIdx})`):''}
+        ${act('🗓<br>Calendar',`addToCal(${nextIdx})`)}
+        ${act('✏️<br>Change',`openSec('trips');editTrip(${nextIdx})`)}
       </div>
-      <div style="font-size:22px;font-weight:800;margin:10px 0 2px">${fmt(next.trip_date)}${next.pickup_time?' · '+String(next.pickup_time).slice(0,5):''}</div>
-      <div style="font-size:14px;color:#cfe0e2;line-height:1.45">${esc((next.pickup_address||'').split(',')[0])} → ${esc(String(next.dropoff_address||next.airport_code||'').split(',')[0])}</div>
-      <div style="margin-top:6px">${pill(next.status)}</div>
+      <div style="margin-top:7px;text-align:center"><button type="button" onclick="cancelTrip(${nextIdx})" style="background:none;border:none;color:#ffb9b9;font-size:12px;font-weight:600;text-decoration:underline;text-underline-offset:3px;padding:2px 6px">✕ Cancel this trip</button></div>`:'';
+  const heroHtml=next?`
+    <div style="background:linear-gradient(135deg,var(--navy),#0c5c5a);border-radius:18px;padding:14px 15px;color:#fff;margin-bottom:12px;box-shadow:0 8px 24px rgba(20,30,50,.18)">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+        <span style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);font-weight:700">${isLive?'Trip in progress':'Your next trip'}</span>
+        <span style="background:${isLive?'rgba(74,222,128,.25)':'rgba(255,255,255,.16)'};padding:3px 9px;border-radius:999px;font-size:11px;font-weight:700">${when}</span>
+      </div>
+      <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin:7px 0 1px">
+        <span style="font-size:19px;font-weight:800">${fmt(next.trip_date)}${next.pickup_time?' · '+String(next.pickup_time).slice(0,5):''}</span>
+        ${pill(next.status)}
+      </div>
+      <div style="font-size:13px;color:#cfe0e2;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc((next.pickup_address||'').split(',')[0])} → ${esc(String(next.dropoff_address||next.airport_code||'').split(',')[0])}</div>
       ${flightChip}
       ${driverCard}
-      ${liveRow}
-      <div style="margin-top:10px;display:flex;gap:8px">
-        <button type="button" onclick="addToCal(${nextIdx})" style="flex:1;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.22);color:#fff;font-weight:700;font-size:13px;padding:10px;border-radius:11px">🗓 Add to calendar</button>
-      </div>
-      <div style="margin-top:8px;display:flex;gap:8px">
-        <button type="button" onclick="openSec('trips');editTrip(${nextIdx})" style="flex:1;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.25);color:#fff;font-weight:700;font-size:13px;padding:10px;border-radius:11px">✏️ Change</button>
-        <button type="button" onclick="cancelTrip(${nextIdx})" style="flex:1;background:rgba(255,255,255,.06);border:1px solid rgba(255,120,120,.4);color:#ffd9d9;font-weight:700;font-size:13px;padding:10px;border-radius:11px">✕ Cancel</button>
-      </div>
+      ${actionsRow}
     </div>`:`
     <div style="background:linear-gradient(135deg,var(--navy),#0c5c5a);border-radius:18px;padding:22px;color:#fff;margin-bottom:14px;text-align:center">
       <div style="font-size:19px;font-weight:800">Where to next?</div>
       <div style="font-size:13px;color:#cfe0e2;margin-top:4px">No upcoming trips — your driver is a few taps away.</div>
     </div>`;
 
-  const tile=(id,icon,label,badge)=>`<button type="button" onclick="openSec('${id}')" id="tile-${id}" style="background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px 8px;text-align:center;box-shadow:0 1px 2px rgba(20,30,50,.05)">
-      <div style="font-size:24px">${icon}</div>
-      <div style="font-size:13px;font-weight:800;color:var(--navy);margin-top:6px">${label}</div>
-      ${badge?`<div style="font-size:11px;color:var(--muted);margin-top:2px">${badge}</div>`:''}
+  const tile=(id,icon,label,badge)=>`<button type="button" onclick="openSec('${id}')" id="tile-${id}" style="background:#fff;border:1px solid var(--line);border-radius:14px;padding:10px 6px;text-align:center;box-shadow:0 1px 2px rgba(20,30,50,.05)">
+      <div style="font-size:20px">${icon}</div>
+      <div style="font-size:12px;font-weight:800;color:var(--navy);margin-top:3px">${label}</div>
+      ${badge?`<div style="font-size:10.5px;color:var(--muted);margin-top:1px">${badge}</div>`:''}
     </button>`;
 
   const rp=(window._data&&window._data.rate_prompt)||null;
@@ -226,18 +230,18 @@ function render(p,trips,places){
   show(`
     ${heroHtml}
     ${rateHtml}
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">
-      <a href="book.html?s=${encodeURIComponent(TOKEN)}" style="display:block;background:linear-gradient(135deg,var(--teal),var(--teal2));color:#fff;border-radius:16px;padding:16px 8px;text-align:center;text-decoration:none;box-shadow:0 1px 2px rgba(20,30,50,.08)">
-        <div style="font-size:24px">📅</div><div style="font-size:13px;font-weight:800;margin-top:6px">Book a trip</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">
+      <a href="book.html?s=${encodeURIComponent(TOKEN)}" style="display:block;background:linear-gradient(135deg,var(--teal),var(--teal2));color:#fff;border-radius:14px;padding:10px 6px;text-align:center;text-decoration:none;box-shadow:0 1px 2px rgba(20,30,50,.08)">
+        <div style="font-size:20px">📅</div><div style="font-size:12px;font-weight:800;margin-top:3px">Book a trip</div>
       </a>
       ${tile('trips','🧳','My trips', upcoming.length+' upcoming')}
       ${tile('statement','📄','Statement','')}
       ${tile('details','👤','My details','')}
       ${tile('places','📍','My places', places.length? places.length+' saved':'')}
-      ${p.gift_token?`<a href="gift.html?m=${encodeURIComponent(p.gift_token)}" style="display:block;background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px 8px;text-align:center;text-decoration:none;box-shadow:0 1px 2px rgba(20,30,50,.05)">
-        <div style="font-size:24px">🎁</div><div style="font-size:13px;font-weight:800;color:var(--navy);margin-top:6px">Gift a trip</div>
-      </a>`:`<button type="button" onclick="callMe(this)" style="background:#fff;border:1.5px solid var(--teal);border-radius:16px;padding:16px 8px;text-align:center">
-        <div style="font-size:24px">📞</div><div style="font-size:13px;font-weight:800;color:var(--teal);margin-top:6px">Call me</div>
+      ${p.gift_token?`<a href="gift.html?m=${encodeURIComponent(p.gift_token)}" style="display:block;background:#fff;border:1px solid var(--line);border-radius:14px;padding:10px 6px;text-align:center;text-decoration:none;box-shadow:0 1px 2px rgba(20,30,50,.05)">
+        <div style="font-size:20px">🎁</div><div style="font-size:12px;font-weight:800;color:var(--navy);margin-top:3px">Gift a trip</div>
+      </a>`:`<button type="button" onclick="callMe(this)" style="background:#fff;border:1.5px solid var(--teal);border-radius:14px;padding:10px 6px;text-align:center">
+        <div style="font-size:20px">📞</div><div style="font-size:12px;font-weight:800;color:var(--teal);margin-top:3px">Call me</div>
       </button>`}
     </div>
     ${p.gift_token?`<button type="button" onclick="callMe(this)" style="display:block;width:100%;margin-bottom:14px;background:#fff;border:1.5px solid var(--teal);color:var(--teal);font-weight:800;font-size:14px;padding:13px;border-radius:14px">📞 Call me</button>`:''}
