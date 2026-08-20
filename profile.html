@@ -172,7 +172,12 @@ async function saveTrip(i){
 }
 async function cancelTrip(i){
   const t=(window._data.trips||[])[i]; if(!t) return;
-  if(!confirm('Cancel this trip on '+fmt(t.trip_date)+'? This can\'t be undone.'))return;
+  // Honest before, not after: inside the final hour the credit still counts
+  // (driver already committed) — the client must know BEFORE confirming.
+  const pickupMs=t.pickup_time?new Date(t.trip_date+'T'+t.pickup_time+'+02:00').getTime():null;
+  const late=pickupMs!=null&&!isNaN(pickupMs)&&pickupMs-Date.now()<=60*60*1000;
+  const warn=late?'\n\n⚠ Pickup is within the hour — cancelling now still uses 1 ride credit (your driver is already committed).':'';
+  if(!confirm('Cancel this trip on '+fmt(t.trip_date)+'? This can\'t be undone.'+warn))return;
   const r=await call({action:'trip_cancel',trip_id:t.id});
   if(r.error){alert(r.error);return;}
   await load();
