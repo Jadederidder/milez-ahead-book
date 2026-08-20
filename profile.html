@@ -14,11 +14,31 @@
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
   .wrap{max-width:540px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column}
-  /* Slim header band: brand + greeting left, credits pill right — one screen is the goal. */
-  header{background:linear-gradient(135deg,var(--navy),#0c5c5a);color:#fff;padding:13px 18px 15px;border-radius:0 0 18px 18px}
-  header .kick{font-size:10px;letter-spacing:2.2px;text-transform:uppercase;color:var(--gold);font-weight:700}
+  /* The painted top — header + next trip flow as ONE navy→teal canvas ("Signature
+     Flow" top, JD-approved 2026-08-20). Everything below it stays calm. */
+  header{background:linear-gradient(160deg,#1d2a4d 0%,#14406b 34%,#0c8b86 78%,#13a89c 100%);color:#fff;padding:13px 16px 16px;border-radius:0 0 30px 30px;position:relative;overflow:hidden}
+  header::before{content:'';position:absolute;top:-80px;right:-60px;width:280px;height:280px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.16),transparent 70%);pointer-events:none}
+  header>*{position:relative}
+  header .kick{font-size:10px;letter-spacing:2.6px;text-transform:uppercase;color:var(--gold);font-weight:700}
   header p{margin:2px 0 0;color:#fff;font-size:17px;font-weight:800}
-  header .bal{display:inline-block;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.18);padding:5px 11px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap}
+  header .bal{display:inline-block;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.14);padding:5px 11px;border-radius:999px;font-size:11.5px;font-weight:700;white-space:nowrap}
+  /* Drawn line icons (no emoji) */
+  svg.ic{width:1em;height:1em;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;vertical-align:-.12em}
+  /* Frosted action buttons living inside the paint */
+  .actIn{flex:1;min-width:0;text-align:center;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.26);border-radius:12px;padding:8px 2px;font-size:10.5px;font-weight:700;color:#fff;line-height:1.5;text-decoration:none;display:block;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+  .actIn .ic{display:block;margin:0 auto 2px;font-size:14px;color:#ffe9b8}
+  .actIn.live{background:linear-gradient(135deg,var(--teal),var(--teal2));border-color:rgba(255,255,255,.2)}
+  .actIn.live .ic{color:#fff}
+  /* Tiles: calm white cards, colour lives in the icon-orbs; gold count badges */
+  .tileF{position:relative;background:#fff;border:1px solid var(--line);border-radius:15px;padding:10px 6px;text-align:center;box-shadow:0 2px 6px rgba(20,30,50,.06);display:block;width:100%;text-decoration:none}
+  .orb{width:34px;height:34px;border-radius:12px;margin:0 auto;display:flex;align-items:center;justify-content:center;font-size:16px}
+  .o1{background:linear-gradient(150deg,var(--teal),var(--teal2));color:#fff;box-shadow:0 4px 10px rgba(19,168,156,.35)}
+  .o2{background:#e8f0fe;color:#2a5bd7}.o3{background:#f2ecff;color:#6d4fc4}
+  .o4{background:#e6f6f0;color:#158a5c}.o5{background:#fdeeea;color:#d05438}.o6{background:#faf3e2;color:#b3872f}
+  .o7{background:#e6f4f3;color:var(--teal)}
+  .tileF .tl{font-size:11.5px;font-weight:800;color:var(--navy);margin-top:5px}
+  .tileF .ts{font-size:10px;color:#8b8f98;margin-top:1px}
+  .tileF .cnt{position:absolute;top:7px;right:7px;background:var(--gold);color:#fff;font-size:9px;font-weight:800;border-radius:99px;padding:2px 6px;box-shadow:0 2px 6px rgba(199,154,59,.4)}
   main{padding:16px 16px 30px;flex:1}
   .card{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:0 1px 2px rgba(20,30,50,.05),0 8px 24px rgba(20,30,50,.06);padding:16px;margin-bottom:14px}
   .card h2{margin:0 0 12px;font-size:15px;color:var(--navy)}
@@ -54,6 +74,7 @@
       </div>
       <span class="bal" id="bal" style="display:none"></span>
     </div>
+    <div id="heroSlot"></div>
   </header>
   <main id="main"><div class="center">Loading…</div></main>
 </div>
@@ -68,6 +89,22 @@ try{ if(S){localStorage.setItem('mz_s',S);} else {TOKEN=localStorage.getItem('mz
 // stored above, then stripped. The link itself still works everywhere.
 try{ if(S){const u=new URL(location.href);u.searchParams.delete('s');history.replaceState(null,'',u.pathname+(u.searchParams.toString()?'?'+u.searchParams.toString():'')+u.hash);} }catch(_){}
 const esc=s=>(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+// Drawn line icons — one visual voice, no emoji (the premium pass, 2026-08-20).
+const _i=p=>`<svg class="ic" viewBox="0 0 24 24">${p}</svg>`;
+const IC={
+  phone:_i('<path d="M22 16.9v3a2 2 0 0 1-2.2 2A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7l.7 3.4a2 2 0 0 1-.5 1.8l-1.3 1.3a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 1.8-.5l3.4.7a2 2 0 0 1 1.5 2z"/>'),
+  person:_i('<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/>'),
+  track:_i('<path d="M9 20l-5.5-2.2V4.5L9 6.7l6-2.2 5.5 2.2v13.3L15 17.8z"/><path d="M9 6.7v13.3M15 4.5v13.3"/>'),
+  share:_i('<path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M16 6l-4-4-4 4M12 2v13"/>'),
+  cal:_i('<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 9h18"/>'),
+  pencil:_i('<path d="M17 3l4 4L8 20l-5 1 1-5z"/>'),
+  book:_i('<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 9h18M12 13v5M9.5 15.5h5"/>'),
+  case:_i('<rect x="5" y="7" width="14" height="14" rx="2"/><path d="M9 7V5a3 3 0 0 1 6 0v2M9 12h6"/>'),
+  doc:_i('<path d="M6 2h9l5 5v15H6z"/><path d="M15 2v5h5M9 13h7M9 17h7"/>'),
+  pin:_i('<path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/>'),
+  gift:_i('<rect x="3" y="8" width="18" height="5"/><path d="M5 13v8h14v-8M12 8v13M12 8s-2.5-6-6-3.5S12 8 12 8zm0 0s2.5-6 6-3.5S12 8 12 8z"/>'),
+};
+const statusLabel=st=>({completed:'Completed',in_progress:'In progress',driver_confirmed:'Driver confirmed',driver_assigned:'Driver allocated',captured:'Received',awaiting_driver:'Arranging',cancelled:'Cancelled',no_show:'No-show'}[st]||st);
 const money=n=>n==null?'':'R'+Number(n).toFixed(0);
 async function call(payload){const r=await fetch(FN,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({token:TOKEN,...payload})});return r.json();}
 function pill(st){const m={completed:['done','Completed'],in_progress:['live','In progress'],driver_confirmed:['live','Driver confirmed'],driver_assigned:['live','Driver allocated'],captured:['pend','Received'],awaiting_driver:['pend','Arranging'],cancelled:['cxl','Cancelled'],no_show:['cxl','No-show']};const[c,l]=m[st]||['pend',st];return `<span class="pill ${c}">${l}</span>`;}
@@ -173,51 +210,50 @@ function render(p,trips,places){
     return `<div style="margin-top:8px;display:inline-block;background:${tone};padding:5px 11px;border-radius:999px;font-size:12px;font-weight:600">✈️ ${esc(fs.ident||next.flight_number)} · ${state}${eta&&!fs.landed?' · lands ~'+eta:''}</div>`;
   })():'';
   const drv=next&&next.driver;const veh=next&&next.vehicle;
+  // The driver rides on the paint as a bright WHITE chip — the emotional centre.
   const driverCard=drv?`
-      <div style="margin-top:12px;display:flex;align-items:center;gap:11px;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.15);border-radius:14px;padding:11px 13px">
-        <div style="width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;border:2px solid rgba(199,154,59,.6)">${esc((drv.name||'?').trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase())}</div>
+      <div style="margin-top:11px;display:flex;align-items:center;gap:11px;background:#fff;border-radius:16px;padding:11px 13px;box-shadow:0 10px 26px rgba(10,40,50,.28);color:var(--ink)">
+        <div style="width:42px;height:42px;border-radius:50%;background:linear-gradient(150deg,var(--navy),#14406b);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;color:#ffe9b8;border:2px solid var(--gold)">${esc((drv.name||'?').trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase())}</div>
         <div style="min-width:0;flex:1">
-          <div style="font-weight:800;font-size:14px">${esc(drv.name||'Your driver')}</div>
-          ${veh?`<div style="font-size:12px;color:#cfe0e2">${esc([veh.make,veh.model].filter(Boolean).join(' '))} · ${esc(veh.registration||'')}</div>`:''}
+          <div style="font-weight:800;font-size:14px;color:var(--navy)">${esc(drv.name||'Your driver')}</div>
+          ${veh?`<div style="font-size:11.5px;color:#7b8089">${esc([veh.make,veh.model].filter(Boolean).join(' '))} · ${esc(veh.registration||'')}</div>`:''}
         </div>
-        ${drv.phone?`<a href="tel:${esc(drv.phone)}" style="background:#22c55e;box-shadow:0 2px 8px rgba(34,197,94,.45);border-radius:999px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;color:#fff;text-decoration:none;font-size:17px">📞</a>`:''}
-        ${next.tracking_token?`<a href="driver.html?t=${encodeURIComponent(next.tracking_token)}" style="background:var(--gold);box-shadow:0 2px 8px rgba(199,154,59,.45);border-radius:999px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;color:#fff;text-decoration:none;font-size:17px">👤</a>`:''}
+        ${drv.phone?`<a href="tel:${esc(drv.phone)}" style="background:#22c55e;box-shadow:0 3px 10px rgba(34,197,94,.4);border-radius:999px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;color:#fff;text-decoration:none;font-size:16px">${IC.phone}</a>`:''}
+        ${next.tracking_token?`<a href="driver.html?t=${encodeURIComponent(next.tracking_token)}" style="background:var(--gold);box-shadow:0 3px 10px rgba(199,154,59,.4);border-radius:999px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;color:#fff;text-decoration:none;font-size:16px">${IC.person}</a>`:''}
       </div>`:'';
-  // ONE compact action row (Track / Share / Calendar / Change) + a quiet Cancel
-  // text link — cancelling is the rare action and shouldn't rank with Change.
-  const act=(inner,on,primary)=>`<button type="button" onclick="${on}" style="flex:1;min-width:0;background:${primary?'linear-gradient(135deg,var(--teal),var(--teal2))':'rgba(255,255,255,.10)'};border:1px solid rgba(255,255,255,${primary?'.2':'.22'});color:#fff;font-weight:700;font-size:11.5px;padding:8px 2px;border-radius:10px;line-height:1.25">${inner}</button>`;
+  // Frosted actions INSIDE the paint + a quiet Cancel text link.
   const actionsRow=next?`
-      <div style="margin-top:10px;display:flex;gap:6px">
-        ${next.tracking_token?`<a href="track.html?token=${encodeURIComponent(next.tracking_token)}" style="flex:1;min-width:0;text-align:center;background:${isLive?'linear-gradient(135deg,var(--teal),var(--teal2))':'rgba(255,255,255,.14)'};border:1px solid rgba(255,255,255,.2);color:#fff;font-weight:700;font-size:11.5px;padding:8px 2px;border-radius:10px;text-decoration:none;line-height:1.25">${isLive?'🔴<br>Live':'🗺<br>Track'}</a>`:''}
-        ${next.tracking_token?act('📤<br>Share',`shareRide(${nextIdx})`):''}
-        ${act('🗓<br>Calendar',`addToCal(${nextIdx})`)}
-        ${act('✏️<br>Change',`openSec('trips');editTrip(${nextIdx})`)}
+      <div style="margin-top:11px;display:flex;gap:6px">
+        ${next.tracking_token?`<a href="track.html?token=${encodeURIComponent(next.tracking_token)}" class="actIn${isLive?' live':''}">${IC.track}${isLive?'Live':'Track'}</a>`:''}
+        ${next.tracking_token?`<button type="button" class="actIn" onclick="shareRide(${nextIdx})">${IC.share}Share</button>`:''}
+        <button type="button" class="actIn" onclick="addToCal(${nextIdx})">${IC.cal}Calendar</button>
+        <button type="button" class="actIn" onclick="openSec('trips');editTrip(${nextIdx})">${IC.pencil}Change</button>
       </div>
-      <div style="margin-top:7px;text-align:center"><button type="button" onclick="cancelTrip(${nextIdx})" style="background:none;border:none;color:#ffb9b9;font-size:12px;font-weight:600;text-decoration:underline;text-underline-offset:3px;padding:2px 6px">✕ Cancel this trip</button></div>`:'';
+      <div style="margin-top:7px;text-align:center"><button type="button" onclick="cancelTrip(${nextIdx})" style="background:none;border:none;color:#ffd2d2;font-size:11.5px;font-weight:600;text-decoration:underline;text-underline-offset:3px;padding:2px 6px">✕ Cancel this trip</button></div>`:'';
+  // Rendered INTO the painted header, so header + trip read as one canvas.
   const heroHtml=next?`
-    <div style="background:linear-gradient(135deg,var(--navy),#0c5c5a);border-radius:18px;padding:14px 15px;color:#fff;margin-bottom:12px;box-shadow:0 8px 24px rgba(20,30,50,.18)">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
-        <span style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);font-weight:700">${isLive?'Trip in progress':'Your next trip'}</span>
-        <span style="background:${isLive?'rgba(74,222,128,.25)':'rgba(255,255,255,.16)'};padding:3px 9px;border-radius:999px;font-size:11px;font-weight:700">${when}</span>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:13px">
+        <span style="font-size:10px;letter-spacing:2.4px;text-transform:uppercase;color:#ffe9b8;font-weight:700">${isLive?'Trip in progress':'Your next trip'}</span>
+        <span style="background:#fff;color:var(--navy);padding:4px 11px;border-radius:999px;font-size:10.5px;font-weight:800;box-shadow:0 3px 10px rgba(0,0,0,.2)">${when}</span>
       </div>
-      <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin:7px 0 1px">
-        <span style="font-size:19px;font-weight:800">${fmt(next.trip_date)}${next.pickup_time?' · '+String(next.pickup_time).slice(0,5):''}</span>
-        ${pill(next.status)}
+      <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin:6px 0 1px">
+        <span style="font-size:21px;font-weight:800;font-variant-numeric:tabular-nums">${fmt(next.trip_date)}${next.pickup_time?' · '+String(next.pickup_time).slice(0,5):''}</span>
       </div>
-      <div style="font-size:13px;color:#cfe0e2;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc((next.pickup_address||'').split(',')[0])} → ${esc(String(next.dropoff_address||next.airport_code||'').split(',')[0])}</div>
+      <div style="font-size:12.5px;color:#dff2ef;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc((next.pickup_address||'').split(',')[0])} → ${esc(String(next.dropoff_address||next.airport_code||'').split(',')[0])}</div>
+      <span style="display:inline-block;background:rgba(255,255,255,.2);color:#fff;font-size:10.5px;font-weight:700;border-radius:999px;padding:3px 10px;margin-top:6px">● ${statusLabel(next.status)}</span>
       ${flightChip}
       ${driverCard}
-      ${actionsRow}
-    </div>`:`
-    <div style="background:linear-gradient(135deg,var(--navy),#0c5c5a);border-radius:18px;padding:22px;color:#fff;margin-bottom:14px;text-align:center">
-      <div style="font-size:19px;font-weight:800">Where to next?</div>
-      <div style="font-size:13px;color:#cfe0e2;margin-top:4px">No upcoming trips — your driver is a few taps away.</div>
-    </div>`;
+      ${actionsRow}`:`
+      <div style="text-align:center;padding:14px 0 6px">
+        <div style="font-size:19px;font-weight:800">Where to next?</div>
+        <div style="font-size:13px;color:#dff2ef;margin-top:4px">No upcoming trips — your driver is a few taps away.</div>
+      </div>`;
 
-  const tile=(id,icon,label,badge)=>`<button type="button" onclick="openSec('${id}')" id="tile-${id}" style="background:#fff;border:1px solid var(--line);border-radius:14px;padding:10px 6px;text-align:center;box-shadow:0 1px 2px rgba(20,30,50,.05)">
-      <div style="font-size:20px">${icon}</div>
-      <div style="font-size:12px;font-weight:800;color:var(--navy);margin-top:3px">${label}</div>
-      ${badge?`<div style="font-size:10.5px;color:var(--muted);margin-top:1px">${badge}</div>`:''}
+  const tile=(id,orb,icon,label,sub,count)=>`<button type="button" onclick="openSec('${id}')" id="tile-${id}" class="tileF">
+      ${count?`<span class="cnt">${count}</span>`:''}
+      <div class="orb ${orb}">${icon}</div>
+      <div class="tl">${label}</div>
+      ${sub?`<div class="ts">${sub}</div>`:''}
     </button>`;
 
   const rp=(window._data&&window._data.rate_prompt)||null;
@@ -227,26 +263,26 @@ function render(p,trips,places){
       <div style="margin-top:8px;font-size:30px;letter-spacing:6px">${[1,2,3,4,5].map(n=>`<span style="cursor:pointer" onclick="rateTrip(${n})">☆</span>`).join('')}</div>
       <div class="hint" style="margin-top:4px">Tap a star — it takes one second.</div>
     </div>`:'';
+  document.getElementById('heroSlot').innerHTML=heroHtml;
   show(`
-    ${heroHtml}
     ${rateHtml}
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">
-      <a href="book.html?s=${encodeURIComponent(TOKEN)}" style="display:block;background:linear-gradient(135deg,var(--teal),var(--teal2));color:#fff;border-radius:14px;padding:10px 6px;text-align:center;text-decoration:none;box-shadow:0 1px 2px rgba(20,30,50,.08)">
-        <div style="font-size:20px">📅</div><div style="font-size:12px;font-weight:800;margin-top:3px">Book a trip</div>
+      <a href="book.html?s=${encodeURIComponent(TOKEN)}" class="tileF">
+        <div class="orb o1">${IC.book}</div><div class="tl">Book a trip</div>
       </a>
-      ${tile('trips','🧳','My trips', upcoming.length+' upcoming')}
-      ${tile('statement','📄','Statement','')}
-      ${tile('details','👤','My details','')}
-      ${tile('places','📍','My places', places.length? places.length+' saved':'')}
-      ${p.gift_token?`<a href="gift.html?m=${encodeURIComponent(p.gift_token)}" style="display:block;background:#fff;border:1px solid var(--line);border-radius:14px;padding:10px 6px;text-align:center;text-decoration:none;box-shadow:0 1px 2px rgba(20,30,50,.05)">
-        <div style="font-size:20px">🎁</div><div style="font-size:12px;font-weight:800;color:var(--navy);margin-top:3px">Gift a trip</div>
-      </a>`:`<button type="button" onclick="callMe(this)" style="background:#fff;border:1.5px solid var(--teal);border-radius:14px;padding:10px 6px;text-align:center">
-        <div style="font-size:20px">📞</div><div style="font-size:12px;font-weight:800;color:var(--teal);margin-top:3px">Call me</div>
+      ${tile('trips','o2',IC.case,'My trips', upcoming.length?'upcoming':'', upcoming.length||'')}
+      ${tile('statement','o3',IC.doc,'Statement','','')}
+      ${tile('details','o4',IC.person,'My details','','')}
+      ${tile('places','o5',IC.pin,'My places', places.length?'saved':'', places.length||'')}
+      ${p.gift_token?`<a href="gift.html?m=${encodeURIComponent(p.gift_token)}" class="tileF">
+        <div class="orb o6">${IC.gift}</div><div class="tl">Gift a trip</div>
+      </a>`:`<button type="button" onclick="callMe(this)" class="tileF" style="border-color:var(--teal)">
+        <div class="orb o7">${IC.phone}</div><div class="tl" style="color:var(--teal)">Call me</div>
       </button>`}
     </div>
-    ${p.gift_token?`<button type="button" onclick="callMe(this)" style="display:block;width:100%;margin-bottom:14px;background:#fff;border:1.5px solid var(--teal);color:var(--teal);font-weight:800;font-size:14px;padding:13px;border-radius:14px">📞 Call me</button>`:''}
+    ${p.gift_token?`<button type="button" onclick="callMe(this)" style="display:block;width:100%;margin-bottom:14px;background:#fff;border:1.5px solid var(--teal);color:var(--teal);font-weight:800;font-size:14px;padding:13px;border-radius:14px">${IC.phone} Call me</button>`:''}
 
-    <a href="https://wa.me/27799722798" style="display:block;margin-bottom:14px;background:#25D366;color:#fff;font-weight:800;font-size:14px;padding:13px;border-radius:14px;text-align:center;text-decoration:none;box-shadow:0 1px 2px rgba(20,30,50,.08)">💬 Chat to us on WhatsApp</a>
+    <a href="https://wa.me/27799722798" style="display:block;margin-bottom:14px;background:linear-gradient(135deg,#25b563,#128c50);color:#fff;font-weight:800;font-size:14px;padding:13px;border-radius:14px;text-align:center;text-decoration:none;box-shadow:0 6px 16px rgba(18,140,80,.3)">💬 Chat to us on WhatsApp</a>
 
     <div class="card sec" id="sec-trips" style="display:none">
       <h2>My trips</h2>
