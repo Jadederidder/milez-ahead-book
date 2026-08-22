@@ -80,14 +80,22 @@
 </div>
 <script>
 const FN='https://izslchhcavckowatgbel.supabase.co/functions/v1/client-profile';
-const S=new URLSearchParams(location.search).get('s')||'';
+const WA_NUM='27799722798';
+const WA_ASK='https://wa.me/'+WA_NUM+'?text='+encodeURIComponent('Please send my secure Milez Ahead trips link');
+// Tolerant token read. The code normally arrives as ?s=<token>, but a link can
+// reach the client mangled — re-shared, copied by hand, or (2026-08-22) sent by
+// a notice whose button carried no code at all. Accept every shape we've ever
+// minted before concluding the link is codeless.
+const Q=new URLSearchParams(location.search);
+const H=new URLSearchParams((location.hash||'').replace(/^#/,''));
+const S=Q.get('s')||Q.get('token')||Q.get('t')||H.get('s')||H.get('token')||'';
 // Home-screen app support: remember the newest token so the installed icon
 // works without a fresh WhatsApp link (tokens now live 30 days).
 let TOKEN=S;
 try{ if(S){localStorage.setItem('mz_s',S);} else {TOKEN=localStorage.getItem('mz_s')||'';} }catch(_){}
 // Hardening: the token never lingers in the address bar / browser history —
 // stored above, then stripped. The link itself still works everywhere.
-try{ if(S){const u=new URL(location.href);u.searchParams.delete('s');history.replaceState(null,'',u.pathname+(u.searchParams.toString()?'?'+u.searchParams.toString():'')+u.hash);} }catch(_){}
+try{ if(S){const u=new URL(location.href);['s','token','t'].forEach(k=>u.searchParams.delete(k));history.replaceState(null,'',u.pathname+(u.searchParams.toString()?'?'+u.searchParams.toString():'')+u.hash);} }catch(_){}
 const esc=s=>(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 // Drawn line icons — one visual voice, no emoji (the premium pass, 2026-08-20).
 const _i=p=>`<svg class="ic" viewBox="0 0 24 24">${p}</svg>`;
@@ -110,10 +118,37 @@ async function call(payload){const r=await fetch(FN,{method:'POST',headers:{'con
 function pill(st){const m={completed:['done','Completed'],in_progress:['live','In progress'],driver_confirmed:['live','Driver confirmed'],driver_assigned:['live','Driver allocated'],captured:['pend','Received'],awaiting_driver:['pend','Arranging'],cancelled:['cxl','Cancelled'],no_show:['cxl','No-show']};const[c,l]=m[st]||['pend',st];return `<span class="pill ${c}">${l}</span>`;}
 function fmt(d){if(!d)return '';const dt=new Date(d+'T00:00:00');return dt.toLocaleDateString('en-ZA',{day:'numeric',month:'short',year:'numeric'});}
 
+// A codeless / expired link must NEVER look like a scam page. A bare red error
+// on an unbranded screen is exactly what clients read as phishing (2026-08-22:
+// a service notice went out with a codeless profile link and the control room
+// spent the day reassuring people). So: full branding, plain explanation of why
+// a code is needed, and one tap that gets them a working link.
+function recovery(kind){
+  const expired=kind==='expired';
+  const sub=document.getElementById('sub');
+  if(sub)sub.textContent=expired?'Your link has expired':"Let's get you back in";
+  show(`
+  <div class="card" style="text-align:center">
+    <img src="milez-wa-header.png" alt="Milez Ahead" style="display:block;width:60%;max-width:200px;height:auto;margin:2px auto 14px">
+    <div style="font-size:16px;font-weight:800;color:var(--navy);margin-bottom:8px">${expired?'This link has expired':'This link arrived without its code'}</div>
+    <p style="font-size:14px;color:var(--muted);margin:0 0 8px">You are in the right place — this is the genuine Milez Ahead trips page.</p>
+    <p style="font-size:14px;color:var(--muted);margin:0 0 16px">To keep your trips private, the page only opens from the personal link we send you on WhatsApp${expired?', and the code on this one has timed out':", and the one you tapped came through without its code"}. Tap below and we'll send you a fresh one straight away.</p>
+    <a href="${WA_ASK}" style="display:block;margin-bottom:10px;background:linear-gradient(135deg,#25b563,#128c50);color:#fff;font-weight:800;font-size:15px;padding:14px;border-radius:14px;text-decoration:none;box-shadow:0 6px 16px rgba(18,140,80,.3)">💬 Send me my link on WhatsApp</a>
+    <a href="tel:+${WA_NUM}" style="display:block;border:1px solid var(--line);background:#fff;color:var(--navy);font-weight:700;font-size:14px;padding:12px;border-radius:14px;text-decoration:none">📞 Call the control room</a>
+    <p class="hint" style="margin-top:16px;text-align:center">We will never ask you for a password, an OTP or card details on this page.</p>
+    <p class="hint" style="text-align:center;margin-top:10px">Milez Ahead · Executive Travel Concierge<br>+27 79 972 2798 · <a href="https://milezahead.co.za" style="color:var(--teal)">milezahead.co.za</a> · <a href="mailto:info@milezahead.co.za" style="color:var(--teal)">info@milezahead.co.za</a></p>
+  </div>`);
+}
 async function load(){
-  if(!TOKEN){show('<div class="msg err">This link is missing its code. Please reopen <b>My profile</b> from WhatsApp.</div>');return;}
-  const r=await call({action:'context'});
-  if(r.error){document.getElementById('sub').textContent='';show('<div class="msg err">'+esc(r.error)+'</div>');return;}
+  if(!TOKEN){recovery('missing');return;}
+  let r;
+  try{ r=await call({action:'context'}); }
+  catch(_){ document.getElementById('sub').textContent='Connection problem'; show('<div class="msg err">We could not reach Milez Ahead just now — please check your signal and reload this page.</div>'); return; }
+  if(r.error){
+    // An expired/invalid code is the same conversation as a missing one: send
+    // them for a fresh link, and drop the dead token so the app icon recovers too.
+    if(/expired|missing|reopen/i.test(r.error)){try{localStorage.removeItem('mz_s');}catch(_){} recovery('expired'); return;}
+    document.getElementById('sub').textContent='';show('<div class="msg err">'+esc(r.error)+'</div>');return;}
   const p=r.profile;
   document.getElementById('sub').textContent=p.full_name?('Hi '+p.full_name.split(' ')[0]+' 👋'):'Welcome';
   if(r.credits){const b=document.getElementById('bal');b.style.display='inline-block';b.textContent=`🎟 ${r.credits.left} of ${r.credits.total} rides left`;}
