@@ -30,6 +30,7 @@
   textarea{width:100%;border:1px solid #d8d4ca;border-radius:10px;padding:10px;font:inherit;font-size:14.5px;margin:6px 0}
   .save{background:var(--gold);color:#fff}
   .done{margin-top:8px;font-weight:700;color:var(--teal);font-size:14px}
+  .chg{font-weight:600;font-size:13px;color:var(--navy);margin-left:8px;text-decoration:underline}
   .empty{text-align:center;color:#8a8578;margin-top:40px}
 </style>
 </head>
@@ -61,14 +62,33 @@
     const ta = card.querySelector('textarea');
     const correction = ok ? '' : (ta.value || '').trim();
     if (!ok && !correction) { alert('Type the reply you would have sent first.'); return; }
+    const wasReviewed = card.dataset.reviewed === '1'; // survives the Change-my-verdict reopen, so the counter never double-counts
     card.style.opacity = .5;
     const r = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ k: K, action: 'verdict', id, ok, correction }) }).catch(() => null);
     if (!r || !r.ok) { card.style.opacity = 1; alert('Could not save, please try again.'); return; }
-    card.classList.add('rv'); card.style.opacity = .75;
+    card.classList.add('rv'); card.style.opacity = .75; card.dataset.reviewed = '1';
     card.querySelector('.acts').style.display = 'none';
-    card.appendChild(el('div', 'done', ok ? '✓ Approved' : '✎ Corrected, the brain will learn your reply'));
-    pending = Math.max(0, pending - 1); setCount();
+    const old = card.querySelector('.done'); if (old) old.remove();
+    addDone(card, ok ? '✓ Approved' : '✎ Corrected, the brain will learn your reply');
+    if (!wasReviewed) { pending = Math.max(0, pending - 1); setCount(); }
+  }
+
+  // A verdict is never final — "Change my verdict" reopens the controls so an
+  // approved reply can still be refined later (JD, 22 Aug).
+  function addDone(card, label) {
+    const done = el('div', 'done', label + '  ');
+    const change = el('a', 'chg', 'Change my verdict');
+    change.href = '#';
+    change.onclick = (e) => {
+      e.preventDefault();
+      done.remove();
+      card.classList.remove('rv'); card.style.opacity = 1;
+      card.querySelector('.acts').style.display = '';
+      card.querySelector('details').open = true;
+    };
+    done.appendChild(change);
+    card.appendChild(done);
   }
 
   function render(rows) {
@@ -82,23 +102,28 @@
       const badge = el('span', 'b ' + (r.action === 'answer' ? 'answer' : r.action === 'handoff' ? 'handoff' : 'silent'),
         r.action === 'answer' ? 'answered' : r.action === 'handoff' ? 'handed to consultant' : 'stayed silent');
       meta.appendChild(badge); a.appendChild(meta); card.appendChild(a);
+      // Controls are built for EVERY card (hidden on reviewed ones) so a past
+      // verdict can always be reopened and changed.
+      const acts = el('div', 'acts');
+      const okBtn = el('button', 'ok', '✓ Happy with this');
+      okBtn.onclick = () => verdict(r.id, true, card);
+      acts.appendChild(okBtn);
+      const det = el('details');
+      det.appendChild(el('summary', '', '✎ Give a better reply'));
+      const ta = el('textarea'); ta.rows = 3; ta.placeholder = 'Type the reply you would have sent…';
+      if (!r.reviewed_ok && r.learned_reply) ta.value = r.learned_reply; // refine an earlier correction
+      det.appendChild(ta);
+      const save = el('button', 'save', 'Save my reply — the brain learns it');
+      save.onclick = () => verdict(r.id, false, card);
+      det.appendChild(save);
+      acts.appendChild(det);
+      card.appendChild(acts);
       if (r.reviewed_at) {
-        card.appendChild(el('div', 'done', r.reviewed_ok ? '✓ Approved' : r.learned_reply ? '✎ Corrected' : '✕ Rejected'));
+        card.dataset.reviewed = '1';
+        acts.style.display = 'none';
+        addDone(card, r.reviewed_ok ? '✓ Approved' : r.learned_reply ? '✎ Corrected' : '✕ Rejected');
       } else {
         pending++;
-        const acts = el('div', 'acts');
-        const okBtn = el('button', 'ok', '✓ Happy with this');
-        okBtn.onclick = () => verdict(r.id, true, card);
-        acts.appendChild(okBtn);
-        const det = el('details');
-        det.appendChild(el('summary', '', '✎ Give a better reply'));
-        const ta = el('textarea'); ta.rows = 3; ta.placeholder = 'Type the reply you would have sent…';
-        det.appendChild(ta);
-        const save = el('button', 'save', 'Save my reply — the brain learns it');
-        save.onclick = () => verdict(r.id, false, card);
-        det.appendChild(save);
-        acts.appendChild(det);
-        card.appendChild(acts);
       }
       list.appendChild(card);
     }
