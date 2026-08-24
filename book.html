@@ -196,7 +196,9 @@ function render(){
     <div class="err" id="err"></div>
     <button class="cta" id="go" onclick="submit()">Confirm booking</button>`;
   // wire inputs
-  document.getElementById('pax').onchange=e=>f.pax=e.target.value;
+  // 5+ passengers can't ride a sedan: pre-select the 7-seater (client can
+  // still override) so the wrong-size car never arrives by default.
+  document.getElementById('pax').onchange=e=>{ f.pax=e.target.value; const v=document.getElementById('vehClass'); if(v&&+e.target.value>=5&&!v.value){ v.value='7seater'; } };
   wireDriverSearch();
   wireCode();
   ['date','time','bags','flight','notes','airport'].forEach(id=>{const el=document.getElementById(id);if(el)el.oninput=()=>{};});
@@ -339,6 +341,14 @@ window.submit=async()=>{
   const pickup=(pickupEl.dataset.full||pickupEl.value.trim());
   if(!pickup){ err.textContent=(isAir && (f.direction||'arrival')==='arrival') ? 'Please enter the drop-off (destination) address.' : 'Please enter a pick-up address.'; err.style.display='block'; return; }
   if(!document.getElementById('thour').value){ err.textContent='Please choose a pick-up time.'; err.style.display='block'; return; }
+  // A pick-up in the past can only be a typo. (Short-notice is fine — the
+  // dispatch engine has a real-time lane — so we only block actual history.)
+  const _when=new Date(document.getElementById('date').value+'T'+document.getElementById('thour').value+':'+(document.getElementById('tmin').value||'00')+':00+02:00');
+  if(!isNaN(_when.getTime())&&_when.getTime()<Date.now()){ err.textContent='That pick-up time has already passed — please check the date and time.'; err.style.display='block'; return; }
+  // Luggage size without a bag count reads as a contradiction downstream
+  // (Mr Prinsloo, 24 Aug: "medium" + 0 bags → confirmation said "Bags: 0").
+  const _bags=+document.getElementById('bags').value||0;
+  if((f.size==='medium'||f.size==='large')&&_bags===0){ err.textContent='You chose '+f.size+' luggage — how many bags are coming? Set Bags to 1 or more (or switch the size to Small if you’re travelling light).'; err.style.display='block'; return; }
   if(isAir){
     if(!document.getElementById('airport').value){ err.textContent='Please choose the airport.'; err.style.display='block'; return; }
   } else {
@@ -346,6 +356,15 @@ window.submit=async()=>{
     if(!drop){ err.textContent='Please enter a drop-off address.'; err.style.display='block'; return; }
     if(pickup.trim().toLowerCase()===drop.trim().toLowerCase()){ err.textContent='Your pick-up and drop-off are the same address — please change one.'; err.style.display='block'; return; }
   }
+  // Home Safe: the team drives the CLIENT'S car home — without at least make
+  // and model the drivers are hunting a mystery vehicle at midnight.
+  if(f.service==='drive_home'){
+    const _mk=(document.getElementById('vmake').value||'').trim(), _md=(document.getElementById('vmodel').value||'').trim();
+    if(!_mk||!_md){ err.textContent='Which car are we driving home? Please give at least the make and model so your driver team can find it.'; err.style.display='block'; return; }
+  }
+  // Alternative number: only checked when given, and only for obvious typos.
+  const _alt=(document.getElementById('altphone').value||'').trim();
+  if(_alt){ const _d=_alt.replace(/\D/g,''); if(!/^(0\d{9}|27\d{9})$/.test(_d)){ err.textContent='That alternative contact number doesn’t look right — e.g. 082 123 4567.'; err.style.display='block'; return; } }
   if(!document.getElementById('indemnity').checked){ err.textContent='Please accept the terms & indemnity to continue.'; document.getElementById('indemWrap').style.borderColor='#dc2626'; err.style.display='block'; return; }
   const special=[...document.querySelectorAll('#special .chip.sel')].map(c=>c.dataset.v);
   const booking={
