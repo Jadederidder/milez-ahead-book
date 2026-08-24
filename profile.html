@@ -343,6 +343,8 @@ function render(p,trips,places){
           <div style="font-size:12px;color:#c9d2e0">${window._data.credits.used} used this membership year</div>
         </div>
       </div>`:''}
+      <button class="btn" id="pdfBtn" onclick="sendPdf()" style="margin:0 0 6px;background:var(--navy)">📄 Send my statement to this WhatsApp</button>
+      <div class="hint" style="margin:0 0 12px">It arrives as a PDF in your Milez Ahead chat within a few seconds.</div>
       <div style="border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-bottom:12px">
         ${trips.map((t,i)=>{
           const from=(t.pickup_address||t.airport_code||'').split(',')[0];
@@ -359,7 +361,7 @@ function render(p,trips,places){
           </div>`;
         }).join('')}
       </div>
-      <button class="btn" id="pdfBtn" onclick="sendPdf()" style="margin:0;background:var(--navy)">📄 Send my statement to this WhatsApp</button><div class="hint" style="margin-top:6px">It arrives as a PDF in your Milez Ahead chat within a few seconds.</div>`
+      `
       :'<div class="hint">Your statement appears once you have trips.</div>'}
     </div>
 
@@ -448,8 +450,11 @@ async function sendPdf(){
   try{
     const doc=await buildStatementDoc();
     const b64=btoa(new Uint8Array(doc.output('arraybuffer')).reduce((a,c)=>a+String.fromCharCode(c),''));
-    const s=new URLSearchParams(location.search).get('s')||'';
-    const r=await fetch('https://izslchhcavckowatgbel.supabase.co/functions/v1/send-client-pdf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({s,filename:'Milez-Ahead-statement.pdf',pdf_base64:b64})});
+    // TOKEN, not location.search: the page scrubs ?s= from the address bar on
+    // load (history hardening), so the URL is ALWAYS bare here — reading it
+    // meant every send went out tokenless and 401'd into the download
+    // fallback (JD + a live client, 24-25 Aug). Same source as call().
+    const r=await fetch('https://izslchhcavckowatgbel.supabase.co/functions/v1/send-client-pdf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({s:TOKEN,filename:'Milez-Ahead-statement.pdf',pdf_base64:b64})});
     if(!r.ok) throw new Error('send failed');
     if(btn){btn.textContent='✅ Sent — check your WhatsApp';}
     setTimeout(()=>{if(btn){btn.disabled=false;btn.textContent='📄 Send my statement to this WhatsApp';}},8000);
