@@ -157,7 +157,7 @@ function render(){
     </div>
     <div class="card">
       <div class="row2"><div class="field"><label class="lab">Passengers</label><select id="pax">${Array.from({length:14},(_,i)=>i+1).map(n=>`<option${n===1?' selected':''}>${n}</option>`).join('')}</select></div>
-      <div class="field"><label class="lab">Bags</label><select id="bags">${Array.from({length:21},(_,i)=>i).map(n=>`<option${n===0?' selected':''}>${n}</option>`).join('')}</select></div></div>
+      <div class="field"><label class="lab">Bags</label><select id="bags"><option value="" selected>How many?</option><option value="0">No bags</option>${Array.from({length:20},(_,i)=>i+1).map(n=>`<option value="${n}">${n}</option>`).join('')}</select></div></div>
       <div class="field"><label class="lab">Luggage size</label><div class="seg"><button type="button" data-sz="small" class="szb sel" onclick="setSz('small')">Small</button><button type="button" data-sz="medium" class="szb" onclick="setSz('medium')">Medium</button><button type="button" data-sz="large" class="szb" onclick="setSz('large')">Large</button></div></div>
       <div class="field"><label class="lab">Travelling with</label><div class="chips" id="special">
         ${['baby_seat:Baby seat','pram:Pram','wheelchair:Wheelchair','golf_bag:Golf bag','bicycle:Bicycle','surfboard:Surfboard','extra_bags:Lots of luggage'].map(s=>{const[v,l]=s.split(':');return `<div class="chip" data-v="${v}" onclick="tog(this)">${l}</div>`}).join('')}
@@ -236,14 +236,22 @@ window.delStop=function(i){ window.STOPS.splice(i,1); renderStops(); };
 window.setStop=function(i,k,v){ if(window.STOPS[i]) window.STOPS[i][k]=v; };
 function renderStops(){
   const el=document.getElementById('stopsList'); if(!el) return;
-  el.innerHTML=window.STOPS.map((st,i)=>`<div style="display:flex;gap:6px;margin-bottom:8px">
-    <select onchange="setStop(${i},'kind',this.value)" style="border:1px solid #c9ccd4;border-radius:10px;padding:8px;font-size:13px">
-      <option value="dropoff" ${st.kind==='dropoff'?'selected':''}>Drop-off</option>
-      <option value="pickup" ${st.kind==='pickup'?'selected':''}>Pick-up</option>
-    </select>
-    <input value="${st.address.replace(/"/g,'&quot;')}" oninput="setStop(${i},'address',this.value)" placeholder="Stop address…" style="flex:1;border:1px solid #c9ccd4;border-radius:10px;padding:8px;font-size:14px">
-    <button type="button" onclick="delStop(${i})" style="border:none;background:none;color:#c0392b;font-size:16px">✕</button>
+  // Each stop is a proper address field: the input gets its OWN full-width line
+  // (the old inline squeeze was unusably narrow) and the SAME Google-powered
+  // autocomplete as pickup/drop-off (24 Aug: a stop typed free-hand had no
+  // suggestions and no coordinates).
+  el.innerHTML=window.STOPS.map((st,i)=>`<div style="border:1px solid #eceef2;border-radius:12px;padding:10px;margin-bottom:8px">
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+      <select onchange="setStop(${i},'kind',this.value)" style="border:1px solid #c9ccd4;border-radius:10px;padding:8px;font-size:13px">
+        <option value="dropoff" ${st.kind==='dropoff'?'selected':''}>Extra drop-off</option>
+        <option value="pickup" ${st.kind==='pickup'?'selected':''}>Extra pick-up</option>
+      </select>
+      <span style="flex:1"></span>
+      <button type="button" onclick="delStop(${i})" aria-label="Remove stop" style="border:none;background:none;color:#c0392b;font-size:16px">✕</button>
+    </div>
+    <div class="acwrap"><input data-stop="${i}" value="${st.address.replace(/"/g,'&quot;')}" oninput="setStop(${i},'address',this.value)" placeholder="Start typing the stop's address…" autocomplete="off" style="width:100%;border:1px solid #c9ccd4;border-radius:10px;padding:10px;font-size:15px"></div>
   </div>`).join('');
+  el.querySelectorAll('input[data-stop]').forEach((inp)=>attachAC(inp,'stop'+inp.dataset.stop));
 }
 (function applyPrefill(){
   if(!window.PREFILL||(!PREFILL.pick&&!PREFILL.drop)) return;
@@ -345,9 +353,11 @@ window.submit=async()=>{
   // dispatch engine has a real-time lane — so we only block actual history.)
   const _when=new Date(document.getElementById('date').value+'T'+document.getElementById('thour').value+':'+(document.getElementById('tmin').value||'00')+':00+02:00');
   if(!isNaN(_when.getTime())&&_when.getTime()<Date.now()){ err.textContent='That pick-up time has already passed — please check the date and time.'; err.style.display='block'; return; }
-  // Luggage size without a bag count reads as a contradiction downstream
-  // (Mr Prinsloo, 24 Aug: "medium" + 0 bags → confirmation said "Bags: 0").
-  const _bags=+document.getElementById('bags').value||0;
+  // Bags are an EXPLICIT choice — the silent 0 default let a "medium" pick
+  // sail through with no count (JD, 24 Aug, twice). "No bags" is one tap.
+  const _bagsRaw=document.getElementById('bags').value;
+  if(_bagsRaw===''){ err.textContent='How many bags are you bringing? Pick a number — "No bags" counts too.'; err.style.display='block'; return; }
+  const _bags=+_bagsRaw||0;
   if((f.size==='medium'||f.size==='large')&&_bags===0){ err.textContent='You chose '+f.size+' luggage — how many bags are coming? Set Bags to 1 or more (or switch the size to Small if you’re travelling light).'; err.style.display='block'; return; }
   if(isAir){
     if(!document.getElementById('airport').value){ err.textContent='Please choose the airport.'; err.style.display='block'; return; }
@@ -397,11 +407,27 @@ window.submit=async()=>{
   if(f.service==='drive_home'){ booking.client_vehicle_make=document.getElementById('vmake').value||null; booking.client_vehicle_model=document.getElementById('vmodel').value||null; booking.client_vehicle_colour=document.getElementById('vcolour').value||null; booking.client_vehicle_reg=document.getElementById('vreg').value||null; }
   go.disabled=true; go.innerHTML='<span class="spin"></span>';
   try{
-    booking.stops=(window.STOPS||[]).filter(st=>st.address.trim());
+    // Stops come from the DOM, not just typed state: an autocomplete pick sets
+    // input.value/dataset.full programmatically (no input event), so state-only
+    // collection would miss it.
+    booking.stops=[...document.querySelectorAll('input[data-stop]')].map(inp=>({
+      kind:(window.STOPS[+inp.dataset.stop]||{}).kind||'dropoff',
+      address:(inp.dataset.full||inp.value||'').trim(),
+    })).filter(st=>st.address);
     const res=await call({action:'submit',booking,save_preferred:document.getElementById('savePref')?.checked});
     if(res.ok){ showState('✅','Booking received','Trip '+res.ref+' is in — taking you back to WhatsApp…'); setTimeout(()=>{location.href='https://wa.me/27799722798';},2000); return; }
     throw new Error(res.error||'Something went wrong.');
-  }catch(e){ go.disabled=false; go.textContent='Confirm booking'; err.textContent=e.message; err.style.display='block'; }
+  }catch(e){
+    go.disabled=false; go.textContent='Confirm booking';
+    // A network drop mid-submit can mean the booking LANDED but the reply was
+    // lost ("Failed to fetch", 24 Aug — the trip existed, the client saw an
+    // error). Be honest and anti-duplicate: point them at WhatsApp first.
+    const _net=/failed to fetch|networkerror|load failed/i.test(String(e&&e.message||''));
+    err.textContent=_net
+      ? 'Connection hiccup — your booking may still have gone through. Check WhatsApp: if your confirmation arrives within a minute, you’re done. No message? Tap Confirm booking again.'
+      : e.message;
+    err.style.display='block';
+  }
 };
 
 (async function init(){

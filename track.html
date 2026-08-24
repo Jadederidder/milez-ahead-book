@@ -197,7 +197,22 @@ function computeArrival(){
   });
 }
 function render(d){
-  if(!d){document.getElementById('app').innerHTML='<div class="card"><div class="headline">Trip not found</div><div class="ref">This tracking link is no longer active.</div></div>';return;}
+  if(!d){
+    // A dead link must NEVER read as a scam page (same rule as profile.html):
+    // full branding, a plain reason, and one tap that gets a fresh live link
+    // sent on WhatsApp (JD, 25 Aug: "client can request updated live link").
+    const WA='https://wa.me/27799722798?text='+encodeURIComponent('Please send me a fresh live tracking link for my trip');
+    document.getElementById('app').innerHTML='<div class="card" style="text-align:center">'
+      +'<img src="milez-wa-header.png" alt="Milez Ahead" style="display:block;width:60%;max-width:200px;height:auto;margin:2px auto 14px">'
+      +'<div class="headline">This tracking link has expired</div>'
+      +'<div class="ref" style="margin:8px 0 4px">You are in the right place — this is the genuine Milez Ahead live tracker.</div>'
+      +'<div class="ref" style="margin:0 0 16px">Links go stale when a trip is updated or completed. Tap below and we will send you a fresh one straight away.</div>'
+      +'<a href="'+WA+'" style="display:block;margin-bottom:10px;background:linear-gradient(135deg,#25b563,#128c50);color:#fff;font-weight:800;font-size:15px;padding:14px;border-radius:14px;text-decoration:none">💬 Send me a fresh link on WhatsApp</a>'
+      +'<a href="tel:+27799722798" style="display:block;border:1px solid #e3e5ea;background:#fff;color:#12233f;font-weight:700;font-size:14px;padding:12px;border-radius:14px;text-decoration:none">📞 Call the control room</a>'
+      +'<div class="ref" style="margin-top:14px">We will never ask for a password, an OTP or card details on this page.</div>'
+      +'</div>';
+    return;
+  }
   const SHORT={booked:'Booked',assigned:'Assigned',enroute:'En route',arrived:'Arrived',started:'In trip',complete:'Done'};
   const steps=d.steps.map(s=>{
     const cls=s.done?'done':(s.current?'current':'todo');
