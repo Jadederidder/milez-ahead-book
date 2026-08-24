@@ -182,6 +182,7 @@ function tripRow(t,i){
   return `<div class="trip" id="trip-${i}"><div style="min-width:0;flex:1">
     <div class="when">${fmt(t.trip_date)}${t.pickup_time?' · '+String(t.pickup_time).slice(0,5):''} ${pill(t.status)}</div>
     <div class="route">${esc(from)}${to?' → '+esc(String(to).split(',')[0]):''}</div>
+    ${(t.stops||[]).map(st=>`<div class="route" style="font-size:12px;color:#8a8f98">➕ Extra ${st.kind==='pickup'?'pick-up':'drop-off'}: ${esc(String(st.address).split(',')[0])}</div>`).join('')}
     ${!canEdit&&t.status==='completed'?`<div style="margin-top:8px"><button type="button" onclick="bookAgain(${i})" style="border:1px solid var(--teal);background:#fff;color:var(--teal);font-weight:700;font-size:12px;padding:6px 12px;border-radius:999px">↻ Book again</button></div>`:''}
     ${canEdit?`<div style="margin-top:8px;display:flex;gap:8px">
       <button type="button" onclick="editTrip(${i})" style="border:1px solid var(--teal);background:#fff;color:var(--teal);font-weight:700;font-size:12px;padding:6px 12px;border-radius:999px">✏️ Change</button>
@@ -334,7 +335,32 @@ function render(p,trips,places){
 
     <div class="card sec" id="sec-statement" style="display:none">
       <h2>My statement</h2>
-      ${trips.length?'<button class="btn" id="pdfBtn" onclick="sendPdf()" style="margin:0;background:var(--navy)">📄 Send my statement to this WhatsApp</button><div class="hint" style="margin-top:6px">It arrives as a PDF in your Milez Ahead chat within a few seconds.</div>':'<div class="hint">Your statement appears once you have trips.</div>'}
+      ${trips.length?`
+      ${window._data&&window._data.credits?`<div style="display:flex;align-items:center;gap:10px;background:linear-gradient(135deg,#102245,#0d4f4a);border-radius:14px;padding:14px 16px;margin-bottom:12px">
+        <div style="font-size:22px">🎟</div>
+        <div style="color:#fff">
+          <div style="font-weight:800;font-size:16px">${window._data.credits.left} of ${window._data.credits.total} rides left</div>
+          <div style="font-size:12px;color:#c9d2e0">${window._data.credits.used} used this membership year</div>
+        </div>
+      </div>`:''}
+      <div style="border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-bottom:12px">
+        ${trips.map((t,i)=>{
+          const from=(t.pickup_address||t.airport_code||'').split(',')[0];
+          const to=(t.dropoff_address||t.airport_code||'').split(',')[0];
+          const cr=(t.status==='cancelled'||t.status==='no_show')?0:(t.credits_effective!=null?Number(t.credits_effective):1);
+          const stops=(t.stops||[]).length;
+          return `<div style="display:flex;gap:10px;align-items:center;padding:11px 14px;${i%2?'background:#f6f5f1;':''}${i?'border-top:1px solid #ecebe6;':''}">
+            <div style="min-width:0;flex:1">
+              <div style="font-size:12px;color:#8a8f98">${fmt(t.trip_date)} · ${esc(String(t.ref||'').replace(/^DRV-|^MUA-/,''))}</div>
+              <div style="font-size:14px;font-weight:600;color:var(--navy);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(from)}${to?' → '+esc(to):''}${stops?` <span style=\"color:#8a8f98;font-weight:500\">(+${stops} stop${stops>1?'s':''})</span>`:''}</div>
+            </div>
+            ${window._data&&window._data.credits?`<div style="flex-shrink:0;background:#eef6f4;color:var(--teal);font-weight:800;font-size:12px;border-radius:999px;padding:4px 10px">${cr?cr+(cr===1?' credit':' credits'):'—'}</div>`:''}
+            ${t.fare!=null?`<div style="flex-shrink:0;font-weight:700;font-size:13px;color:#5a616c">${money(t.fare)}</div>`:''}
+          </div>`;
+        }).join('')}
+      </div>
+      <button class="btn" id="pdfBtn" onclick="sendPdf()" style="margin:0;background:var(--navy)">📄 Send my statement to this WhatsApp</button><div class="hint" style="margin-top:6px">It arrives as a PDF in your Milez Ahead chat within a few seconds.</div>`
+      :'<div class="hint">Your statement appears once you have trips.</div>'}
     </div>
 
     <div class="card sec" id="sec-details" style="display:none">
@@ -434,35 +460,109 @@ async function sendPdf(){
     try{ await savePdf(); }finally{ if(btn){btn.disabled=false;btn.textContent='📄 Send my statement to this WhatsApp';} }
   }
 }
+// The branded statement PDF — ONE builder for both delivery paths (send-to-
+// WhatsApp and browser download). Design: navy masthead with the gold lockup,
+// client block, credits summary, zebra table with a per-trip Credits column,
+// totals, footer. helvetica lacks the → glyph (the old build printed garbage
+// where arrows should be — JD, 24 Aug), so routes use "to".
+async function buildStatementDoc(){
+  const d=window._data; if(!d) throw new Error('no data');
+  const { jsPDF } = await import('https://esm.sh/jspdf@2.5.1');
+  const doc=new jsPDF({unit:'pt',format:'a4'});
+  const W=595, M=42, R=W-M;
+  const NAVY=[16,34,69], GOLD=[201,162,39], TEAL=[13,79,74], INK=[30,36,46], MUT=[110,116,126];
+  const trips=(d.trips||[]);
+  const isMember=!!d.credits;
+  let page=1;
+
+  function masthead(){
+    doc.setFillColor(NAVY[0],NAVY[1],NAVY[2]); doc.rect(0,0,W,84,'F');
+    doc.setFillColor(GOLD[0],GOLD[1],GOLD[2]); doc.rect(0,84,W,3,'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(20); doc.setTextColor(255,255,255);
+    doc.text('MILEZ',M,40);
+    doc.setTextColor(GOLD[0],GOLD[1],GOLD[2]); doc.text('AHEAD',M+72,40);
+    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(220,224,232);
+    doc.text('Executive Travel Concierge',M,56);
+    doc.setFont('helvetica','bold'); doc.setFontSize(13); doc.setTextColor(255,255,255);
+    doc.text('My Statement',R,40,{align:'right'});
+    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(220,224,232);
+    doc.text(new Date().toLocaleDateString('en-ZA',{day:'numeric',month:'long',year:'numeric'}),R,56,{align:'right'});
+  }
+  function tableHead(y){
+    doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(TEAL[0],TEAL[1],TEAL[2]);
+    doc.text('DATE',M,y); doc.text('REF',M+72,y); doc.text('TRIP',M+178,y);
+    if(isMember) doc.text('CREDITS',R-70,y,{align:'right'});
+    doc.text('FARE',R,y,{align:'right'});
+    doc.setDrawColor(NAVY[0],NAVY[1],NAVY[2]); doc.setLineWidth(1); doc.line(M,y+6,R,y+6);
+    return y+20;
+  }
+  function footer(){
+    doc.setDrawColor(225); doc.setLineWidth(0.5); doc.line(M,806,R,806);
+    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(MUT[0],MUT[1],MUT[2]);
+    doc.text('Milez Ahead · Executive Travel Concierge · +27 79 972 2798 · milezahead.co.za',M,820);
+    doc.text('Page '+page,R,820,{align:'right'});
+  }
+
+  masthead();
+  let y=112;
+  doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(INK[0],INK[1],INK[2]);
+  doc.text(d.profile.full_name||'',M,y);
+  doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(MUT[0],MUT[1],MUT[2]);
+  if(d.profile.phone) doc.text(String(d.profile.phone),M,y+15);
+  if(isMember){
+    // Credits chip, right-aligned: "95 of 100 rides left · 5 used"
+    const txt=`${d.credits.left} of ${d.credits.total} rides left  ·  ${d.credits.used} used`;
+    const tw=doc.getTextWidth(txt)+24;
+    doc.setFillColor(240,246,244); doc.setDrawColor(TEAL[0],TEAL[1],TEAL[2]); doc.setLineWidth(0.8);
+    doc.roundedRect(R-tw,y-14,tw,26,13,13,'FD');
+    doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(TEAL[0],TEAL[1],TEAL[2]);
+    doc.text(txt,R-tw/2,y+3,{align:'center'});
+  }
+  y+=40;
+  y=tableHead(y);
+
+  doc.setFontSize(9);
+  let totCredits=0, totFare=0, shaded=false;
+  trips.forEach(t=>{
+    const from=(t.pickup_address||t.airport_code||'').split(',')[0];
+    const to=(t.dropoff_address||t.airport_code||'').split(',')[0];
+    const stops=(t.stops||[]).length;
+    const route=(from&&to)?`${from} to ${to}`:(from||to||'');
+    const tripTxt=route+(stops?`  (+${stops} stop${stops>1?'':''}${stops>1?'s':''})`:'');
+    const lines=doc.splitTextToSize(tripTxt, isMember?170:230).slice(0,2);
+    const rowH=Math.max(18, lines.length*11+7);
+    if(y+rowH>790){ footer(); doc.addPage(); page++; masthead(); y=tableHead(112); shaded=false; }
+    if(shaded){ doc.setFillColor(246,245,241); doc.rect(M-6,y-11,R-M+12,rowH,'F'); }
+    shaded=!shaded;
+    doc.setFont('helvetica','normal'); doc.setTextColor(INK[0],INK[1],INK[2]);
+    doc.text(String(t.trip_date||''),M,y);
+    doc.setTextColor(MUT[0],MUT[1],MUT[2]);
+    doc.text(String(t.ref||'').replace(/^DRV-|^MUA-/,'').slice(0,14),M+72,y);
+    doc.setTextColor(INK[0],INK[1],INK[2]);
+    doc.text(lines,M+178,y);
+    const cr=(t.status==='cancelled'||t.status==='no_show')?0:(t.credits_effective!=null?Number(t.credits_effective):1);
+    if(isMember){ totCredits+=cr; doc.text(cr?String(cr):'—',R-70,y,{align:'right'}); }
+    if(t.fare!=null){ totFare+=Number(t.fare); doc.setTextColor(MUT[0],MUT[1],MUT[2]); doc.text('R'+Number(t.fare).toFixed(0),R,y,{align:'right'}); }
+    y+=rowH;
+  });
+  if(!trips.length){ doc.setFont('helvetica','normal'); doc.setTextColor(MUT[0],MUT[1],MUT[2]); doc.text('No trips yet.',M,y); y+=16; }
+
+  // Totals band.
+  doc.setDrawColor(NAVY[0],NAVY[1],NAVY[2]); doc.setLineWidth(1); doc.line(M,y-4,R,y-4); y+=12;
+  doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(NAVY[0],NAVY[1],NAVY[2]);
+  doc.text(`${trips.length} trip${trips.length===1?'':'s'} on record`,M,y);
+  if(isMember) doc.text(`${totCredits} credit${totCredits===1?'':'s'} used`,R-70,y,{align:'right'});
+  if(totFare>0) doc.text('R'+totFare.toFixed(0),R,y,{align:'right'});
+  footer();
+  return doc;
+}
 async function savePdf(){
-  const d=window._data; if(!d) return;
   const btn=document.getElementById('pdfBtn'); if(btn){btn.disabled=true;btn.textContent='Preparing…';}
   try{
-    const { jsPDF } = await import('https://esm.sh/jspdf@2.5.1');
-    const doc=new jsPDF({unit:'pt',format:'a4'}); const M=40, R=555; let y=54;
-    doc.setFont('helvetica','bold'); doc.setFontSize(18); doc.setTextColor(13,79,74);
-    doc.text('Milez Ahead — My statement', M, y); y+=26;
-    doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.setTextColor(60,60,60);
-    doc.text(d.profile.full_name||'', M, y); y+=15;
-    if(d.profile.phone){ doc.text(d.profile.phone, M, y); y+=15; }
-    if(d.credits){ doc.setTextColor(20,20,20); doc.text(`Rides this year: ${d.credits.left} of ${d.credits.total} left (${d.credits.used} used)`, M, y); y+=10; }
-    y+=8; doc.setDrawColor(210); doc.line(M, y, R, y); y+=18;
-    doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(20,20,20);
-    doc.text('Date', M, y); doc.text('Ref', M+95, y); doc.text('Trip', M+195, y); doc.text('Fare', R, y, {align:'right'}); y+=6;
-    doc.line(M, y, R, y); y+=16; doc.setFont('helvetica','normal'); doc.setTextColor(50,50,50);
-    (d.trips||[]).forEach(t=>{
-      if(y>800){ doc.addPage(); y=54; }
-      const from=(t.pickup_address||'').split(',')[0]; const to=(t.dropoff_address||t.airport_code||'').split(',')[0];
-      doc.text(String(t.trip_date||''), M, y);
-      doc.text(String(t.ref||'').slice(0,16), M+95, y);
-      doc.text((from+(to?' → '+to:'')).slice(0,42), M+195, y);
-      doc.text(t.fare!=null?('R'+Number(t.fare).toFixed(0)):'', R, y, {align:'right'});
-      y+=15;
-    });
-    if(!(d.trips||[]).length){ doc.text('No trips yet.', M, y); }
+    const doc=await buildStatementDoc();
     doc.save('Milez-Ahead-statement.pdf');
   }catch(e){ alert('Could not build the PDF — please try again.'); }
-  finally{ if(btn){btn.disabled=false;btn.textContent='📄 Download my statement (PDF)';} }
+  finally{ if(btn){btn.disabled=false;btn.textContent='📄 Send my statement to this WhatsApp';} }
 }
 async function save(){
   const btn=document.getElementById('save');btn.disabled=true;btn.textContent='Saving…';
