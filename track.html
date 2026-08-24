@@ -265,7 +265,10 @@ function render(d){
   const st=k=>(d.steps.find(s=>s.key===k)||{}).done;
   const showEta=d.driver&&d.driver.live&&!st('arrived')&&!st('started')&&!d.cancelled;
   const etaChip=showEta?'<div id="eta" class="etachip"'+(_eta?'':' style="display:none"')+'>'+(_eta?'🛣️ ~'+esc(_eta)+' away':'')+'</div>':'';
-  const sosBtn=(d.driver&&!d.cancelled&&!st('complete'))?'<button class="sosbtn" onclick="openSos()">🆘 I feel unsafe — alert control room</button>':'';
+  // SOS is HIDDEN until armed response is wired (JD, 25 Aug — same call as the
+  // driver app's button). The modal + track-sos plumbing stay intact; restore
+  // by reinstating the button markup here.
+  const sosBtn='';
   // After the trip: branded receipt + rate & tip + one-tap return booking.
   let after='';
   if(d.receipt){
