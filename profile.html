@@ -334,7 +334,7 @@ function render(p,trips,places){
 
     <div class="card sec" id="sec-statement" style="display:none">
       <h2>My statement</h2>
-      ${trips.length?'<button class="btn" id="pdfBtn" onclick="savePdf()" style="margin:0;background:var(--navy)">📄 Download my statement (PDF)</button>':'<div class="hint">Your statement appears once you have trips.</div>'}
+      ${trips.length?'<button class="btn" id="pdfBtn" onclick="sendPdf()" style="margin:0;background:var(--navy)">📄 Send my statement to this WhatsApp</button><div class="hint" style="margin-top:6px">It arrives as a PDF in your Milez Ahead chat within a few seconds.</div>':'<div class="hint">Your statement appears once you have trips.</div>'}
     </div>
 
     <div class="card sec" id="sec-details" style="display:none">
@@ -413,6 +413,26 @@ async function callMe(btn){
   const r=await call({action:'callback'});
   btn.textContent=r&&!r.error?'✓ We\'ll phone you shortly':was;
   if(r&&r.error){alert(r.error);btn.disabled=false;btn.textContent=was;}
+}
+async function sendPdf(){
+  // WhatsApp's in-app browser silently blocks file downloads (Mrs Brand, Mrs
+  // Steenberg — Aug 2026), so the statement is DELIVERED into their own chat
+  // instead: same PDF, sent as a WhatsApp document via the server.
+  const btn=document.getElementById('pdfBtn'); if(btn){btn.disabled=true;btn.textContent='Sending to your WhatsApp…';}
+  try{
+    const doc=await buildStatementDoc();
+    const b64=btoa(new Uint8Array(doc.output('arraybuffer')).reduce((a,c)=>a+String.fromCharCode(c),''));
+    const s=new URLSearchParams(location.search).get('s')||'';
+    const r=await fetch('https://izslchhcavckowatgbel.supabase.co/functions/v1/send-client-pdf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({s,filename:'Milez-Ahead-statement.pdf',pdf_base64:b64})});
+    if(!r.ok) throw new Error('send failed');
+    if(btn){btn.textContent='✅ Sent — check your WhatsApp';}
+    setTimeout(()=>{if(btn){btn.disabled=false;btn.textContent='📄 Send my statement to this WhatsApp';}},8000);
+    return;
+  }catch(e){
+    // Fall back to the old browser download (works in a real browser).
+    if(btn){btn.textContent='Preparing download…';}
+    try{ await savePdf(); }finally{ if(btn){btn.disabled=false;btn.textContent='📄 Send my statement to this WhatsApp';} }
+  }
 }
 async function savePdf(){
   const d=window._data; if(!d) return;
