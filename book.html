@@ -169,13 +169,13 @@ function render(){
       <div class="row2"><div class="field"><input type="text" id="vcolour" placeholder="Colour *" required></div><div class="field"><input type="text" id="vreg" placeholder="Registration (optional)"></div></div>
     </div>
     <div class="card">
-      <div class="field"><label class="lab">Preferred driver</label>
+      ${isHome?'':`<div class="field"><label class="lab">Preferred driver</label>
         <div class="acwrap">
           <input type="text" id="driverSearch" placeholder="Any available driver — type a name" autocomplete="off">
           <input type="hidden" id="driver" value="${CTX.preferred_driver_id||''}">
           <div class="acbox" id="driverBox"></div>
         </div>
-        <label style="display:flex;gap:8px;align-items:center;margin-top:8px;font-size:13px;color:var(--muted)"><input type="checkbox" id="savePref" style="width:18px;height:18px"> Always use this driver for me</label></div>
+        <label style="display:flex;gap:8px;align-items:center;margin-top:8px;font-size:13px;color:var(--muted)"><input type="checkbox" id="savePref" style="width:18px;height:18px"> Always use this driver for me</label></div>`}
       <div class="row2">
         <div class="field"><label class="lab">Driver preference</label><select id="driverSex"><option value="">No preference</option><option value="female">Female driver</option><option value="male">Male driver</option></select></div>
         <div class="field"><label class="lab">Vehicle</label><select id="vehClass"><option value="">No preference</option><option value="sedan">Sedan</option><option value="suv">SUV</option><option value="7seater">7-Seater / group</option></select></div>
@@ -384,7 +384,9 @@ window.submit=async()=>{
     passengers:+document.getElementById('pax').value||1, luggage:+document.getElementById('bags').value||0, luggage_size:f.size||'small',
     pickup_address:pickup, pickup_lat:place.pickup?.lat??null, pickup_lng:place.pickup?.lng??null,
     special_items:special, notes:[((document.getElementById('altphone').value||'').trim()?('Alt contact: '+document.getElementById('altphone').value.trim()):''),(document.getElementById('notes').value||'').trim()].filter(Boolean).join(' · ')||undefined,
-    requested_driver_id:document.getElementById('driver').value||null,
+    // Home Safe has no preferred-driver field (Marcelle, 25 Aug) — a requested
+    // driver would bypass the 2-driver team broadcast, so it stays null there.
+    requested_driver_id:document.getElementById('driver')?.value||null,
     driver_sex_pref:document.getElementById('driverSex').value||null,
     vehicle_class_pref:document.getElementById('vehClass').value||null,
     indemnity_accepted:true,
