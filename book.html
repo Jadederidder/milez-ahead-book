@@ -176,10 +176,10 @@ function render(){
           <div class="acbox" id="driverBox"></div>
         </div>
         <label style="display:flex;gap:8px;align-items:center;margin-top:8px;font-size:13px;color:var(--muted)"><input type="checkbox" id="savePref" style="width:18px;height:18px"> Always use this driver for me</label></div>`}
-      <div class="row2">
+      ${isHome?'':`<div class="row2">
         <div class="field"><label class="lab">Driver preference</label><select id="driverSex"><option value="">No preference</option><option value="female">Female driver</option><option value="male">Male driver</option></select></div>
         <div class="field"><label class="lab">Vehicle</label><select id="vehClass"><option value="">No preference</option><option value="sedan">Sedan</option><option value="suv">SUV</option><option value="7seater">7-Seater / group</option></select></div>
-      </div>
+      </div>`}
       <div class="field"><label class="lab">Alternative contact number <span style="font-weight:500;text-transform:none;color:#9aa1ab">(optional)</span></label><input type="tel" id="altphone" inputmode="tel" placeholder="e.g. 082 123 4567"></div>
       <div class="field"><label class="lab">Voucher / gift code <span style="font-weight:500;text-transform:none;color:#9aa1ab">(optional)</span></label>
         <input type="text" id="code" placeholder="e.g. MA-XXXXXX" autocomplete="off" autocapitalize="characters" style="text-transform:uppercase">
@@ -390,8 +390,10 @@ window.submit=async()=>{
     // Home Safe has no preferred-driver field (Marcelle, 25 Aug) — a requested
     // driver would bypass the 2-driver team broadcast, so it stays null there.
     requested_driver_id:document.getElementById('driver')?.value||null,
-    driver_sex_pref:document.getElementById('driverSex').value||null,
-    vehicle_class_pref:document.getElementById('vehClass').value||null,
+    // Home Safe renders neither select: the team pairs are fixed and the
+    // vehicle is the client's own car (JD, 25 Aug).
+    driver_sex_pref:document.getElementById('driverSex')?.value||null,
+    vehicle_class_pref:document.getElementById('vehClass')?.value||null,
     indemnity_accepted:true,
     add_escort:!!document.getElementById('escort')?.checked, policy_number:CTX.policy_number||undefined,
     code:((document.getElementById('code')||{}).value||'').trim().toUpperCase()||undefined,
