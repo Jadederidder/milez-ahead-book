@@ -349,6 +349,9 @@ window.submit=async()=>{
   const pickup=(pickupEl.dataset.full||pickupEl.value.trim());
   if(!pickup){ err.textContent=(isAir && (f.direction||'arrival')==='arrival') ? 'Please enter the drop-off (destination) address.' : 'Please enter a pick-up address.'; err.style.display='block'; return; }
   if(!document.getElementById('thour').value){ err.textContent='Please choose a pick-up time.'; err.style.display='block'; return; }
+  // Minutes are an EXPLICIT choice — the silent :00 default booked a trip at the
+  // wrong time in JD's 25 Aug drill (same failure shape as the bags default).
+  if(!document.getElementById('tmin').value){ err.textContent='Please choose the pick-up minutes too — pick :00 if it\'s on the hour.'; err.style.display='block'; return; }
   // A pick-up in the past can only be a typo. (Short-notice is fine — the
   // dispatch engine has a real-time lane — so we only block actual history.)
   const _when=new Date(document.getElementById('date').value+'T'+document.getElementById('thour').value+':'+(document.getElementById('tmin').value||'00')+':00+02:00');
