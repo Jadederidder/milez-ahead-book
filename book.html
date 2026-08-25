@@ -165,8 +165,8 @@ function render(){
     </div>
     <div class="card ${isHome?'':'hide'}" id="vehWrap">
       <label class="lab">The car we're driving home</label>
-      <div class="row2"><div class="field"><input type="text" id="vmake" placeholder="Make"></div><div class="field"><input type="text" id="vmodel" placeholder="Model"></div></div>
-      <div class="row2"><div class="field"><input type="text" id="vcolour" placeholder="Colour"></div><div class="field"><input type="text" id="vreg" placeholder="Registration"></div></div>
+      <div class="row2"><div class="field"><input type="text" id="vmake" placeholder="Make *" required></div><div class="field"><input type="text" id="vmodel" placeholder="Model *" required></div></div>
+      <div class="row2"><div class="field"><input type="text" id="vcolour" placeholder="Colour *" required></div><div class="field"><input type="text" id="vreg" placeholder="Registration (optional)"></div></div>
     </div>
     <div class="card">
       <div class="field"><label class="lab">Preferred driver</label>
@@ -366,11 +366,13 @@ window.submit=async()=>{
     if(!drop){ err.textContent='Please enter a drop-off address.'; err.style.display='block'; return; }
     if(pickup.trim().toLowerCase()===drop.trim().toLowerCase()){ err.textContent='Your pick-up and drop-off are the same address — please change one.'; err.style.display='block'; return; }
   }
-  // Home Safe: the team drives the CLIENT'S car home — without at least make
-  // and model the drivers are hunting a mystery vehicle at midnight.
+  // Home Safe: the team drives the CLIENT'S car home — make, model AND colour
+  // are compulsory on every channel (JD, 25 Aug — driver request; the offer
+  // push names the car). Registration stays optional: typo-prone, and the team
+  // identifies the car by colour + model at the door.
   if(f.service==='drive_home'){
-    const _mk=(document.getElementById('vmake').value||'').trim(), _md=(document.getElementById('vmodel').value||'').trim();
-    if(!_mk||!_md){ err.textContent='Which car are we driving home? Please give at least the make and model so your driver team can find it.'; err.style.display='block'; return; }
+    const _mk=(document.getElementById('vmake').value||'').trim(), _md=(document.getElementById('vmodel').value||'').trim(), _cl=(document.getElementById('vcolour').value||'').trim();
+    if(!_mk||!_md||!_cl){ err.textContent='Which car are we driving home? Please give the make, model and colour so your driver team can find it.'; err.style.display='block'; return; }
   }
   // Alternative number: only checked when given, and only for obvious typos.
   const _alt=(document.getElementById('altphone').value||'').trim();
