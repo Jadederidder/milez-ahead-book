@@ -54,6 +54,8 @@
   .state{padding:60px 24px;text-align:center}.state .em{font-size:42px}.state h2{margin:14px 0 6px;color:var(--navy)}.state p{color:var(--muted)}
   .spin{display:inline-block;width:20px;height:20px;border:2.5px solid rgba(255,255,255,.5);border-top-color:#fff;border-radius:50%;animation:s .7s linear infinite;vertical-align:-4px}@keyframes s{to{transform:rotate(360deg)}}
   .hint{font-size:12px;color:var(--muted);margin-top:4px}
+  .rq{color:#dc2626;font-weight:800;margin-left:2px}
+  .miss{border-color:#dc2626 !important;background:#fff8f6 !important}
   .acwrap{position:relative}
   .acbox{position:absolute;left:0;right:0;top:100%;z-index:40;background:#fff;border:1.5px solid var(--teal);border-top:none;border-radius:0 0 12px 12px;box-shadow:0 10px 28px rgba(20,30,50,.14);display:none;max-height:230px;overflow:auto}
   .acitem{padding:12px 14px;font-size:14px;cursor:pointer;border-top:1px solid #f1eee6;color:var(--ink)}
@@ -138,33 +140,33 @@ function render(){
     </div>
     ${recent}
     <div class="card">
-      <div class="row2"><div class="field"><label class="lab">Date</label><input type="date" id="date"></div>
-      <div class="field"><label class="lab">Pick-up time</label><div class="row2">
+      <div class="row2"><div class="field"><label class="lab">Date<span class="rq">*</span></label><input type="date" id="date"></div>
+      <div class="field"><label class="lab">Pick-up time<span class="rq">*</span></label><div class="row2">
         <select id="thour"><option value="">Hr</option>${Array.from({length:24},(_,i)=>String(i).padStart(2,'0')).map(h=>`<option>${h}</option>`).join('')}</select>
         <select id="tmin"><option value="">Min</option>${['00','15','30','45'].map(m=>`<option>${m}</option>`).join('')}</select>
       </div></div></div>
-      <div class="field"><label class="lab" id="pickupLab">${isAir && f.direction==='arrival' ? 'Drop-off address' : 'Pick-up address'}</label><div class="acwrap"><input type="text" id="pickup" placeholder="Start typing your address…" autocomplete="off"></div></div>
-      <div class="field ${isAir?'hide':''}" id="dropWrap"><label class="lab">Drop-off address</label><div class="acwrap"><input type="text" id="drop" placeholder="Where to?" autocomplete="off"></div></div>
+      <div class="field"><label class="lab" id="pickupLab">${isAir && f.direction==='arrival' ? 'Drop-off address' : 'Pick-up address'}<span class="rq">*</span></label><div class="acwrap"><input type="text" id="pickup" placeholder="Start typing your address…" autocomplete="off"></div></div>
+      <div class="field ${isAir?'hide':''}" id="dropWrap"><label class="lab">Drop-off address<span class="rq">*</span></label><div class="acwrap"><input type="text" id="drop" placeholder="Where to?" autocomplete="off"></div></div>
       <div class="field" id="stopsWrap"><label class="lab">Extra stops <span style="font-weight:500;text-transform:none;color:#9aa1ab">(optional · 1 credit each)</span></label>
         <div id="stopsList"></div>
         <button type="button" onclick="addStop()" style="border:1px dashed #c9ccd4;background:#fff;color:#6b7280;font-weight:600;font-size:13px;padding:8px 14px;border-radius:10px;width:100%">+ Add a stop</button>
       </div>
       <div class="${isAir?'':'hide'}" id="airWrap">
-        <div class="field"><label class="lab">Airport</label><select id="airport">${airOpts}</select></div>
+        <div class="field"><label class="lab">Airport<span class="rq">*</span></label><select id="airport">${airOpts}</select></div>
         <div class="field"><label class="lab">Direction</label><div class="seg"><button type="button" id="dirArr" class="sel" onclick="setDir('arrival')">Arrival</button><button type="button" id="dirDep" onclick="setDir('departure')">Departure</button></div></div>
         <div class="field"><label class="lab">Flight number <span style="font-weight:500;text-transform:none;color:#9aa1ab">(optional)</span></label><input type="text" id="flight" placeholder="e.g. FA204"></div>
       </div>
     </div>
     <div class="card">
       <div class="row2"><div class="field"><label class="lab">Passengers</label><select id="pax">${Array.from({length:14},(_,i)=>i+1).map(n=>`<option${n===1?' selected':''}>${n}</option>`).join('')}</select></div>
-      <div class="field"><label class="lab">Bags</label><select id="bags"><option value="" selected>How many?</option><option value="0">No bags</option>${Array.from({length:20},(_,i)=>i+1).map(n=>`<option value="${n}">${n}</option>`).join('')}</select></div></div>
+      <div class="field"><label class="lab">Bags<span class="rq">*</span></label><select id="bags"><option value="" selected>How many?</option><option value="0">No bags</option>${Array.from({length:20},(_,i)=>i+1).map(n=>`<option value="${n}">${n}</option>`).join('')}</select></div></div>
       <div class="field"><label class="lab">Luggage size</label><div class="seg"><button type="button" data-sz="small" class="szb sel" onclick="setSz('small')">Small</button><button type="button" data-sz="medium" class="szb" onclick="setSz('medium')">Medium</button><button type="button" data-sz="large" class="szb" onclick="setSz('large')">Large</button></div></div>
       <div class="field"><label class="lab">Travelling with</label><div class="chips" id="special">
         ${['baby_seat:Baby seat','pram:Pram','wheelchair:Wheelchair','golf_bag:Golf bag','bicycle:Bicycle','surfboard:Surfboard','extra_bags:Lots of luggage'].map(s=>{const[v,l]=s.split(':');return `<div class="chip" data-v="${v}" onclick="tog(this)">${l}</div>`}).join('')}
       </div><div class="hint">Helps us send a vehicle that fits.</div></div>
     </div>
     <div class="card ${isHome?'':'hide'}" id="vehWrap">
-      <label class="lab">The car we're driving home</label>
+      <label class="lab">The car we're driving home<span class="rq">*</span></label>
       <div class="row2"><div class="field"><input type="text" id="vmake" placeholder="Make *" required></div><div class="field"><input type="text" id="vmodel" placeholder="Model *" required></div></div>
       <div class="row2"><div class="field"><input type="text" id="vcolour" placeholder="Colour *" required></div><div class="field"><input type="text" id="vreg" placeholder="Registration (optional)"></div></div>
     </div>
@@ -339,9 +341,27 @@ async function pick(s, input, which, box){
   }catch(_){}
 }
 
+// Red-border every compulsory field that's still empty (JD, 26 Aug): the
+// bottom message names ONE gap; the borders show ALL of them at a glance,
+// and each clears itself the moment the client fills the field.
+function markMiss(el){ if(!el) return; el.classList.add('miss'); const clr=()=>el.classList.remove('miss'); el.addEventListener('input',clr,{once:true}); el.addEventListener('change',clr,{once:true}); }
+function requiredGaps(){
+  const g=[]; const by=(id)=>document.getElementById(id);
+  if(!by('date').value) g.push(by('date'));
+  if(!by('thour').value) g.push(by('thour'));
+  if(!by('tmin').value) g.push(by('tmin'));
+  const pk=by('pickup'); if(!(pk.dataset.full||pk.value.trim())) g.push(pk);
+  if(f.service==='airport'){ if(!by('airport').value) g.push(by('airport')); }
+  else { const d=by('drop'); if(d&&!(d.dataset.full||d.value.trim())) g.push(d); }
+  if(by('bags').value==='') g.push(by('bags'));
+  if(f.service==='drive_home'){ for(const id of ['vmake','vmodel','vcolour']){ const el=by(id); if(el&&!(el.value||'').trim()) g.push(el); } }
+  return g.filter(Boolean);
+}
 window.submit=async()=>{
   const err=document.getElementById('err'); err.style.display='none';
   const go=document.getElementById('go');
+  const gaps=requiredGaps();
+  if(gaps.length){ gaps.forEach(markMiss); gaps[0].scrollIntoView({behavior:'smooth',block:'center'}); }
   if(!f.service){ err.textContent='Please choose a service.'; err.style.display='block'; return; }
   if(!document.getElementById('date').value){ err.textContent='Please choose a date.'; err.style.display='block'; return; }
   const isAir=f.service==='airport';
