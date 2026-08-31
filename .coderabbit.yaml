@@ -1,0 +1,121 @@
+# CodeRabbit configuration — milez-ahead-book
+# Public Milez Ahead booking and tracking site -- internet-facing.
+# Schema: https://docs.coderabbit.ai/reference/configuration
+#
+# Intent: rigorous, security-first PR review with LOW noise. This is the
+# always-on per-PR gate that sits *underneath* /cso and /code-review -- its job
+# is to catch the leaked secret, the misconfigured workflow and the obvious bug
+# at 2am, not to bikeshed style the linter already owns.
+#
+# Baseline shared with project-help-drive/.coderabbit.yaml; the tone, path
+# lenses and tool set below are specific to this repo.
+
+language: en-GB
+early_access: false
+tone_instructions: >-
+  Be direct and senior. Every page here is served to the open internet and
+  this codebase has previously leaked passenger data. Weight data exposure,
+  client-side secrets and input validation above all else. Cosmetic HTML
+  nits are not worth a comment.
+
+reviews:
+  profile: assertive
+  request_changes_workflow: true   # findings block the PR until resolved
+  high_level_summary: true
+  poem: false                         # no filler
+  review_status: true
+  collapse_walkthrough: false
+  commit_status: true
+  estimate_code_review_effort: true
+
+  auto_review:
+    enabled: true
+    drafts: false                     # don't burn reviews on draft PRs
+    base_branches:
+      - main
+
+  # Only review what matters. Everything below is generated, vendored, data or
+  # docs -- keep it out so real findings aren't buried.
+  path_filters:
+    - "!**/node_modules/**"
+    - "!**/dist/**"
+    - "!**/build/**"
+    - "!package-lock.json"
+    - "!**/*.png"
+    - "!**/*.jpg"
+    - "!**/*.pdf"
+    - "!**/*.webmanifest"
+    - "!**/*.ico"
+
+  # Domain-specific review lenses -- sharpen the reviewer on the parts of this
+  # repo where a mistake is expensive.
+  path_instructions:
+    - path: "**/*.html"
+      instructions: >-
+        Public, unauthenticated pages. Flag: any API key, service-role key
+        or bearer token present in client-side script; any passenger name,
+        phone number, address or trip identifier placed in a URL, query
+        string or fragment where it will land in browser history and
+        referrer headers; any fetch to a Supabase table that relies on the
+        caller being trusted rather than on row-level security; any form
+        that submits without validating input. Deep-links to WhatsApp must
+        use approved template buttons rather than raw wa.me URLs carrying
+        customer data. Treat any widening of what an anonymous visitor can
+        read as a blocking finding.
+    - path: "wa/**"
+      instructions: >-
+        WhatsApp-facing assets. Flag customer data embedded in a static
+        asset and any tracking link that carries an
+        unguessable-but-permanent identifier in the clear.
+    - path: "network/**"
+      instructions: >-
+        Network/config assets. Flag committed credentials and any origin
+        allow-list widened to a wildcard.
+
+  # Static analysis / SAST -- CodeRabbit runs these in sandboxed containers and
+  # folds the results into the same review thread.
+  tools:
+    # Secret scanning -- the non-negotiable gate.
+    gitleaks:
+      enabled: true
+    # Second secret scanner; catches what gitleaks' rules miss.
+    trufflehog:
+      enabled: true
+    # PII leak detection -- customer/driver personal data in diffs.
+    presidio:
+      enabled: true
+    # Deep semantic security patterns.
+    semgrep:
+      enabled: true
+    # Known CVEs in declared dependencies.
+    osvScanner:
+      enabled: true
+    # Defer to the repo's own ESLint config.
+    eslint:
+      enabled: false
+    # Off -- repo uses ESLint; avoid double-linting noise.
+    biome:
+      enabled: false
+    # Static HTML correctness for the public pages.
+    htmlhint:
+      enabled: true
+    # YAML correctness (workflows, config).
+    yamllint:
+      enabled: true
+    # Off -- docs are not code; keep the review signal clean.
+    markdownlint:
+      enabled: false
+    # Off -- prose nits are noise here.
+    languagetool:
+      enabled: false
+
+chat:
+  auto_reply: true
+
+knowledge_base:
+  learnings:
+    scope: local          # keep this repo's decisions in this repo
+  code_guidelines:
+    enabled: true
+    filePatterns:
+      - "README.md"
