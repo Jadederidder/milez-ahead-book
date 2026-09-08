@@ -163,7 +163,8 @@ function render(){
       <div class="field"><label class="lab">Luggage size</label><div class="seg"><button type="button" data-sz="small" class="szb sel" onclick="setSz('small')">Small</button><button type="button" data-sz="medium" class="szb" onclick="setSz('medium')">Medium</button><button type="button" data-sz="large" class="szb" onclick="setSz('large')">Large</button></div></div>
       <div class="field"><label class="lab">Travelling with</label><div class="chips" id="special">
         ${['baby_seat:Baby seat','pram:Pram','wheelchair:Wheelchair','golf_bag:Golf bag','bicycle:Bicycle','surfboard:Surfboard','extra_bags:Lots of luggage'].map(s=>{const[v,l]=s.split(':');return `<div class="chip" data-v="${v}" onclick="tog(this)">${l}</div>`}).join('')}
-      </div><div class="hint">Helps us send a vehicle that fits.</div></div>
+      </div><div class="hint">Helps us send a vehicle that fits.</div>
+      <div class="hint" id="vehHint" style="display:none;color:var(--teal);font-weight:700;margin-top:6px"></div></div>
     </div>
     <div class="card ${isHome?'':'hide'}" id="vehWrap">
       <label class="lab">The car we're driving home<span class="rq">*</span></label>
@@ -201,10 +202,12 @@ function render(){
   // wire inputs
   // 5+ passengers can't ride a sedan: pre-select the 7-seater (client can
   // still override) so the wrong-size car never arrives by default.
-  document.getElementById('pax').onchange=e=>{ f.pax=e.target.value; const v=document.getElementById('vehClass'); if(v&&+e.target.value>=5&&!v.value){ v.value='7seater'; } };
+  document.getElementById('pax').onchange=e=>{ f.pax=e.target.value; applyVehRec(); };
+  const _bagsEl=document.getElementById('bags'); if(_bagsEl) _bagsEl.onchange=applyVehRec;
   wireDriverSearch();
   wireCode();
   ['date','time','bags','flight','notes','airport'].forEach(id=>{const el=document.getElementById(id);if(el)el.oninput=()=>{};});
+  applyVehRec();
   initMaps();
 }
 
@@ -231,8 +234,28 @@ function wireCode(){
 
 window.setSvc=(s)=>{ f.service=s; render(); };
 window.setDir=(d)=>{ f.direction=d; document.getElementById('dirArr').classList.toggle('sel',d==='arrival'); document.getElementById('dirDep').classList.toggle('sel',d==='departure'); const lab=document.getElementById('pickupLab'); if(lab) lab.textContent = d==='arrival' ? 'Drop-off address' : 'Pick-up address'; };
-window.setSz=(z)=>{ f.size=z; document.querySelectorAll('.szb').forEach(b=>b.classList.toggle('sel',b.dataset.sz===z)); };
-window.tog=(el)=>{ el.classList.toggle('sel'); };
+window.setSz=(z)=>{ f.size=z; document.querySelectorAll('.szb').forEach(b=>b.classList.toggle('sel',b.dataset.sz===z)); applyVehRec(); };
+window.tog=(el)=>{ el.classList.toggle('sel'); applyVehRec(); };
+// Live vehicle guidance — the SAME load rule the dispatch engine uses, so the
+// client sees the right car up front (golf bags / lots of luggage / a big party
+// → a 7-seater), instead of us guessing later (Mr Seitz: 7 large bags on a car
+// that couldn't fit them). Bumps the preference up to the minimum that fits.
+window.recommendVehicle=()=>{
+  const pax=+(document.getElementById('pax')?.value||1);
+  const bags=+(document.getElementById('bags')?.value||0);
+  const large=f.size==='large';
+  const special=[...document.querySelectorAll('#special .chip.sel')].map(c=>c.dataset.v);
+  const bulky=special.some(s=>['golf_bag','surfboard','bicycle'].includes(s));
+  if(pax>=5||bags>=5||(large&&bags>=4)||bulky) return '7seater';
+  if(bags>=3||(large&&bags>=2)) return 'suv';
+  return null;
+};
+window.applyVehRec=()=>{
+  const rec=recommendVehicle(), v=document.getElementById('vehClass'), hint=document.getElementById('vehHint');
+  const RANK={sedan:1,suv:2,'7seater':3};
+  if(v&&rec&&(!v.value||RANK[v.value]<RANK[rec])) v.value=rec; // never downgrade the client's own pick
+  if(hint){ if(rec){ hint.textContent='👍 Based on your party and luggage, we’ll send '+(rec==='7seater'?'a 7-seater':'an SUV')+'.'; hint.style.display='block'; } else { hint.style.display='none'; } }
+};
 window.STOPS=[];
 window.addStop=function(){ if(window.STOPS.length>=5)return; window.STOPS.push({kind:'dropoff',address:''}); renderStops(); };
 window.delStop=function(i){ window.STOPS.splice(i,1); renderStops(); };
