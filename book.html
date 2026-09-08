@@ -196,6 +196,7 @@ function render(){
     <div class="preview" id="preview"></div>
     <div class="indem" id="indemWrap"><input type="checkbox" id="indemnity"><span>${indemText}</span></div>
     <div class="err" id="err"></div>
+    ${CTX && CTX.is_tester ? `<label id="testWrap" style="display:flex;gap:8px;align-items:center;margin:0 0 10px;font-size:13px;color:var(--muted)"><input type="checkbox" id="testFlag" style="width:18px;height:18px"> 🧪 Test booking — won't reach drivers or the live board</label>` : ''}
     <button class="cta" id="go" onclick="submit()">Confirm booking</button>`;
   // wire inputs
   // 5+ passengers can't ride a sedan: pre-select the 7-seater (client can
@@ -443,6 +444,7 @@ window.submit=async()=>{
       kind:(window.STOPS[+inp.dataset.stop]||{}).kind||'dropoff',
       address:(inp.dataset.full||inp.value||'').trim(),
     })).filter(st=>st.address);
+    booking.test=!!document.getElementById('testFlag')?.checked; // only tester tokens can flip a booking to test (enforced server-side)
     const res=await call({action:'submit',booking,save_preferred:document.getElementById('savePref')?.checked});
     if(res.ok){ showState('✅','Booking received','Trip '+res.ref+' is in — taking you back to WhatsApp…'); setTimeout(()=>{location.href='https://wa.me/27799722798';},2000); return; }
     throw new Error(res.error||'Something went wrong.');
