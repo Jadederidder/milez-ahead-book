@@ -114,7 +114,21 @@ function updatePreview(){
   const el=document.getElementById('preview'); if(!el) return;
   if(place.pickup && place.drop){
     const km=haversine(place.pickup,place.drop)*1.4;
-    if(CTX.is_member){ const c=creditsFor(km,CTX.cover_radius_km||50); el.textContent=`≈ ${Math.round(km)} km · about ${c} credit${c===1?'':'s'} from your allowance`; el.style.display='block'; }
+    if(CTX.is_member){
+      // Credit sanity: base distance credits + 1 per extra stop; then set it
+      // against what's actually left. Informational only — never blocks; the
+      // paywall is the real authority, and going over just means the extra is
+      // charged (MUA SOP), which we say plainly rather than refusing the trip.
+      const stops=(window.STOPS||[]).length;
+      const c=creditsFor(km,CTX.cover_radius_km||50)+stops;
+      const stopNote=stops?` (incl. ${stops} stop${stops===1?'':'s'})`:'';
+      const left=CTX.credits_left;
+      let txt=`≈ ${Math.round(km)} km · about ${c} credit${c===1?'':'s'}${stopNote}`;
+      if(left==null) txt+=' from your allowance';
+      else if(c>left) txt+=` — that’s more than your ${left} left this year, so the extra will be charged`;
+      else txt+=` of your ${left} left this year`;
+      el.textContent=txt; el.style.display='block';
+    }
     else { el.textContent=`≈ ${Math.round(km)} km · you'll receive a secure card payment link`; el.style.display='block'; }
   } else el.style.display='none';
 }
@@ -146,6 +160,7 @@ function render(){
         <select id="tmin"><option value="">Min</option>${['00','15','30','45'].map(m=>`<option>${m}</option>`).join('')}</select>
       </div></div></div>
       <div id="clashWarn" style="display:none;background:#fff7ed;border:1px solid #fdba74;border-radius:12px;padding:10px 12px;margin-bottom:10px;font-size:13px;line-height:1.45;color:#9a3412"></div>
+      <div class="hint" id="timeHint" style="display:none;margin-bottom:10px;border-radius:10px;padding:8px 10px;line-height:1.4;font-size:12.5px"></div>
       <div class="field"><label class="lab" id="pickupLab">${isAir && f.direction==='arrival' ? 'Drop-off address' : 'Pick-up address'}<span class="rq">*</span></label><div class="acwrap"><input type="text" id="pickup" placeholder="Start typing your address…" autocomplete="off"></div>
         <div class="hint" id="pickHint" style="display:none;margin-top:6px;border-radius:10px;padding:8px 10px;line-height:1.4;font-size:12.5px"></div></div>
       <div class="field ${isAir?'hide':''}" id="dropWrap"><label class="lab">Drop-off address<span class="rq">*</span></label><div class="acwrap"><input type="text" id="drop" placeholder="Where to?" autocomplete="off"></div>
@@ -214,7 +229,7 @@ function render(){
   ['date','time','bags','flight','notes','airport'].forEach(id=>{const el=document.getElementById(id);if(el)el.oninput=()=>{};});
   applyVehRec();
   // Live double-booking check — debounced, on any change to date / time / flight.
-  const _clash=(()=>{let t;return()=>{clearTimeout(t);t=setTimeout(checkClash,400);};})();
+  const _clash=(()=>{let t;return()=>{clearTimeout(t);t=setTimeout(()=>{checkClash();checkTimeSanity();},400);};})();
   ['date','thour','tmin','flight'].forEach(id=>{const el=document.getElementById(id);if(el){el.addEventListener('change',_clash);el.addEventListener('input',_clash);}});
   // Flight-aware autofill — debounced, on flight-number or date change.
   const _flt=(()=>{let t;return()=>{clearTimeout(t);t=setTimeout(lookupFlight,600);};})();
@@ -315,7 +330,8 @@ window.lookupFlight=async()=>{
   try{
     const r=await call({action:'lookup_flight', flight_number:ident, trip_date:date, direction});
     const fl=r&&r.flight;
-    if(!fl||!fl.iata){ hint.style.display='none'; return; }
+    if(!fl||!fl.iata){ hint.style.display='none'; window._flightInfo=null; if(window.checkTimeSanity)checkTimeSanity(); return; }
+    window._flightInfo={direction:fl.direction,date:fl.date,time:fl.time,cancelled:fl.cancelled}; // for the departure-timing check
     const air=document.getElementById('airport');
     const known=air&&[...air.options].some(o=>o.value===fl.iata);
     if(known) air.value=fl.iata; // the flight is ground truth for the airport
@@ -345,11 +361,12 @@ window.lookupFlight=async()=>{
     hint.style.color=warn?'#9a3412':'#065f46';
     hint.style.display='block';
     checkClash();
+    if(window.checkTimeSanity) checkTimeSanity(); // a departure flight may change the timing advice
   }catch(_){ hint.style.display='none'; }
 };
 window.STOPS=[];
-window.addStop=function(){ if(window.STOPS.length>=5)return; window.STOPS.push({kind:'dropoff',address:''}); renderStops(); };
-window.delStop=function(i){ window.STOPS.splice(i,1); renderStops(); };
+window.addStop=function(){ if(window.STOPS.length>=5)return; window.STOPS.push({kind:'dropoff',address:''}); renderStops(); updatePreview(); };
+window.delStop=function(i){ window.STOPS.splice(i,1); renderStops(); updatePreview(); };
 window.setStop=function(i,k,v){ if(window.STOPS[i]) window.STOPS[i][k]=v; };
 function renderStops(){
   const el=document.getElementById('stopsList'); if(!el) return;
@@ -484,6 +501,30 @@ window.addressConfidence=()=>{
   // (1b) drop-off pin nudge
   const drPin=_addrBlurred.drop && txt(dr).length>=6 && !pinned('drop');
   setAddrHint(drHint, drPin?'📍 Tip: tap a suggestion so your driver has an exact pin.':'', false);
+};
+// Time sanity — soft, never blocks (JD: assist, don't obstruct). Warns on a
+// pick-up time that's already passed, and — for an airport departure whose flight
+// we recognised — a pick-up that's at/after the flight or cutting it fine. A
+// very-soon booking gets a gentle "we'll do our best" note, not a block.
+window.checkTimeSanity=()=>{
+  const hint=document.getElementById('timeHint'); if(!hint) return;
+  const date=document.getElementById('date')?.value;
+  const h=document.getElementById('thour')?.value, m=document.getElementById('tmin')?.value;
+  if(!date||!h){ setAddrHint(hint,'',false); return; }
+  const when=new Date(`${date}T${h}:${(m||'00')}:00+02:00`);
+  if(isNaN(+when)){ setAddrHint(hint,'',false); return; }
+  const mins=(+when - Date.now())/60000;
+  if(mins<0){ setAddrHint(hint,'⏰ That pick-up time has already passed — please choose a later time.',true); return; }
+  const fi=window._flightInfo;
+  if(f.service==='airport' && fi && fi.direction==='departure' && fi.time && fi.date===date){
+    const [dh,dm]=fi.time.split(':').map(Number);
+    const dep=new Date(`${date}T${String(dh).padStart(2,'0')}:${String(dm).padStart(2,'0')}:00+02:00`);
+    const lead=(+dep - +when)/60000;
+    if(lead<=0){ setAddrHint(hint,`⏰ Your pick-up is at or after your ${fi.time} flight departs — you’ll want an earlier pick-up.`,true); return; }
+    if(lead<90){ setAddrHint(hint,`⏰ Only ${Math.round(lead)} min before your ${fi.time} flight — consider an earlier pick-up to be safe.`,true); return; }
+  }
+  if(mins<120){ setAddrHint(hint,'⏰ That’s soon — we’ll do our best to have a driver ready in time.',false); return; }
+  setAddrHint(hint,'',false);
 };
 
 // Red-border every compulsory field that's still empty (JD, 26 Aug): the
