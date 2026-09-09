@@ -145,6 +145,7 @@ function render(){
         <select id="thour"><option value="">Hr</option>${Array.from({length:24},(_,i)=>String(i).padStart(2,'0')).map(h=>`<option>${h}</option>`).join('')}</select>
         <select id="tmin"><option value="">Min</option>${['00','15','30','45'].map(m=>`<option>${m}</option>`).join('')}</select>
       </div></div></div>
+      <div id="clashWarn" style="display:none;background:#fff7ed;border:1px solid #fdba74;border-radius:12px;padding:10px 12px;margin-bottom:10px;font-size:13px;line-height:1.45;color:#9a3412"></div>
       <div class="field"><label class="lab" id="pickupLab">${isAir && f.direction==='arrival' ? 'Drop-off address' : 'Pick-up address'}<span class="rq">*</span></label><div class="acwrap"><input type="text" id="pickup" placeholder="Start typing your address…" autocomplete="off"></div></div>
       <div class="field ${isAir?'hide':''}" id="dropWrap"><label class="lab">Drop-off address<span class="rq">*</span></label><div class="acwrap"><input type="text" id="drop" placeholder="Where to?" autocomplete="off"></div></div>
       <div class="field" id="stopsWrap"><label class="lab">Extra stops <span style="font-weight:500;text-transform:none;color:#9aa1ab">(optional · 1 credit each)</span></label>
@@ -208,6 +209,9 @@ function render(){
   wireCode();
   ['date','time','bags','flight','notes','airport'].forEach(id=>{const el=document.getElementById(id);if(el)el.oninput=()=>{};});
   applyVehRec();
+  // Live double-booking check — debounced, on any change to date / time / flight.
+  const _clash=(()=>{let t;return()=>{clearTimeout(t);t=setTimeout(checkClash,400);};})();
+  ['date','thour','tmin','flight'].forEach(id=>{const el=document.getElementById(id);if(el){el.addEventListener('change',_clash);el.addEventListener('input',_clash);}});
   initMaps();
 }
 
@@ -255,6 +259,30 @@ window.applyVehRec=()=>{
   const RANK={sedan:1,suv:2,'7seater':3};
   if(v&&rec&&(!v.value||RANK[v.value]<RANK[rec])) v.value=rec; // never downgrade the client's own pick
   if(hint){ if(rec){ hint.textContent='👍 Based on your party and luggage, we’ll send '+(rec==='7seater'?'a 7-seater':'an SUV')+'.'; hint.style.display='block'; } else { hint.style.display='none'; } }
+};
+// Live double-booking warning — as the client sets the date / time / flight, ask
+// book-web whether they ALREADY have a trip that day (same rule as the atomic
+// guard: same flight, or a pick-up within 60 min). We warn BEFORE submit so they
+// aren't surprised by the server block at the end. It never blocks — a real
+// change of plan can carry on, and the atomic guard is still the authority. A
+// failed check just hides the banner (never a false "you're double-booked").
+window.checkClash=async()=>{
+  const warn=document.getElementById('clashWarn'); if(!warn) return;
+  const date=document.getElementById('date')?.value;
+  const h=document.getElementById('thour')?.value, m=document.getElementById('tmin')?.value;
+  const pickup_time = h ? `${h}:${m||'00'}` : undefined;
+  const flight=document.getElementById('flight')?.value||undefined;
+  if(!date || (!pickup_time && !flight)){ warn.style.display='none'; return; }
+  try{
+    const r=await call({action:'check_clash', trip_date:date, pickup_time, flight_number:flight, is_test:!!document.getElementById('testFlag')?.checked});
+    const c=r&&r.clash;
+    if(c){
+      const when=c.time?` at ${c.time}`:'';
+      const what=c.flight?` (flight ${c.flight})`:(c.route?` (${c.route})`:'');
+      warn.innerHTML=`⚠️ <b>Heads up</b> — you already have a trip booked for this day${when}${what}, ref <b>${c.ref}</b>.<br>If this is a <b>separate</b> trip, carry on. If it replaces the other one, please cancel that first (reply <b>trips</b> on WhatsApp).`;
+      warn.style.display='block';
+    } else { warn.style.display='none'; }
+  }catch(_){ warn.style.display='none'; }
 };
 window.STOPS=[];
 window.addStop=function(){ if(window.STOPS.length>=5)return; window.STOPS.push({kind:'dropoff',address:''}); renderStops(); };
