@@ -201,7 +201,7 @@ function render(){
       ${isHome?'':`<div class="row2">
         <div class="field"><label class="lab">Driver preference</label><select id="driverSex"><option value="">No preference</option><option value="female">Female driver</option><option value="male">Male driver</option></select>
           <div class="hint" id="driverSexHint" style="display:none;margin-top:6px;border-radius:10px;padding:8px 10px;line-height:1.4;background:#eef2ff;border:1px solid #c7d2fe;color:#3730a3"></div></div>
-        <div class="field"><label class="lab">Vehicle</label><select id="vehClass"><option value="">No preference</option><option value="sedan">Sedan</option><option value="suv">SUV</option><option value="7seater">7-Seater / group</option></select></div>
+        <div class="field"><label class="lab">Vehicle</label><select id="vehClass"><option value="">No preference</option><option value="sedan">Sedan</option><option value="suv">SUV</option><option value="7seater">7-Seater / group</option><option value="van">Van / large luggage</option></select></div>
       </div>`}
       <div class="field"><label class="lab">Alternative contact number <span style="font-weight:500;text-transform:none;color:#9aa1ab">(optional)</span></label><input type="tel" id="altphone" inputmode="tel" placeholder="e.g. 082 123 4567"></div>
       <div class="field"><label class="lab">Voucher / gift code <span style="font-weight:500;text-transform:none;color:#9aa1ab">(optional)</span></label>
@@ -277,15 +277,16 @@ window.recommendVehicle=()=>{
   const large=f.size==='large';
   const special=[...document.querySelectorAll('#special .chip.sel')].map(c=>c.dataset.v);
   const bulky=special.some(s=>['golf_bag','surfboard','bicycle'].includes(s));
+  if(pax>=8||bags>=7||(large&&bags>=5)) return 'van'; // beyond a 7-seater: a real van (Staria/H1/Quantum)
   if(pax>=5||bags>=5||(large&&bags>=4)||bulky) return '7seater';
   if(bags>=3||(large&&bags>=2)) return 'suv';
   return null;
 };
 window.applyVehRec=()=>{
   const rec=recommendVehicle(), v=document.getElementById('vehClass'), hint=document.getElementById('vehHint');
-  const RANK={sedan:1,suv:2,'7seater':3};
+  const RANK={sedan:1,suv:2,'7seater':3,van:4};
   if(v&&rec&&(!v.value||RANK[v.value]<RANK[rec])) v.value=rec; // never downgrade the client's own pick
-  if(hint){ if(rec){ hint.textContent='👍 Based on your party and luggage, we’ll send '+(rec==='7seater'?'a 7-seater':'an SUV')+'.'; hint.style.display='block'; } else { hint.style.display='none'; } }
+  if(hint){ if(rec){ hint.textContent='👍 Based on your party and luggage, we’ll send '+(rec==='van'?'a van for all that luggage':rec==='7seater'?'a 7-seater':'an SUV')+'.'; hint.style.display='block'; } else { hint.style.display='none'; } }
 };
 // Live double-booking warning — as the client sets the date / time / flight, ask
 // book-web whether they ALREADY have a trip that day (same rule as the atomic
