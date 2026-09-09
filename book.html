@@ -301,7 +301,7 @@ window.checkClash=async()=>{
   const flight=document.getElementById('flight')?.value||undefined;
   if(!date || (!pickup_time && !flight)){ warn.style.display='none'; return; }
   try{
-    const r=await call({action:'check_clash', trip_date:date, pickup_time, flight_number:flight, is_test:!!document.getElementById('testFlag')?.checked});
+    const r=await call({action:'check_clash', trip_date:date, pickup_time, flight_number:flight, direction:(f.service==='airport'?(f.direction||'arrival'):undefined), is_test:!!document.getElementById('testFlag')?.checked});
     const c=r&&r.clash;
     if(c){
       const when=c.time?` at ${c.time}`:'';
