@@ -548,6 +548,15 @@ window.submit=async()=>{
   const go=document.getElementById('go');
   const gaps=requiredGaps();
   if(gaps.length){ gaps.forEach(markMiss); gaps[0].scrollIntoView({behavior:'smooth',block:'center'}); }
+  // When MORE THAN ONE required field is empty, name them all — not just the
+  // first (JD: minutes AND bags were blank but the alert only mentioned the
+  // time). A single gap still gets its specific, friendlier message below.
+  if(gaps.length>1){
+    const NAME={date:'date',thour:'pick-up hour',tmin:'pick-up minutes',pickup:(f.service==='airport'&&(f.direction||'arrival')==='arrival')?'drop-off address':'pick-up address',drop:'drop-off address',airport:'airport',bags:'number of bags',vmake:'car make',vmodel:'car model',vcolour:'car colour'};
+    const uniq=[...new Set(gaps.map(el=>NAME[el.id]||'a required field'))];
+    const list=uniq.length>1 ? uniq.slice(0,-1).join(', ')+' and '+uniq[uniq.length-1] : uniq[0];
+    err.textContent='Please fill in the highlighted fields: '+list+'.'; err.style.display='block'; return;
+  }
   if(!f.service){ err.textContent='Please choose a service.'; err.style.display='block'; return; }
   if(!document.getElementById('date').value){ err.textContent='Please choose a date.'; err.style.display='block'; return; }
   const isAir=f.service==='airport';
