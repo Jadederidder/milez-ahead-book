@@ -146,8 +146,10 @@ function render(){
         <select id="tmin"><option value="">Min</option>${['00','15','30','45'].map(m=>`<option>${m}</option>`).join('')}</select>
       </div></div></div>
       <div id="clashWarn" style="display:none;background:#fff7ed;border:1px solid #fdba74;border-radius:12px;padding:10px 12px;margin-bottom:10px;font-size:13px;line-height:1.45;color:#9a3412"></div>
-      <div class="field"><label class="lab" id="pickupLab">${isAir && f.direction==='arrival' ? 'Drop-off address' : 'Pick-up address'}<span class="rq">*</span></label><div class="acwrap"><input type="text" id="pickup" placeholder="Start typing your address…" autocomplete="off"></div></div>
-      <div class="field ${isAir?'hide':''}" id="dropWrap"><label class="lab">Drop-off address<span class="rq">*</span></label><div class="acwrap"><input type="text" id="drop" placeholder="Where to?" autocomplete="off"></div></div>
+      <div class="field"><label class="lab" id="pickupLab">${isAir && f.direction==='arrival' ? 'Drop-off address' : 'Pick-up address'}<span class="rq">*</span></label><div class="acwrap"><input type="text" id="pickup" placeholder="Start typing your address…" autocomplete="off"></div>
+        <div class="hint" id="pickHint" style="display:none;margin-top:6px;border-radius:10px;padding:8px 10px;line-height:1.4;font-size:12.5px"></div></div>
+      <div class="field ${isAir?'hide':''}" id="dropWrap"><label class="lab">Drop-off address<span class="rq">*</span></label><div class="acwrap"><input type="text" id="drop" placeholder="Where to?" autocomplete="off"></div>
+        <div class="hint" id="dropHint" style="display:none;margin-top:6px;border-radius:10px;padding:8px 10px;line-height:1.4;font-size:12.5px"></div></div>
       <div class="field" id="stopsWrap"><label class="lab">Extra stops <span style="font-weight:500;text-transform:none;color:#9aa1ab">(optional · 1 credit each)</span></label>
         <div id="stopsList"></div>
         <button type="button" onclick="addStop()" style="border:1px dashed #c9ccd4;background:#fff;color:#6b7280;font-weight:600;font-size:13px;padding:8px 14px;border-radius:10px;width:100%">+ Add a stop</button>
@@ -397,11 +399,13 @@ function attachAC(input, which){
   let timer;
   input.addEventListener('input', ()=>{
     place[which]=null;
+    if(window._addrBlurred) _addrBlurred[which]=false; // editing again — hold the pin nudge until they leave
+    if(window.addressConfidence) addressConfidence();  // keep same-address check live
     const q=input.value.trim(); clearTimeout(timer);
     if(q.length<3){ box.style.display='none'; return; }
     timer=setTimeout(()=>suggest(q, box, input, which), 250);
   });
-  input.addEventListener('blur', ()=>setTimeout(()=>{ box.style.display='none'; }, 200));
+  input.addEventListener('blur', ()=>setTimeout(()=>{ box.style.display='none'; if(window._addrBlurred){ _addrBlurred[which]=true; addressConfidence(); } }, 200));
 }
 async function suggest(q, box, input, which){
   try{
@@ -452,7 +456,35 @@ async function pick(s, input, which, box){
     }
     updatePreview();
   }catch(_){}
+  if(window.addressConfidence) addressConfidence();
 }
+
+// Address confidence — two soft, never-blocking nudges (JD: assist, don't
+// obstruct). (1) If a client typed an address but didn't tap a suggestion (so we
+// have no exact pin), we gently suggest picking one after they leave the field —
+// this is what stops a driver going to the wrong place. We still geocode a typed
+// address on submit, so it never blocks. (2) If pick-up and drop-off read the
+// same, we ask if they meant two different places. Both are hints, not gates.
+function setAddrHint(hint,msg,warn){ if(!hint) return; if(!msg){ hint.style.display='none'; hint.innerHTML=''; return; } hint.innerHTML=msg; hint.style.background=warn?'#fff7ed':'#f0f9ff'; hint.style.border='1px solid '+(warn?'#fdba74':'#bae6fd'); hint.style.color=warn?'#9a3412':'#075985'; hint.style.display='block'; }
+window._addrBlurred={pickup:false,drop:false};
+window.addressConfidence=()=>{
+  const isAir=f.service==='airport';
+  const pk=document.getElementById('pickup'), dr=document.getElementById('drop');
+  const pkHint=document.getElementById('pickHint'), drHint=document.getElementById('dropHint');
+  const txt=el=>((el&&(el.dataset.full||el.value))||'').trim();
+  const pinned=w=>!!(place&&place[w]&&place[w].lat);
+  const norm=s=>((s||'').toLowerCase().replace(/,?\s*south africa\s*$/i,'').replace(/[^a-z0-9]/g,''));
+  // (1a) pick-up pin nudge — only after the field has been left (never mid-type)
+  const pkPin=_addrBlurred.pickup && txt(pk).length>=6 && !pinned('pickup');
+  setAddrHint(pkHint, pkPin?'📍 Tip: tap a suggestion so your driver has an exact pin — we’ll still find you if you type it in.':'', false);
+  if(isAir){ setAddrHint(drHint,'',false); return; } // airport uses the dropdown, no free drop-off
+  // (2) same pick-up & drop-off — live, takes priority on the drop-off hint
+  const a=norm(txt(pk)), b=norm(txt(dr));
+  if(a&&b&&a===b){ setAddrHint(drHint,'⚠️ Your pick-up and drop-off look the same — did you mean two different places?',true); return; }
+  // (1b) drop-off pin nudge
+  const drPin=_addrBlurred.drop && txt(dr).length>=6 && !pinned('drop');
+  setAddrHint(drHint, drPin?'📍 Tip: tap a suggestion so your driver has an exact pin.':'', false);
+};
 
 // Red-border every compulsory field that's still empty (JD, 26 Aug): the
 // bottom message names ONE gap; the borders show ALL of them at a glance,
