@@ -401,7 +401,28 @@ function renderStops(){
     if(tries>40)clearInterval(iv);
   },250);
 })();
-window.rebook=(i)=>{ if(i==='')return; const t=(window.RECF||[])[i]; if(!t)return; const p=document.getElementById('pickup'),d=document.getElementById('drop'); if(p&&t.pickup){p.value=t.pickup;p.dataset.full=t.pickup;} if(d&&t.dropoff){d.value=t.dropoff;d.dataset.full=t.dropoff;} };
+window.rebook=(i)=>{ if(i==='')return; const t=(window.RECF||[])[i]; if(!t)return;
+  const p=document.getElementById('pickup'),d=document.getElementById('drop');
+  const setBox=(el,v)=>{ if(el&&v){ el.value=v; el.dataset.full=v; } };
+  if(t.service_type==='airport'){
+    // The single address box is the client's OWN address (the NON-airport end):
+    // for an ARRIVAL that's the drop-off, for a DEPARTURE the pick-up (the airport
+    // is the other end, set via the dropdown). Set direction + airport first so the
+    // box's label matches, then fill the box with the client's address — never the
+    // airport (line 404 used to fill it with t.pickup, i.e. the airport, on an
+    // arrival: "CPT → CPT" / drop-off = the airport).
+    const dir=(t.direction==='departure')?'departure':'arrival';
+    if(window.setDir) setDir(dir);
+    const air=document.getElementById('airport'); if(air&&t.airport) air.value=t.airport;
+    const airLabel=(air&&air.options[air.selectedIndex]&&air.options[air.selectedIndex].text)||t.airport||'';
+    const home=dir==='arrival'?t.dropoff:t.pickup;
+    // Never prefill the airport itself — older trips that lost the client's address
+    // stored the airport on both ends; leave the box blank so they type the real one.
+    if(home && home!==airLabel && home!==t.airport) setBox(p,home);
+  } else {
+    setBox(p,t.pickup); setBox(d,t.dropoff);
+  }
+};
 
 // Modern, lightweight address autocomplete via the Places API (New) over fetch
 // + a custom dropdown — no heavy Maps SDK, no deprecated component (which crashed
