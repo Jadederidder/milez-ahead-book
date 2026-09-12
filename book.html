@@ -240,6 +240,10 @@ function render(){
   const _dsx=document.getElementById('driverSex'), _dsxHint=document.getElementById('driverSexHint');
   if(_dsx&&_dsxHint){ const upd=()=>{ if(_dsx.value==='female'){ _dsxHint.innerHTML='💜 We’ll do our best to send a <b>female driver</b>. If one isn’t available at your time, a male driver will be assigned so you’re never left waiting.'; _dsxHint.style.display='block'; } else { _dsxHint.style.display='none'; } }; _dsx.addEventListener('change',upd); upd(); }
   initMaps();
+  // render() rebuilds #stopsList empty, so any stops the client already added
+  // must be repainted from window.STOPS — otherwise switching service (setSvc)
+  // silently drops every extra stop. renderStops() no-ops when there are none.
+  renderStops();
 }
 
 // Voucher / gift code — uppercase + live validation so the client sees "free trip"
@@ -481,6 +485,14 @@ function wireDriverSearch(){
   inp.onblur=()=>setTimeout(()=>{ box.style.display='none'; },150);
 }
 async function pick(s, input, which, box){
+  // A stop's model (window.STOPS) is the source of truth renderStops() rebuilds
+  // from. pick() sets input.value/dataset.full directly with no input event, so
+  // grab the stop's object NOW — before the await, since delStop() can shift the
+  // positional index underneath us — and sync the chosen address onto that same
+  // object at the end. Without this, the moment the client adds or removes another
+  // stop, renderStops() reverts this field to the raw typed text (the 24 Aug
+  // DOM-collection fix covered submit, not re-render).
+  const stopObj = /^stop\d+$/.test(which) ? window.STOPS[+which.slice(4)] : null;
   input.value=(s.text&&s.text.text)||input.value; box.style.display='none';
   try{
     const r=await fetch(`https://places.googleapis.com/v1/places/${s.placeId}?fields=location,formattedAddress`,{headers:{'X-Goog-Api-Key':MAPS_KEY}});
@@ -495,6 +507,9 @@ async function pick(s, input, which, box){
     }
     updatePreview();
   }catch(_){}
+  // Store the canonical full address (what pickup/drop submit too); renderStops()
+  // shows it and submit reads it back, so a re-render keeps the exact place.
+  if(stopObj) stopObj.address = input.dataset.full || input.value;
   if(window.addressConfidence) addressConfidence();
 }
 
