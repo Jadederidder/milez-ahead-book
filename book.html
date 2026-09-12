@@ -495,6 +495,13 @@ async function pick(s, input, which, box){
     }
     updatePreview();
   }catch(_){}
+  // A stop's model (window.STOPS) is the source of truth renderStops() rebuilds
+  // from. pick() sets input.value/dataset.full directly with no input event, so
+  // the model still holds the RAW typed text — the moment the client adds or
+  // removes another stop, renderStops() reverts this field to that raw text and
+  // drops the picked address (the 24 Aug DOM-collection fix covered submit, not
+  // re-render). Sync the chosen address back so it survives a re-render.
+  if(/^stop\d+$/.test(which)){ const si=+which.slice(4); if(window.STOPS[si]) window.STOPS[si].address = input.value; }
   if(window.addressConfidence) addressConfidence();
 }
 
