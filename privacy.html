@@ -8,7 +8,6 @@
 <title>Milez Ahead Driver — Privacy Policy</title>
 <meta name="description" content="Privacy policy for the Milez Ahead Driver app — what it collects, why, and how it is protected." />
 <meta name="robots" content="index, follow" />
-<script src="https://cdn.tailwindcss.com"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -22,6 +21,52 @@
   .prose-mz li::before { content: ''; position: absolute; left: .25rem; top: .62em; width: .4rem; height: .4rem; border-radius: 9999px; background: var(--gold); }
   .prose-mz strong { color: var(--navy); font-weight: 600; }
   .prose-mz a { color: var(--navy); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
+
+  /* Self-contained utilities (audit M9): replaces the Tailwind CDN so this static
+     privacy page pulls NO third-party script. Only the utilities this page uses,
+     with a minimal reset matching the parts of Tailwind preflight it relied on. */
+  *, ::before, ::after { box-sizing: border-box; }
+  body { margin: 0; }
+  img { display: block; max-width: 100%; height: auto; }
+  h1 { margin: 0; }
+  .prose-mz ul, .prose-mz ol { list-style: none; padding-left: 0; }
+  .prose-mz ol { margin: .25rem 0 1rem 0; }
+  .bg-slate-50 { background: #f8fafc; }
+  .bg-white { background: #fff; }
+  .text-slate-800 { color: #1e293b; }
+  .text-slate-400 { color: #94a3b8; }
+  .text-white { color: #fff; }
+  .mx-auto { margin-left: auto; margin-right: auto; }
+  .max-w-2xl { max-width: 42rem; }
+  .px-5 { padding-left: 1.25rem; padding-right: 1.25rem; }
+  .py-10 { padding-top: 2.5rem; padding-bottom: 2.5rem; }
+  .p-6 { padding: 1.5rem; }
+  .rounded-2xl { border-radius: 1rem; }
+  .rounded-full { border-radius: 9999px; }
+  .shadow-lg { box-shadow: 0 10px 15px -3px rgba(0,0,0,.1), 0 4px 6px -4px rgba(0,0,0,.1); }
+  .ring-1 { outline: 1px solid rgba(0,0,0,.05); outline-offset: -1px; }
+  .ring-black\/5 { outline-color: rgba(0,0,0,.05); }
+  .mb-6 { margin-bottom: 1.5rem; }
+  .mt-2 { margin-top: .5rem; }
+  .mt-3 { margin-top: .75rem; }
+  .mt-6 { margin-top: 1.5rem; }
+  .h-16 { height: 4rem; }
+  .object-contain { object-fit: contain; }
+  .border-b { border-bottom: 1px solid transparent; }
+  .border-slate-100 { border-color: #f1f5f9; }
+  .pb-5 { padding-bottom: 1.25rem; }
+  .text-center { text-align: center; }
+  .inline-block { display: inline-block; }
+  .px-3 { padding-left: .75rem; padding-right: .75rem; }
+  .py-1 { padding-top: .25rem; padding-bottom: .25rem; }
+  .text-xs { font-size: .75rem; line-height: 1rem; }
+  .text-sm { font-size: .875rem; line-height: 1.25rem; }
+  .text-2xl { font-size: 1.5rem; line-height: 2rem; }
+  .text-\[15px\] { font-size: 15px; }
+  .font-semibold { font-weight: 600; }
+  .font-extrabold { font-weight: 800; }
+  .tracking-wide { letter-spacing: .025em; }
+  @media (min-width: 640px) { .sm\:p-9 { padding: 2.25rem; } }
 </style>
 </head>
 <body class="bg-slate-50 text-slate-800">
