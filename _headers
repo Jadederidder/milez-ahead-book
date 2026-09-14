@@ -1,0 +1,15 @@
+# Security headers for the Milez Ahead booking site (Cloudflare Pages).
+# Security audit 2026-09-14 (M9 + L3).
+#
+# Deliberately a SAFE subset: clickjacking + base-tag + plugin lockdown, and a
+# referrer policy that never leaks a full URL (with a tracking token) cross-site.
+# We do NOT set a strict script-src/connect-src CSP here — the booking pages carry
+# inline scripts and call several external origins (Google Maps/Places, Paystack,
+# Supabase), so an untested enforcing CSP could break the live booking form. A full
+# CSP is a follow-up: roll out Content-Security-Policy-Report-Only first, confirm no
+# violations across every page, then promote to enforcing.
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Content-Security-Policy: frame-ancestors 'none'; object-src 'none'; base-uri 'self'

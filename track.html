@@ -126,7 +126,16 @@ const EDGE='https://izslchhcavckowatgbel.supabase.co/functions/v1/track';
 const SOS_EDGE='https://izslchhcavckowatgbel.supabase.co/functions/v1/track-sos';
 const FEEDBACK_EDGE='https://izslchhcavckowatgbel.supabase.co/functions/v1/submit-feedback';
 const TIP_EDGE='https://izslchhcavckowatgbel.supabase.co/functions/v1/tip-init';
-const TOKEN=new URLSearchParams(location.search).get('token')||'';
+// SECURITY (audit L3): read the tracking token from the URL FRAGMENT (never sent
+// to servers/proxies in the Referer header or stored in access logs), falling back
+// to the query string so older shared links still work. If it arrived in the query
+// string, scrub it into the fragment so it stops leaking via Referer/history — the
+// token is the only gate on this page's PII (client name, addresses, live GPS).
+const TOKEN=new URLSearchParams(location.hash.slice(1)).get('token')
+  || new URLSearchParams(location.search).get('token') || '';
+if(TOKEN && /(^|[?&])token=/.test(location.search)){
+  try{history.replaceState(null,'',location.pathname+'#token='+encodeURIComponent(TOKEN));}catch(_){}
+}
 // Set MAPS_KEY to a Google Maps JS API browser key (restricted to this domain)
 // to embed the live map. While empty, the page falls back to the "open in Maps" link.
 const MAPS_KEY='AIzaSyAtZvXbiV8BhpC_6dENVYrxoNWdPJlwNiM';
@@ -223,10 +232,10 @@ function render(d){
   if(d.driver){
     const dv=d.driver;
     const initials=esc((dv.name||'D').trim().slice(0,1).toUpperCase());
-    const av=dv.photo?'<img class="av" src="'+dv.photo+'" alt="" onerror="this.outerHTML=\'<div class=&quot;av&quot;>'+initials+'</div>\'">':'<div class="av">'+initials+'</div>';
+    const av=dv.photo?'<img class="av" src="'+esc(dv.photo)+'" alt="" onerror="this.outerHTML=\'<div class=&quot;av&quot;>'+initials+'</div>\'">':'<div class="av">'+initials+'</div>';
     const vname=dv.vehicleDesc?esc(dv.vehicleDesc):(dv.vehicle?esc(dv.vehicle.replace(/\s*\(.*\)\s*$/,'')):'');
     const left='<div class="dvleft">'+
-      (dv.vehiclePhoto?'<img class="vthumb2" src="'+dv.vehiclePhoto+'" alt="Vehicle" onerror="this.style.display=\'none\'">':'')+
+      (dv.vehiclePhoto?'<img class="vthumb2" src="'+esc(dv.vehiclePhoto)+'" alt="Vehicle" onerror="this.style.display=\'none\'">':'')+
       (dv.reg?'<div class="plate">'+esc(dv.reg)+'</div>':'')+
       (vname?'<div class="vname">'+vname+'</div>':'')+
     '</div>';
@@ -258,7 +267,7 @@ function render(d){
     '</div>'+
       (showMeet?'<div class="mp"><span class="ic">📍</span><div><div class="lbl">Where to meet your driver</div><div class="val">'+esc(d.route.meetingPoint)+'</div></div></div>':'')+
       (showArrival?'<div><span id="arrivalEta" class="arrival" style="display:none"></span></div>':'')+
-      (!MAPS_KEY && d.route.mapsLink?'<a class="btn ghost" href="'+d.route.mapsLink+'" target="_blank" rel="noopener">🗺️ See the route'+(live?' & your driver':'')+'</a>':'')+
+      (!MAPS_KEY && d.route.mapsLink?'<a class="btn ghost" href="'+esc(d.route.mapsLink)+'" target="_blank" rel="noopener">🗺️ See the route'+(live?' & your driver':'')+'</a>':'')+
     '</div>';
   }
   const when=(d.tripDate||'')+(d.pickupTime?' · '+d.pickupTime:'');
