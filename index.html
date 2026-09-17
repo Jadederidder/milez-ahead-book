@@ -69,7 +69,7 @@
 
         <div class="grid gap-4 sm:grid-cols-2">
           <label><span class="lbl">Full name <span class="req">*</span></span><input name="full_name" class="field" required placeholder="Jane Doe" /></label>
-          <label><span class="lbl">Mobile <span class="req">*</span></span><input name="phone" class="field" required placeholder="082 123 4567" autocomplete="tel" /></label>
+          <label><span class="lbl">Mobile <span class="req">*</span></span><input name="phone" class="field" required placeholder="082 123 4567" autocomplete="tel" /><span class="mt-1 block text-xs text-slate-400">Where we send trip updates. Booking for someone else? Enter the <span class="font-semibold text-slate-500">passenger’s own</span> mobile.</span></label>
         </div>
         <label class="block"><span class="lbl">Alternative contact number <span class="font-normal text-slate-400">— optional</span></span><input name="alt_phone" type="tel" class="field" placeholder="Another number we can reach" autocomplete="tel" /></label>
         <p id="welcome" class="hidden -mt-2 flex items-center gap-1.5 text-xs font-medium text-emerald-600"></p>
@@ -164,7 +164,7 @@
 
         <label class="agent-card block">
           <span class="lbl">Booking on behalf of someone else?</span>
-          <span class="mb-2 block text-xs leading-snug text-white/70">If this trip is for a friend, family member or colleague, add <span class="font-semibold text-white/90">your own</span> cell number here — we’ll send you a copy of the booking confirmation as proof.</span>
+          <span class="mb-2 block text-xs leading-snug text-white/70">Put the <span class="font-semibold text-white/90">passenger’s own</span> mobile in the Mobile field above — that’s where their trip updates go. Add <span class="font-semibold text-white/90">your own</span> cell here and we’ll send you a copy of the confirmation as proof.</span>
           <input name="agent_phone" type="tel" class="field" placeholder="Your cell number — 082 123 4567" autocomplete="off" />
         </label>
 
@@ -416,6 +416,19 @@
     btn.disabled = true; btn.textContent = 'Sending…'
     const fd = new FormData(form)
     const payload = Object.fromEntries(fd.entries())
+    // Reachability: the passenger's mobile must be valid, and on a broker booking it
+    // must be DISTINCT from the broker's own cell — otherwise the passenger gets no
+    // trip updates (Mr Mahoney, 17 Sep, via a broker booking). Mirrors the server
+    // guard in book-trip so the API can't be bypassed.
+    const normMobile = (v) => { const d = String(v || '').replace(/\D/g, ''); return d.startsWith('0') ? '27' + d.slice(1) : d.startsWith('27') ? d : d.length === 9 ? '27' + d : d }
+    const paxNorm = normMobile(payload.phone)
+    const brokerNorm = normMobile(payload.agent_phone)
+    const failPhone = (msg, fieldName) => {
+      errEl.textContent = msg; errEl.classList.remove('hidden'); errEl.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      ;(form[fieldName] || form.phone).focus(); btn.disabled = false; btn.textContent = 'Request my trip'
+    }
+    if (!/^27\d{9}$/.test(paxNorm)) { failPhone('Please enter a valid passenger mobile number (e.g. 082 123 4567) so we can send trip updates.', 'phone'); return }
+    if (brokerNorm && brokerNorm === paxNorm) { failPhone('The passenger’s number and your number are the same — enter the passenger’s own mobile so they receive trip updates.', 'agent_phone'); return }
     payload.service_type = service
     payload.indemnity_accepted = true // captured at booking — see terms acknowledgment
     // Structured trip preferences flow through the shared booking payload with the
