@@ -418,7 +418,7 @@
     const payload = Object.fromEntries(fd.entries())
     // Reachability: the passenger's mobile must be valid, and on a broker booking it
     // must be DISTINCT from the broker's own cell — otherwise the passenger gets no
-    // trip updates (Mr Mahoney, 17 Sep, via a broker booking). Mirrors the server
+    // trip updates (17 Sep incident, via a broker booking). Mirrors the server
     // guard in book-trip so the API can't be bypassed.
     const normMobile = (v) => { const d = String(v || '').replace(/\D/g, ''); return d.startsWith('0') ? '27' + d.slice(1) : d.startsWith('27') ? d : d.length === 9 ? '27' + d : d }
     const paxNorm = normMobile(payload.phone)
@@ -427,7 +427,7 @@
       errEl.textContent = msg; errEl.classList.remove('hidden'); errEl.scrollIntoView({ behavior: 'smooth', block: 'center' })
       ;(form[fieldName] || form.phone).focus(); btn.disabled = false; btn.textContent = 'Request my trip'
     }
-    if (!/^27\d{9}$/.test(paxNorm)) { failPhone('Please enter a valid passenger mobile number (e.g. 082 123 4567) so we can send trip updates.', 'phone'); return }
+    if (!/^27[6-8]\d{8}$/.test(paxNorm)) { failPhone('Please enter a valid passenger mobile number (e.g. 082 123 4567) so we can send trip updates.', 'phone'); return }
     if (brokerNorm && brokerNorm === paxNorm) { failPhone('The passenger’s number and your number are the same — enter the passenger’s own mobile so they receive trip updates.', 'agent_phone'); return }
     payload.service_type = service
     payload.indemnity_accepted = true // captured at booking — see terms acknowledgment
