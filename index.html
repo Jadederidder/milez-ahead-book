@@ -428,7 +428,12 @@
       ;(form[fieldName] || form.phone).focus(); btn.disabled = false; btn.textContent = 'Request my trip'
     }
     if (!/^27[6-8]\d{8}$/.test(paxNorm)) { failPhone('Please enter a valid passenger mobile number (e.g. 082 123 4567) so we can send trip updates.', 'phone'); return }
-    if (brokerNorm && brokerNorm === paxNorm) { failPhone('The passenger’s number and your number are the same — enter the passenger’s own mobile so they receive trip updates.', 'agent_phone'); return }
+    if (brokerNorm) {
+      // A populated broker cell must itself be a valid mobile (they get the copy), and
+      // must differ from the passenger's number. (CodeRabbit)
+      if (!/^27[6-8]\d{8}$/.test(brokerNorm)) { failPhone('Please enter a valid cell number for your confirmation copy, or leave it blank.', 'agent_phone'); return }
+      if (brokerNorm === paxNorm) { failPhone('The passenger’s number and your number are the same — enter the passenger’s own mobile so they receive trip updates.', 'agent_phone'); return }
+    }
     payload.service_type = service
     payload.indemnity_accepted = true // captured at booking — see terms acknowledgment
     // Structured trip preferences flow through the shared booking payload with the
