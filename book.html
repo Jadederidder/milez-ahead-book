@@ -160,6 +160,7 @@ function render(){
         <select id="tmin"><option value="">Min</option>${['00','15','30','45'].map(m=>`<option>${m}</option>`).join('')}</select>
       </div></div></div>
       <div id="clashWarn" style="display:none;background:#fff7ed;border:1px solid #fdba74;border-radius:12px;padding:10px 12px;margin-bottom:10px;font-size:13px;line-height:1.45;color:#9a3412"></div>
+      <div id="leadWarn" style="display:none;background:#fff7ed;border:1px solid #fdba74;border-radius:12px;padding:10px 12px;margin-bottom:10px;font-size:13px;line-height:1.45;color:#9a3412"></div>
       <div class="hint" id="timeHint" style="display:none;margin-bottom:10px;border-radius:10px;padding:8px 10px;line-height:1.4;font-size:12.5px"></div>
       <div class="field"><label class="lab" id="pickupLab">${isAir && f.direction==='arrival' ? 'Drop-off address' : 'Pick-up address'}<span class="rq">*</span></label><div class="acwrap"><input type="text" id="pickup" placeholder="Start typing your address…" autocomplete="off"></div>
         <div class="hint" id="pickHint" style="display:none;margin-top:6px;border-radius:10px;padding:8px 10px;line-height:1.4;font-size:12.5px"></div></div>
@@ -229,7 +230,7 @@ function render(){
   ['date','time','bags','flight','notes','airport'].forEach(id=>{const el=document.getElementById(id);if(el)el.oninput=()=>{};});
   applyVehRec();
   // Live double-booking check — debounced, on any change to date / time / flight.
-  const _clash=(()=>{let t;return()=>{clearTimeout(t);t=setTimeout(()=>{checkClash();checkTimeSanity();},400);};})();
+  const _clash=(()=>{let t;return()=>{clearTimeout(t);t=setTimeout(()=>{checkClash();checkTimeSanity();checkLead();},400);};})();
   ['date','thour','tmin','flight'].forEach(id=>{const el=document.getElementById(id);if(el){el.addEventListener('change',_clash);el.addEventListener('input',_clash);}});
   // Flight-aware autofill — debounced, on flight-number or date change.
   const _flt=(()=>{let t;return()=>{clearTimeout(t);t=setTimeout(lookupFlight,600);};})();
@@ -267,7 +268,7 @@ function wireCode(){
   el.onblur=bookCheckCode;
 }
 
-window.setSvc=(s)=>{ f.service=s; render(); };
+window.setSvc=(s)=>{ f.service=s; render(); checkLead(); };
 window.setDir=(d)=>{ f.direction=d; document.getElementById('dirArr').classList.toggle('sel',d==='arrival'); document.getElementById('dirDep').classList.toggle('sel',d==='departure'); const lab=document.getElementById('pickupLab'); if(lab) lab.textContent = d==='arrival' ? 'Drop-off address' : 'Pick-up address'; if(window.lookupFlight) lookupFlight(); };
 window.setSz=(z)=>{ f.size=z; document.querySelectorAll('.szb').forEach(b=>b.classList.toggle('sel',b.dataset.sz===z)); applyVehRec(); };
 window.tog=(el)=>{ el.classList.toggle('sel'); applyVehRec(); };
@@ -315,6 +316,33 @@ window.checkClash=async()=>{
       warn.style.display='block';
     } else { warn.style.display='none'; }
   }catch(_){ warn.style.display='none'; }
+};
+// Call-centre number (super-admin sets it in the console; book-web hands it to us
+// in CTX). A tap-to-call button when we have one, generic text otherwise.
+window._ccNum=()=>((window.CTX&&(CTX.call_centre_number||CTX.callCentreNumber))||'').toString().trim();
+window._ccOn=()=>{ const n=_ccNum(); return n?(' on <b>'+esc(n)+'</b>'):''; };
+window._callBtn=()=>{ const n=_ccNum(); if(!n) return ''; const tel=n.replace(/[^0-9+]/g,''); return `<div style="margin-top:10px"><a href="tel:${tel}" style="display:inline-flex;align-items:center;gap:6px;background:#059669;color:#fff;font-weight:600;text-decoration:none;border-radius:999px;padding:8px 16px;font-size:13px">📞 Call ${esc(n)}</a></div>`; };
+// Live lead-time advisory (mirror of the server rule in _shared/leadTime.ts). Home
+// Safe (drive_home) needs 90 min, every other trip 6 hours (both HARD, also blocked
+// at submit); 6–24h out is a soft "book 24h ahead" nudge that still lets them book.
+window.checkLead=()=>{
+  const warn=document.getElementById('leadWarn'); if(!warn) return;
+  const date=document.getElementById('date')?.value;
+  const h=document.getElementById('thour')?.value, m=document.getElementById('tmin')?.value;
+  if(!date||!h){ warn.style.display='none'; return; }
+  const when=Date.parse(`${date}T${h}:${m||'00'}:00+02:00`);
+  if(isNaN(when)){ warn.style.display='none'; return; }
+  const mins=(when-Date.now())/60000;
+  if(mins<0){ warn.style.display='none'; return; } // a past pick-up is caught at submit
+  let msg='';
+  if(f.service==='drive_home'){
+    if(mins<90) msg='⚠️ <b>Home Safe needs at least 90 minutes notice</b> so we can arrange your two driver team. For a trip this soon, please call our call centre'+_ccOn()+'.'+_callBtn();
+  } else if(mins<360){
+    msg='⚠️ <b>Trips need at least 6 hours notice.</b> For a trip this soon, please call our call centre'+_ccOn()+'.'+_callBtn();
+  } else if(mins<1440){
+    msg='ℹ️ Trips are best booked at least <b>24 hours</b> ahead. You can still request this one and we will see if a driver is available.';
+  }
+  if(msg){ warn.innerHTML=msg; warn.style.display='block'; } else { warn.style.display='none'; }
 };
 // Flight-aware autofill — when the client types a flight number (+ date), ask
 // book-web (→ AeroDataBox, the same source flight-watch tracks with) for the real
@@ -367,6 +395,7 @@ window.lookupFlight=async()=>{
     hint.style.display='block';
     checkClash();
     if(window.checkTimeSanity) checkTimeSanity(); // a departure flight may change the timing advice
+    checkLead();
   }catch(_){ hint.style.display='none'; }
 };
 window.STOPS=[];
@@ -608,6 +637,14 @@ window.submit=async()=>{
   // dispatch engine has a real-time lane — so we only block actual history.)
   const _when=new Date(document.getElementById('date').value+'T'+document.getElementById('thour').value+':'+(document.getElementById('tmin').value||'00')+':00+02:00');
   if(!isNaN(_when.getTime())&&_when.getTime()<Date.now()){ err.textContent='That pick-up time has already passed — please check the date and time.'; err.style.display='block'; return; }
+  // HARD lead-time floors (mirror of the server rule, _shared/leadTime.ts; the
+  // server is the authority). Home Safe needs 90 min (2-driver team), every other
+  // trip 6 hours. Under that we route the client to the call centre.
+  if(!isNaN(_when.getTime())){
+    const _mins=(_when.getTime()-Date.now())/60000;
+    if(f.service==='drive_home' && _mins<90){ err.innerHTML='Home Safe trips need at least <b>90 minutes</b> notice so we can arrange your two driver team safely. For a trip this soon, please call our call centre'+_ccOn()+'.'+_callBtn(); err.style.display='block'; err.scrollIntoView({behavior:'smooth',block:'center'}); return; }
+    if(f.service!=='drive_home' && _mins<360){ err.innerHTML='Trips need at least <b>6 hours</b> notice. For a trip this soon, please call our call centre'+_ccOn()+' and we will do our best to arrange a driver.'+_callBtn(); err.style.display='block'; err.scrollIntoView({behavior:'smooth',block:'center'}); return; }
+  }
   // Bags are an EXPLICIT choice — the silent 0 default let a "medium" pick
   // sail through with no count (JD, 24 Aug, twice). "No bags" is one tap.
   const _bagsRaw=document.getElementById('bags').value;
