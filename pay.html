@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Milez Ahead — Secure payment</title>
+<style>
+  :root{ --ink:#16201c; --muted:#5c6b63; --line:#e5e3db; --brand:#0f7a52; --bg:#f6f5f1; }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;display:flex;min-height:100vh;align-items:center;justify-content:center;padding:20px}
+  .card{background:#fff;border:1px solid var(--line);border-radius:16px;max-width:400px;width:100%;padding:28px 24px;text-align:center;box-shadow:0 8px 30px rgba(20,32,28,.06)}
+  .logo{font-weight:700;letter-spacing:.02em;color:var(--brand);font-size:15px;margin-bottom:18px}
+  h1{font-size:19px;margin:.4em 0 .3em}
+  p{color:var(--muted);font-size:14px;line-height:1.5;margin:.3em 0}
+  .amt{font-size:26px;font-weight:700;margin:10px 0}
+  button,.btn{display:inline-block;margin-top:18px;background:var(--brand);color:#fff;border:0;border-radius:10px;padding:13px 20px;font-size:15px;font-weight:600;cursor:pointer;text-decoration:none;width:100%}
+  button:disabled{opacity:.6}
+  .link{margin-top:14px;background:none;color:var(--brand);font-weight:600;font-size:14px;padding:8px}
+  .spin{color:var(--muted);font-size:14px}
+  .err{color:#b0321f}
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">MILEZ AHEAD</div>
+    <div id="view"><p class="spin">Loading your secure payment…</p></div>
+  </div>
+<script>
+const FN = 'https://izslchhcavckowatgbel.supabase.co/functions/v1/pay-link';
+const params = new URLSearchParams(location.search);
+const token = params.get('t') || params.get('token') || '';
+const view = document.getElementById('view');
+
+function esc(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+async function call(resend){
+  const r = await fetch(FN, { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ token, resend: !!resend }) });
+  if (!r.ok && r.status !== 200) throw new Error('http ' + r.status);
+  return r.json();
+}
+
+function render(html){ view.innerHTML = html; }
+
+function resendButton(label){
+  return `<button id="resend">${label || 'Send me a fresh link on WhatsApp'}</button>`;
+}
+function wireResend(){
+  const b = document.getElementById('resend');
+  if (!b) return;
+  b.onclick = async () => {
+    b.disabled = true; b.textContent = 'Sending…';
+    try { await call(true); render('<h1>Sent ✅</h1><p>We have sent a fresh payment link to your WhatsApp. Please open it there to pay.</p>'); }
+    catch { render('<h1 class="err">Something went wrong</h1><p>Please reply on WhatsApp and a consultant will help you pay.</p>'); }
+  };
+}
+
+async function start(){
+  if (!token){ render('<h1 class="err">Link not recognised</h1><p>Please use the payment link from your WhatsApp chat, or reply there and we will resend it.</p>'); return; }
+  try {
+    const d = await call(false);
+    if (d.status === 'live' && d.url){
+      render(`<h1>Ready to pay</h1><div class="amt">R${Number(d.amount||0).toFixed(0)}</div><p>Trip ${esc(d.ref||'')}</p><a class="btn" href="${esc(d.url)}">Pay now securely</a><p style="margin-top:14px;font-size:12px">Secured by Paystack</p>`);
+      // Auto-forward to the live checkout after a moment.
+      setTimeout(() => { location.href = d.url; }, 1200);
+    } else if (d.status === 'paid'){
+      render(`<h1>Already paid ✅</h1><p>Trip ${esc(d.ref||'')} is settled — nothing more to do. Safe travels 🙏</p>`);
+    } else if (d.status === 'not_payable'){
+      render(`<h1>You're covered ✅</h1><p>This trip is covered by your policy, so there's nothing to pay.</p>`);
+    } else if (d.status === 'closed'){
+      render(`<h1>Booking not active</h1><p>This booking is no longer live. Please reply on WhatsApp if you need a hand.</p>`);
+    } else {
+      render(`<h1>Payment unavailable</h1><p>We could not start this payment right now.</p>${resendButton()}`); wireResend();
+    }
+  } catch {
+    render(`<h1 class="err">This link needs refreshing</h1><p>Your previous payment link expired. Tap below and we will send you a fresh, live link on WhatsApp.</p>${resendButton()}`);
+    wireResend();
+  }
+}
+start();
+</script>
+</body>
+</html>
