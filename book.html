@@ -205,6 +205,12 @@ function render(){
         <div class="field"><label class="lab">Vehicle</label><select id="vehClass"><option value="">No preference</option><option value="sedan">Sedan</option><option value="suv">SUV</option><option value="7seater">7-Seater / group</option><option value="van">Van / large luggage</option></select></div>
       </div>`}
       <div class="field"><label class="lab">Alternative contact number <span style="font-weight:500;text-transform:none;color:#9aa1ab">(optional)</span></label><input type="tel" id="altphone" inputmode="tel" placeholder="e.g. 082 123 4567"></div>
+      <div class="field"><label class="escort"><input type="checkbox" id="onBehalf" onchange="document.getElementById('onBehalfWrap').style.display=this.checked?'':'none'"> I'm booking for someone else</label></div>
+      <div id="onBehalfWrap" style="display:none">
+        <div class="field"><label class="lab">Traveller's name</label><input type="text" id="travName" placeholder="Who is travelling?"></div>
+        <div class="field"><label class="lab">Traveller's mobile (WhatsApp)</label><input type="tel" id="travPhone" inputmode="tel" placeholder="e.g. 082 123 4567">
+          <div class="hint" style="display:block;margin-top:6px;border-radius:10px;padding:8px 10px;line-height:1.4;background:#ecfeff;border:1px solid #a5f3fc;color:#155e63">We'll send the driver and trip updates to the traveller, and keep you copied.</div></div>
+      </div>
       <div class="field"><label class="lab">Voucher / gift code <span style="font-weight:500;text-transform:none;color:#9aa1ab">(optional)</span></label>
         <input type="text" id="code" placeholder="e.g. MA-XXXXXX" autocomplete="off" autocapitalize="characters" style="text-transform:uppercase">
         <div class="hint" id="codeMsg" style="display:none"></div></div>
@@ -686,6 +692,10 @@ window.submit=async()=>{
     indemnity_accepted:true,
     add_escort:!!document.getElementById('escort')?.checked, policy_number:CTX.policy_number||undefined,
     code:((document.getElementById('code')||{}).value||'').trim().toUpperCase()||undefined,
+    // On-behalf: the traveller (if booking for someone else) — server sends them the
+    // trip updates and copies the booker. Only when the toggle is on with a name.
+    passenger_name:(document.getElementById('onBehalf')?.checked&&(document.getElementById('travName').value||'').trim())||undefined,
+    passenger_phone:(document.getElementById('onBehalf')?.checked&&(document.getElementById('travPhone').value||'').trim())||undefined,
   };
   if(isAir){
     booking.airport_code=document.getElementById('airport').value; booking.direction=f.direction||'arrival'; booking.flight_number=document.getElementById('flight').value||undefined;
