@@ -343,7 +343,9 @@ window.checkLead=()=>{
   let msg='';
   if(f.service==='drive_home'){
     if(mins<90) msg='⚠️ <b>Home Safe needs at least 90 minutes notice</b> so we can arrange your two driver team. For a trip this soon, please call our call centre'+_ccOn()+'.'+_callBtn();
-  } else if(mins<360){
+  } else if(f.service==='airport' && mins<720){
+    msg='⚠️ <b>Airport trips need at least 12 hours notice</b> — an early pickup means the driver is up before dawn, so we need time to arrange one. For a trip this soon, please call our call centre'+_ccOn()+'.'+_callBtn();
+  } else if(f.service!=='airport' && mins<360){
     msg='⚠️ <b>Trips need at least 6 hours notice.</b> For a trip this soon, please call our call centre'+_ccOn()+'.'+_callBtn();
   } else if(mins<1440){
     msg='ℹ️ Trips are best booked at least <b>24 hours</b> ahead. You can still request this one and we will see if a driver is available.';
@@ -649,7 +651,8 @@ window.submit=async()=>{
   if(!isNaN(_when.getTime())){
     const _mins=(_when.getTime()-Date.now())/60000;
     if(f.service==='drive_home' && _mins<90){ err.innerHTML='Home Safe trips need at least <b>90 minutes</b> notice so we can arrange your two driver team safely. For a trip this soon, please call our call centre'+_ccOn()+'.'+_callBtn(); err.style.display='block'; err.scrollIntoView({behavior:'smooth',block:'center'}); return; }
-    if(f.service!=='drive_home' && _mins<360){ err.innerHTML='Trips need at least <b>6 hours</b> notice. For a trip this soon, please call our call centre'+_ccOn()+' and we will do our best to arrange a driver.'+_callBtn(); err.style.display='block'; err.scrollIntoView({behavior:'smooth',block:'center'}); return; }
+    if(f.service==='airport' && _mins<720){ err.innerHTML='Airport trips need at least <b>12 hours</b> notice — an early pickup means the driver is up before dawn, so we need time to arrange one. For a trip this soon, please call our call centre'+_ccOn()+' and we will do our best.'+_callBtn(); err.style.display='block'; err.scrollIntoView({behavior:'smooth',block:'center'}); return; }
+    if(f.service!=='drive_home' && f.service!=='airport' && _mins<360){ err.innerHTML='Trips need at least <b>6 hours</b> notice. For a trip this soon, please call our call centre'+_ccOn()+' and we will do our best to arrange a driver.'+_callBtn(); err.style.display='block'; err.scrollIntoView({behavior:'smooth',block:'center'}); return; }
   }
   // Bags are an EXPLICIT choice — the silent 0 default let a "medium" pick
   // sail through with no count (JD, 24 Aug, twice). "No bags" is one tap.
