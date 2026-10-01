@@ -87,6 +87,25 @@ const BOOK_TRIP_FN = 'https://izslchhcavckowatgbel.supabase.co/functions/v1/book
 const ANON = 'sb_publishable_ITCnCcqKXF56UearfrSBYg_SXy3QtE8';
 const MAPS_KEY = 'AIzaSyAtZvXbiV8BhpC_6dENVYrxoNWdPJlwNiM';
 const AIRPORTS =[['CPT','Cape Town Airport (CPT)'],['JNB','O.R. Tambo Airport (JNB)'],['HLA','Lanseria Airport (HLA)'],['DUR','King Shaka Airport (DUR)'],['PLZ','Gqeberha Airport (PLZ)'],['GRJ','George Airport (GRJ)'],['BFN','Bloemfontein Airport (BFN)'],['ELS','East London Airport (ELS)'],['MQP','Kruger Mpumalanga Airport (MQP)'],['PZB','Pietermaritzburg Airport (PZB)'],['KIM','Kimberley Airport (KIM)'],['UTN','Upington Airport (UTN)'],['RCB','Richards Bay Airport (RCB)']];
+// Canonical airport ADDRESS + COORDS (mirrors src/lib/airports.ts). We send these on
+// an airport booking so the server never has to geocode the airport label — geocoding
+// "Cape Town Airport" returns the suburb "Matroosfontein, 7490", which then showed to
+// the client and driver (JD, 1 Oct). The coords are our own trusted data, not input.
+const AIR_CANON = {
+  CPT:{addr:'Cape Town International Airport (CPT), Cape Town',lat:-33.9715,lng:18.6021},
+  JNB:{addr:'O.R. Tambo International Airport (JNB), Kempton Park, Johannesburg',lat:-26.1367,lng:28.2411},
+  HLA:{addr:'Lanseria International Airport (HLA), Johannesburg',lat:-25.9385,lng:27.9261},
+  DUR:{addr:'King Shaka International Airport (DUR), La Mercy, Durban',lat:-29.6144,lng:31.1197},
+  PLZ:{addr:'Chief Dawid Stuurman International Airport (PLZ), Gqeberha',lat:-33.9849,lng:25.6173},
+  GRJ:{addr:'George Airport (GRJ), George',lat:-34.0056,lng:22.3789},
+  BFN:{addr:'Bram Fischer International Airport (BFN), Bloemfontein',lat:-29.0927,lng:26.3024},
+  ELS:{addr:'King Phalo Airport (ELS), East London',lat:-33.0356,lng:27.8261},
+  MQP:{addr:'Kruger Mpumalanga International Airport (MQP), Mbombela',lat:-25.3832,lng:31.1056},
+  PZB:{addr:'Pietermaritzburg Airport (PZB), Pietermaritzburg',lat:-29.649,lng:30.3987},
+  KIM:{addr:'Kimberley Airport (KIM), Kimberley',lat:-28.8028,lng:24.7652},
+  UTN:{addr:'Upington Airport (UTN), Upington',lat:-28.3991,lng:21.2602},
+  RCB:{addr:'Richards Bay Airport (RCB), Richards Bay',lat:-28.7409,lng:32.0921},
+};
 const SERVICES = [
   ['airport','Airport','transfer to/from'],['drive_home','Home Safe','drive me & my car home'],
   ['convenient','Convenient','everyday driver'],
@@ -706,12 +725,14 @@ window.submit=async()=>{
     // the client's own address (the box above). For an ARRIVAL the airport is the
     // pickup and the box is the destination — so it MUST be captured as the drop-off,
     // otherwise the trip has no destination and a later rebook has nothing to pre-fill.
-    const airSel=document.getElementById('airport'); const airLabel=(airSel.options[airSel.selectedIndex]&&airSel.options[airSel.selectedIndex].text)||booking.airport_code;
+    const airSel=document.getElementById('airport');
+    // Canonical airport address + known coords (no geocode → never "Matroosfontein").
+    const canon=AIR_CANON[booking.airport_code]||{addr:((airSel.options[airSel.selectedIndex]&&airSel.options[airSel.selectedIndex].text)||booking.airport_code),lat:null,lng:null};
     if(booking.direction==='arrival'){
       booking.dropoff_address=pickup; booking.dropoff_lat=place.pickup?.lat??null; booking.dropoff_lng=place.pickup?.lng??null;
-      booking.pickup_address=airLabel; booking.pickup_lat=null; booking.pickup_lng=null;
+      booking.pickup_address=canon.addr; booking.pickup_lat=canon.lat; booking.pickup_lng=canon.lng;
     } else {
-      booking.dropoff_address=airLabel; booking.dropoff_lat=null; booking.dropoff_lng=null;
+      booking.dropoff_address=canon.addr; booking.dropoff_lat=canon.lat; booking.dropoff_lng=canon.lng;
     }
   }
   else { const dropEl=document.getElementById('drop'); booking.dropoff_address=(dropEl.dataset.full||dropEl.value.trim())||undefined; booking.dropoff_lat=place.drop?.lat??null; booking.dropoff_lng=place.drop?.lng??null; }
