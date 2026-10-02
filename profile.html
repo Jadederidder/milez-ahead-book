@@ -261,7 +261,7 @@ function render(p,trips,places){
       <div style="margin-top:11px;display:flex;align-items:center;gap:11px;background:#fff;border-radius:16px;padding:11px 13px;box-shadow:0 10px 26px rgba(10,40,50,.28);color:var(--ink)">
         <div style="width:42px;height:42px;border-radius:50%;background:linear-gradient(150deg,var(--navy),#14406b);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;color:#ffe9b8;border:2px solid var(--gold)">${esc((drv.name||'?').trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase())}</div>
         <div style="min-width:0;flex:1">
-          <div style="font-weight:800;font-size:14px;color:var(--navy)">${esc(drv.name||'Your driver')}</div>
+          <div style="font-weight:800;font-size:14px;color:var(--navy)">${esc(drv.name||'Your driver')}${drv.rating&&drv.rating.count?` <span style="font-size:11.5px;color:var(--gold);font-weight:700" title="${drv.rating.avg.toFixed(1)} from ${drv.rating.count} rating${drv.rating.count===1?'':'s'}">★ ${drv.rating.avg.toFixed(1)}</span>`:''}</div>
           ${veh?`<div style="font-size:11.5px;color:#7b8089">${esc([veh.make,veh.model].filter(Boolean).join(' '))} · ${esc(veh.registration||'')}</div>`:''}
         </div>
         ${drv.phone?`<a href="tel:${esc(drv.phone)}" style="background:#22c55e;box-shadow:0 3px 10px rgba(34,197,94,.4);border-radius:999px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;color:#fff;text-decoration:none;font-size:16px">${IC.phone}</a>`:''}
