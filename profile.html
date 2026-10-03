@@ -267,6 +267,12 @@ function render(p,trips,places){
         ${drv.phone?`<a href="tel:${esc(drv.phone)}" style="background:#22c55e;box-shadow:0 3px 10px rgba(34,197,94,.4);border-radius:999px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;color:#fff;text-decoration:none;font-size:16px">${IC.phone}</a>`:''}
         ${next.tracking_token?`<a href="driver.html?t=${encodeURIComponent(next.tracking_token)}" style="background:var(--gold);box-shadow:0 3px 10px rgba(199,154,59,.4);border-radius:999px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;color:#fff;text-decoration:none;font-size:16px">${IC.person}</a>`:''}
       </div>`:'';
+  // When the trip is LIVE, the driver's map rides right here on the hero — the real
+  // tracker embedded inline (driver GPS + route + ETA), so the client watches the car
+  // approach without a separate "Track" tap (JD, 3 Oct). Reuses track.html in embed mode.
+  const liveMap=(isLive&&next.tracking_token)?`
+      <iframe src="track.html?token=${encodeURIComponent(next.tracking_token)}&embed=1" title="Live trip"
+        style="width:100%;height:440px;border:0;border-radius:16px;margin-top:11px;background:#fff;box-shadow:0 12px 30px rgba(10,40,50,.3)"></iframe>`:'';
   // Frosted actions INSIDE the paint + a quiet Cancel text link.
   const actionsRow=next?`
       <div style="margin-top:11px;display:flex;gap:6px">
@@ -288,7 +294,7 @@ function render(p,trips,places){
       <div style="font-size:12.5px;color:#dff2ef;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc((next.pickup_address||'').split(',')[0])} → ${esc(String(next.dropoff_address||next.airport_code||'').split(',')[0])}</div>
       <span style="display:inline-block;background:rgba(255,255,255,.2);color:#fff;font-size:10.5px;font-weight:700;border-radius:999px;padding:3px 10px;margin-top:6px">● ${statusLabel(next.status)}</span>
       ${flightChip}
-      ${driverCard}
+      ${isLive&&next.tracking_token?liveMap:driverCard}
       ${actionsRow}`:`
       <div style="text-align:center;padding:14px 0 6px">
         <div style="font-size:19px;font-weight:800">Where to next?</div>

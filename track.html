@@ -107,6 +107,11 @@
   .receipt .rl .k{color:#8a8aa0;flex:0 0 auto}
   .receipt .rl .v{font-weight:700;text-align:right}
   @media print{body{background:#fff}.brand .s,.foot,.sosbtn,.dvbtns,#rateCard,#mapcard{display:none!important}}
+  /* Embed mode (inside the hero page's iframe): drop our own chrome, show map + cards only. */
+  body.embed{background:transparent}
+  body.embed .brand,body.embed .foot{display:none!important}
+  body.embed .wrap{padding:0;max-width:none}
+  body.embed #mapcard{margin:0 0 10px;border-radius:14px}
 </style>
 </head>
 <body>
@@ -133,6 +138,11 @@ const TIP_EDGE='https://izslchhcavckowatgbel.supabase.co/functions/v1/tip-init';
 // token is the only gate on this page's PII (client name, addresses, live GPS).
 const TOKEN=new URLSearchParams(location.hash.slice(1)).get('token')
   || new URLSearchParams(location.search).get('token') || '';
+// Embed mode: when the hero page drops this tracker in an <iframe> (embed=1), hide our
+// own header/footer so only the live map + driver + route show. Read before the token
+// scrub below rewrites the URL (which drops the embed flag).
+const EMBED=/[?#&]embed=1/.test(location.href);
+if(EMBED) document.body.classList.add('embed');
 if(TOKEN && /(^|[?&])token=/.test(location.search)){
   try{history.replaceState(null,'',location.pathname+'#token='+encodeURIComponent(TOKEN));}catch(_){}
 }
