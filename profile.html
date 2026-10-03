@@ -30,8 +30,8 @@
   .actIn.live{background:linear-gradient(135deg,var(--teal),var(--teal2));border-color:rgba(255,255,255,.2)}
   .actIn.live .ic{color:#fff}
   /* Tiles: calm white cards, colour lives in the icon-orbs; gold count badges */
-  .tileF{position:relative;background:#fff;border:1px solid var(--line);border-radius:15px;padding:10px 6px;text-align:center;box-shadow:0 2px 6px rgba(20,30,50,.06);display:block;width:100%;text-decoration:none}
-  .orb{width:34px;height:34px;border-radius:12px;margin:0 auto;display:flex;align-items:center;justify-content:center;font-size:16px}
+  .tileF{position:relative;background:#fff;border:1px solid var(--line);border-radius:15px;padding:9px 5px;text-align:center;box-shadow:0 2px 6px rgba(20,30,50,.06);display:block;width:100%;text-decoration:none}
+  .orb{width:30px;height:30px;border-radius:10px;margin:0 auto;display:flex;align-items:center;justify-content:center;font-size:15px}
   .o1{background:linear-gradient(150deg,var(--teal),var(--teal2));color:#fff;box-shadow:0 4px 10px rgba(19,168,156,.35)}
   .o2{background:#e8f0fe;color:#2a5bd7}.o3{background:#f2ecff;color:#6d4fc4}
   .o4{background:#e6f6f0;color:#158a5c}.o5{background:#fdeeea;color:#d05438}.o6{background:#faf3e2;color:#b3872f}
@@ -72,10 +72,10 @@
   .navbar{position:fixed;left:50%;transform:translateX(-50%);bottom:0;width:100%;max-width:540px;height:64px;
     background:rgba(255,255,255,.94);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
     border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-around;z-index:50;padding-bottom:3px;box-shadow:0 -6px 22px rgba(20,30,50,.07)}
-  .navbar a,.navbar button{display:flex;flex-direction:column;align-items:center;gap:3px;font:700 10px inherit;color:#9aa0ac;text-decoration:none;background:none;border:none;cursor:pointer;padding:0;-webkit-appearance:none;appearance:none}
+  .navbar a,.navbar button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;font:700 10px inherit;color:#9aa0ac;text-decoration:none;background:none;border:none;cursor:pointer;padding:0;-webkit-appearance:none;appearance:none;min-width:0}
   .navbar .act{color:var(--navy)}
   .navbar a svg.ic,.navbar button svg.ic{width:19px;height:19px}
-  .navbar a.nbook{background:linear-gradient(150deg,var(--navy),var(--teal));color:#fff;width:50px;height:50px;border-radius:50%;justify-content:center;margin-top:-20px;box-shadow:0 8px 20px rgba(13,43,70,.4);gap:0}
+  .navbar a.nbook{flex:0 0 54px;background:linear-gradient(150deg,var(--navy),var(--teal));color:#fff;width:50px;height:50px;border-radius:50%;justify-content:center;margin-top:-20px;box-shadow:0 8px 20px rgba(13,43,70,.4);gap:0}
   .navbar a.nbook svg.ic{width:24px;height:24px;color:#fff}
 </style>
 </head>
@@ -371,10 +371,12 @@ function render(p,trips,places){
       ${tile('statement','o3',IC.doc,'Statement','','')}
       ${tile('places','o5',IC.pin,'My places', places.length?'saved':'', places.length||'')}
     </div>
-    ${p.gift_token?`<a href="gift.html?m=${encodeURIComponent(p.gift_token)}" style="display:flex;align-items:center;justify-content:center;gap:9px;width:100%;margin-bottom:10px;background:#fff;border:1px solid var(--line);color:var(--navy);font-weight:800;font-size:14px;padding:13px;border-radius:14px;text-decoration:none">${IC.gift} Gift a trip</a>`:''}
-    <button type="button" onclick="callMe(this)" style="display:flex;align-items:center;justify-content:center;gap:9px;width:100%;margin-bottom:10px;background:#fff;border:1.5px solid var(--teal);color:var(--teal);font-weight:800;font-size:14px;padding:13px;border-radius:14px">${IC.phone} Call me</button>
+    <div style="display:grid;grid-template-columns:${p.gift_token?'1fr 1fr':'1fr'};gap:8px;margin-bottom:10px">
+      ${p.gift_token?`<a href="gift.html?m=${encodeURIComponent(p.gift_token)}" style="display:flex;align-items:center;justify-content:center;gap:8px;background:#fff;border:1px solid var(--line);color:var(--navy);font-weight:800;font-size:14px;padding:12px;border-radius:14px;text-decoration:none">${IC.gift} Gift</a>`:''}
+      <button type="button" onclick="callMe(this)" style="display:flex;align-items:center;justify-content:center;gap:8px;background:#fff;border:1.5px solid var(--teal);color:var(--teal);font-weight:800;font-size:14px;padding:12px;border-radius:14px">${IC.phone} Call me</button>
+    </div>
 
-    <a href="https://wa.me/27799722798" style="display:block;margin-bottom:14px;background:linear-gradient(135deg,#25b563,#128c50);color:#fff;font-weight:800;font-size:14px;padding:13px;border-radius:14px;text-align:center;text-decoration:none;box-shadow:0 6px 16px rgba(18,140,80,.3)">💬 Chat to us on WhatsApp</a>
+    <a href="https://wa.me/27799722798" style="display:block;margin-bottom:12px;background:linear-gradient(135deg,#25b563,#128c50);color:#fff;font-weight:800;font-size:14px;padding:13px;border-radius:14px;text-align:center;text-decoration:none;box-shadow:0 6px 16px rgba(18,140,80,.3)">💬 Chat to us on WhatsApp</a>
 
     <div class="card sec" id="sec-trips" style="display:none">
       <h2>My trips</h2>
