@@ -62,6 +62,21 @@
   .msg{padding:12px;border-radius:11px;font-size:14px;margin-bottom:12px;text-align:center}
   .msg.err{background:#fdecec;color:#c0392b}.msg.ok{background:#e8f5ee;color:#137a45}
   .center{text-align:center;color:var(--muted);padding:40px 0}
+  /* ---- app-like hub: primary "Where to?" bar + bottom nav ---- */
+  .whereto{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px 16px;box-shadow:0 8px 22px rgba(20,30,50,.08);text-decoration:none;margin-bottom:12px}
+  .whereto .mag{width:34px;height:34px;border-radius:11px;background:linear-gradient(150deg,var(--navy),#14406b);color:#ffe9b8;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .whereto .wt{font-weight:800;font-size:16px;color:var(--navy)}
+  .whereto .ws{font-size:11.5px;color:var(--muted);margin-top:1px}
+  .whereto .go{margin-left:auto;color:var(--gold);font-size:20px;font-weight:800}
+  main{padding-bottom:86px}
+  .navbar{position:fixed;left:50%;transform:translateX(-50%);bottom:0;width:100%;max-width:540px;height:64px;
+    background:rgba(255,255,255,.94);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+    border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-around;z-index:50;padding-bottom:3px;box-shadow:0 -6px 22px rgba(20,30,50,.07)}
+  .navbar a{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;font-weight:700;color:#9aa0ac;text-decoration:none;background:none;border:none;cursor:pointer;padding:0}
+  .navbar a.act{color:var(--navy)}
+  .navbar a svg.ic{width:19px;height:19px}
+  .navbar a.nbook{background:linear-gradient(150deg,var(--navy),var(--teal));color:#fff;width:50px;height:50px;border-radius:50%;justify-content:center;margin-top:-20px;box-shadow:0 8px 20px rgba(13,43,70,.4);gap:0}
+  .navbar a.nbook svg.ic{width:24px;height:24px;color:#fff}
 </style>
 </head>
 <body>
@@ -111,6 +126,7 @@ const IC={
   doc:_i('<path d="M6 2h9l5 5v15H6z"/><path d="M15 2v5h5M9 13h7M9 17h7"/>'),
   pin:_i('<path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/>'),
   gift:_i('<rect x="3" y="8" width="18" height="5"/><path d="M5 13v8h14v-8M12 8v13M12 8s-2.5-6-6-3.5S12 8 12 8zm0 0s2.5-6 6-3.5S12 8 12 8z"/>'),
+  home:_i('<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/>'),
 };
 const statusLabel=st=>({completed:'Completed',in_progress:'In progress',driver_confirmed:'Driver confirmed',driver_assigned:'Driver allocated',captured:'Received',awaiting_driver:'Arranging',cancelled:'Cancelled',no_show:'No-show'}[st]||st);
 const money=n=>n==null?'':'R'+Number(n).toFixed(0);
@@ -318,10 +334,12 @@ function render(p,trips,places){
   document.getElementById('heroSlot').innerHTML=heroHtml;
   show(`
     ${rateHtml}
+    <a href="book.html?s=${encodeURIComponent(TOKEN)}" class="whereto">
+      <span class="mag">${IC.book}</span>
+      <span><span class="wt">Where to?</span><div class="ws">Book a trip — airport, home, anywhere</div></span>
+      <span class="go">›</span>
+    </a>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">
-      <a href="book.html?s=${encodeURIComponent(TOKEN)}" class="tileF">
-        <div class="orb o1">${IC.book}</div><div class="tl">Book a trip</div>
-      </a>
       ${tile('trips','o2',IC.case,'My trips', upcoming.length?'upcoming':'', upcoming.length||'')}
       ${tile('statement','o3',IC.doc,'Statement','','')}
       ${tile('details','o4',IC.person,'My details','','')}
@@ -399,6 +417,14 @@ function render(p,trips,places){
       <input id="pl_addr" placeholder="Start typing the address" style="margin-top:8px">
       <button class="btn" id="addPlace" onclick="addPlace()" style="margin-top:12px">Add place</button>
     </div>
+
+    <nav class="navbar">
+      <button type="button" class="act" onclick="window.scrollTo({top:0,behavior:'smooth'})">${IC.home}Home</button>
+      <button type="button" onclick="openSec('trips')">${IC.case}Trips</button>
+      <a class="nbook" href="book.html?s=${encodeURIComponent(TOKEN)}" aria-label="Book a trip">${IC.book}</a>
+      <button type="button" onclick="openSec('statement')">${IC.doc}Statement</button>
+      <button type="button" onclick="openSec('details')">${IC.person}Account</button>
+    </nav>
   `);
 }
 function toggleSec(k){const el=document.getElementById('sec-'+k);if(el)el.style.display=el.style.display==='none'?'block':'none';}
