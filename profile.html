@@ -72,9 +72,9 @@
   .navbar{position:fixed;left:50%;transform:translateX(-50%);bottom:0;width:100%;max-width:540px;height:64px;
     background:rgba(255,255,255,.94);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
     border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-around;z-index:50;padding-bottom:3px;box-shadow:0 -6px 22px rgba(20,30,50,.07)}
-  .navbar a{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;font-weight:700;color:#9aa0ac;text-decoration:none;background:none;border:none;cursor:pointer;padding:0}
-  .navbar a.act{color:var(--navy)}
-  .navbar a svg.ic{width:19px;height:19px}
+  .navbar a,.navbar button{display:flex;flex-direction:column;align-items:center;gap:3px;font:700 10px inherit;color:#9aa0ac;text-decoration:none;background:none;border:none;cursor:pointer;padding:0;-webkit-appearance:none;appearance:none}
+  .navbar .act{color:var(--navy)}
+  .navbar a svg.ic,.navbar button svg.ic{width:19px;height:19px}
   .navbar a.nbook{background:linear-gradient(150deg,var(--navy),var(--teal));color:#fff;width:50px;height:50px;border-radius:50%;justify-content:center;margin-top:-20px;box-shadow:0 8px 20px rgba(13,43,70,.4);gap:0}
   .navbar a.nbook svg.ic{width:24px;height:24px;color:#fff}
 </style>
@@ -130,6 +130,20 @@ const IC={
 };
 const statusLabel=st=>({completed:'Completed',in_progress:'In progress',driver_confirmed:'Driver confirmed',driver_assigned:'Driver allocated',captured:'Received',awaiting_driver:'Arranging',cancelled:'Cancelled',no_show:'No-show'}[st]||st);
 const money=n=>n==null?'':'R'+Number(n).toFixed(0);
+// Curated per-airport "from arrivals" guidance for an international traveller who has no
+// idea where to go (JD, 3 Oct). The exact bay (e.g. Parkgate 2) comes from the trip's
+// meeting_point when the controller sets it; until then we guide to the pickup area and
+// tell them the driver confirms the bay. Photos are a later addition (meeting-point library).
+const AIRPORTS={
+  CPT:{name:'Cape Town International',maps:'https://maps.google.com/?q=Cape+Town+International+Airport',dirs:['Collect your bags and exit through Arrivals.','Walk out to the pickup area just outside the terminal.','Your driver will message you the exact bay (e.g. Parkgate 2) — reply here or tap Call if you can’t spot them.']},
+  JNB:{name:'O.R. Tambo International',maps:'https://maps.google.com/?q=O.R.+Tambo+International+Airport',dirs:['Collect your bags and exit through Arrivals.','Head to the designated pickup / parkade area.','Your driver will message you the exact bay — reply here or tap Call if you can’t spot them.']},
+  DUR:{name:'King Shaka International',maps:'https://maps.google.com/?q=King+Shaka+International+Airport',dirs:['Collect your bags and exit through Arrivals.','Head to the pickup area outside the terminal.','Your driver will message you the exact bay — reply here or tap Call if you can’t spot them.']},
+};
+function airportGuide(next){
+  const arrival=next&&(next.direction==='arrival'||(next.airport_code&&/airport/i.test(next.pickup_address||'')));
+  if(!arrival)return null;
+  return AIRPORTS[next.airport_code]||{name:(next.pickup_address||'the airport').split(',')[0],maps:'https://maps.google.com/?q='+encodeURIComponent(next.pickup_address||next.airport_code||'airport'),dirs:['Collect your bags and exit through Arrivals.','Walk out to the pickup area outside the terminal.','Your driver will message you the exact meeting point — reply here or tap Call.']};
+}
 async function call(payload){const r=await fetch(FN,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({token:TOKEN,...payload})});return r.json();}
 function pill(st){const m={completed:['done','Completed'],in_progress:['live','In progress'],driver_confirmed:['live','Driver confirmed'],driver_assigned:['live','Driver allocated'],captured:['pend','Received'],awaiting_driver:['pend','Arranging'],cancelled:['cxl','Cancelled'],no_show:['cxl','No-show']};const[c,l]=m[st]||['pend',st];return `<span class="pill ${c}">${l}</span>`;}
 function fmt(d){if(!d)return '';const dt=new Date(d+'T00:00:00');return dt.toLocaleDateString('en-ZA',{day:'numeric',month:'short',year:'numeric'});}
@@ -283,6 +297,18 @@ function render(p,trips,places){
         ${drv.phone?`<a href="tel:${esc(drv.phone)}" style="background:#22c55e;box-shadow:0 3px 10px rgba(34,197,94,.4);border-radius:999px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;color:#fff;text-decoration:none;font-size:16px">${IC.phone}</a>`:''}
         ${next.tracking_token?`<a href="driver.html?t=${encodeURIComponent(next.tracking_token)}" style="background:var(--gold);box-shadow:0 3px 10px rgba(199,154,59,.4);border-radius:999px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;color:#fff;text-decoration:none;font-size:16px">${IC.person}</a>`:''}
       </div>`:'';
+  // Airport arrival? Show the meeting-point guide — exact bay (when set) + from-arrivals
+  // steps + a Maps pin — so a just-landed traveller knows exactly where to go (JD, 3 Oct).
+  const ag=airportGuide(next);
+  const airportCard=ag?`
+      <div style="margin-top:11px;background:#fff;border-radius:16px;padding:13px 14px;box-shadow:0 10px 26px rgba(10,40,50,.22);color:var(--ink)">
+        <div style="font-size:10px;letter-spacing:1.6px;text-transform:uppercase;color:var(--gold);font-weight:800">Airport pickup${ag.name?' · '+esc(ag.name):''}</div>
+        ${next.meeting_point?`<div style="font-weight:800;font-size:15px;color:var(--navy);margin-top:3px">Meet your driver at: ${esc(next.meeting_point)}</div>`:`<div style="font-weight:800;font-size:14px;color:var(--navy);margin-top:3px">Where to find your driver</div>`}
+        <ol style="margin:9px 0 0;padding-left:18px;font-size:12.5px;color:#4a4f58;line-height:1.5">
+          ${ag.dirs.map(d=>`<li style="margin-bottom:3px">${esc(d)}</li>`).join('')}
+        </ol>
+        <a href="${ag.maps}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;margin-top:10px;background:#f6f5f1;border:1px solid var(--line);border-radius:999px;padding:7px 13px;font-size:12px;font-weight:700;color:var(--navy);text-decoration:none">${IC.pin} Open in Maps</a>
+      </div>`:'';
   // When the trip is LIVE, the driver's map rides right here on the hero — the real
   // tracker embedded inline (driver GPS + route + ETA), so the client watches the car
   // approach without a separate "Track" tap (JD, 3 Oct). Reuses track.html in embed mode.
@@ -310,6 +336,7 @@ function render(p,trips,places){
       <div style="font-size:12.5px;color:#dff2ef;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc((next.pickup_address||'').split(',')[0])} → ${esc(String(next.dropoff_address||next.airport_code||'').split(',')[0])}</div>
       <span style="display:inline-block;background:rgba(255,255,255,.2);color:#fff;font-size:10.5px;font-weight:700;border-radius:999px;padding:3px 10px;margin-top:6px">● ${statusLabel(next.status)}</span>
       ${flightChip}
+      ${airportCard}
       ${isLive&&next.tracking_token?liveMap:driverCard}
       ${actionsRow}`:`
       <div style="text-align:center;padding:14px 0 6px">
@@ -342,15 +369,10 @@ function render(p,trips,places){
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">
       ${tile('trips','o2',IC.case,'My trips', upcoming.length?'upcoming':'', upcoming.length||'')}
       ${tile('statement','o3',IC.doc,'Statement','','')}
-      ${tile('details','o4',IC.person,'My details','','')}
       ${tile('places','o5',IC.pin,'My places', places.length?'saved':'', places.length||'')}
-      ${p.gift_token?`<a href="gift.html?m=${encodeURIComponent(p.gift_token)}" class="tileF">
-        <div class="orb o6">${IC.gift}</div><div class="tl">Gift a trip</div>
-      </a>`:`<button type="button" onclick="callMe(this)" class="tileF" style="border-color:var(--teal)">
-        <div class="orb o7">${IC.phone}</div><div class="tl" style="color:var(--teal)">Call me</div>
-      </button>`}
     </div>
-    ${p.gift_token?`<button type="button" onclick="callMe(this)" style="display:block;width:100%;margin-bottom:14px;background:#fff;border:1.5px solid var(--teal);color:var(--teal);font-weight:800;font-size:14px;padding:13px;border-radius:14px">${IC.phone} Call me</button>`:''}
+    ${p.gift_token?`<a href="gift.html?m=${encodeURIComponent(p.gift_token)}" style="display:flex;align-items:center;justify-content:center;gap:9px;width:100%;margin-bottom:10px;background:#fff;border:1px solid var(--line);color:var(--navy);font-weight:800;font-size:14px;padding:13px;border-radius:14px;text-decoration:none">${IC.gift} Gift a trip</a>`:''}
+    <button type="button" onclick="callMe(this)" style="display:flex;align-items:center;justify-content:center;gap:9px;width:100%;margin-bottom:10px;background:#fff;border:1.5px solid var(--teal);color:var(--teal);font-weight:800;font-size:14px;padding:13px;border-radius:14px">${IC.phone} Call me</button>
 
     <a href="https://wa.me/27799722798" style="display:block;margin-bottom:14px;background:linear-gradient(135deg,#25b563,#128c50);color:#fff;font-weight:800;font-size:14px;padding:13px;border-radius:14px;text-align:center;text-decoration:none;box-shadow:0 6px 16px rgba(18,140,80,.3)">💬 Chat to us on WhatsApp</a>
 
