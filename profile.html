@@ -27,6 +27,16 @@
   header .greeting{font-family:'Fraunces',Georgia,serif;font-weight:600;font-size:25px;line-height:1.15;letter-spacing:-.01em;color:#fff;margin:0}
   header .gsub{font-size:12.5px;color:#dbe4f3;margin-top:3px}
   header .bal{position:absolute;top:11px;right:13px;z-index:2;display:inline-block;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.14);padding:4px 10px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}
+  /* Trip-state: the next-trip card is tall, so trim redundant chrome (subtitle +
+     the WhatsApp bar — the page already opens inside WhatsApp, and Call me covers
+     contact) and tighten spacing so the whole hub fits one in-app screen. */
+  body.trip header .gsub{display:none}
+  body.trip .chatbar{display:none!important}
+  body.trip header .greeting{font-size:21px}
+  body.trip main{padding-top:10px;padding-bottom:68px}
+  body.trip .tileF .ts{display:none}
+  body.trip .actIn{padding:6px 2px}
+  body.trip .whereto{padding:11px 16px}
   /* Drawn line icons (no emoji) */
   svg.ic{width:1em;height:1em;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;vertical-align:-.12em}
   /* Frosted action buttons living inside the paint */
@@ -279,6 +289,9 @@ function render(p,trips,places){
   ):'<div class="center">No trips yet.</div>';
   const next=upcoming[0];
   const nextIdx=next?trips.indexOf(next):-1;
+  // Trip-state: the next-trip card is tall, so trim redundant chrome to keep the
+  // whole hub on one screen inside the WhatsApp in-app browser (JD, 3 Oct).
+  document.body.classList.toggle('trip', !!next);
   const daysTo=next?Math.ceil((new Date(next.trip_date+'T00:00:00')-new Date().setHours(0,0,0,0))/864e5):0;
   const isToday=next&&daysTo<=0;
   const isLive=next&&(next.status==='in_progress'||(isToday&&next.driver));
@@ -334,7 +347,7 @@ function render(p,trips,places){
         <button type="button" class="actIn" onclick="addToCal(${nextIdx})">${IC.cal}Calendar</button>
         <button type="button" class="actIn" onclick="openSec('trips');editTrip(${nextIdx})">${IC.pencil}Change</button>
       </div>
-      <div style="margin-top:6px;text-align:center"><button type="button" onclick="cancelTrip(${nextIdx})" style="background:none;border:none;color:#ff5a5a;font-size:11.5px;font-weight:700;text-decoration:underline;text-underline-offset:3px;padding:2px 6px">✕ Cancel this trip</button></div>`:'';
+      <div style="margin-top:9px;text-align:center"><button type="button" onclick="cancelTrip(${nextIdx})" style="background:#e23744;border:none;color:#fff;font-size:12.5px;font-weight:800;padding:9px 20px;border-radius:999px;box-shadow:0 4px 12px rgba(226,55,68,.35)">✕ Cancel this trip</button></div>`:'';
   // Rendered INTO the painted header, so header + trip read as one canvas.
   const heroHtml=next?`
       <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:10px">
@@ -387,7 +400,7 @@ function render(p,trips,places){
       <button type="button" onclick="callMe(this)" style="display:flex;align-items:center;justify-content:center;gap:8px;background:#fff;border:1.5px solid var(--teal);color:var(--teal);font-weight:800;font-size:14px;padding:12px;border-radius:14px">${IC.phone} Call me</button>
     </div>
 
-    <a href="https://wa.me/27799722798" style="display:block;margin-bottom:10px;background:linear-gradient(135deg,#25b563,#128c50);color:#fff;font-weight:800;font-size:14px;padding:11px;border-radius:14px;text-align:center;text-decoration:none;box-shadow:0 6px 16px rgba(18,140,80,.3)">💬 Chat to us on WhatsApp</a>
+    <a href="https://wa.me/27799722798" class="chatbar" style="display:block;margin-bottom:10px;background:linear-gradient(135deg,#25b563,#128c50);color:#fff;font-weight:800;font-size:14px;padding:11px;border-radius:14px;text-align:center;text-decoration:none;box-shadow:0 6px 16px rgba(18,140,80,.3)">💬 Chat to us on WhatsApp</a>
 
     <div class="card sec" id="sec-trips" style="display:none">
       <h2>My trips</h2>
