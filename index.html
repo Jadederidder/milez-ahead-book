@@ -401,6 +401,41 @@
     })
   }
 
+  // Confirm-the-number gate (JD, 6 Oct — John McCormick's updates went to a stranger
+  // because a wrong mobile was typed here). Before the booking sends, the booker must
+  // confirm the mobile is correct. Branded overlay, no native popup. Re-arms whenever
+  // the number is edited, so an edited number is always re-confirmed.
+  let numberConfirmed = false
+  form.phone.addEventListener('input', () => { numberConfirmed = false })
+  function showNumberConfirm(typedNumber, onConfirm) {
+    let ov = document.getElementById('numConfirmOverlay')
+    if (!ov) {
+      ov = document.createElement('div')
+      ov.id = 'numConfirmOverlay'
+      ov.style.cssText = 'position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,.55);padding:20px'
+      ov.innerHTML =
+        '<div style="max-width:380px;width:100%;background:#fff;border-radius:18px;padding:22px;box-shadow:0 20px 50px rgba(0,0,0,.25)">' +
+          '<div style="font-size:15px;font-weight:700;color:#0f172a;margin-bottom:8px">Is this the passenger’s mobile?</div>' +
+          '<div style="font-size:26px;font-weight:800;letter-spacing:.5px;color:var(--teal);text-align:center;margin:10px 0 12px">' +
+            '<span id="numConfirmValue"></span></div>' +
+          '<div style="font-size:12.5px;line-height:1.5;color:#475569;margin-bottom:16px">' +
+            'Every trip update — the driver’s details and “driver on the way” — is sent to this number. ' +
+            'Please make 100% sure it is the <b>passenger’s own</b> mobile. ' +
+            'Milez Ahead cannot be held responsible for messages sent to an incorrect number.</div>' +
+          '<div style="display:flex;gap:10px">' +
+            '<button type="button" id="numConfirmEdit" style="flex:1;padding:11px;border-radius:12px;border:1px solid #cbd5e1;background:#fff;color:#334155;font-weight:600;font-size:14px;cursor:pointer">Edit number</button>' +
+            '<button type="button" id="numConfirmYes" style="flex:1;padding:11px;border-radius:12px;border:none;background:var(--teal);color:#fff;font-weight:700;font-size:14px;cursor:pointer">Yes, it’s correct</button>' +
+          '</div>' +
+        '</div>'
+      document.body.appendChild(ov)
+    }
+    ov.querySelector('#numConfirmValue').textContent = typedNumber
+    ov.style.display = 'flex'
+    const close = () => { ov.style.display = 'none' }
+    ov.querySelector('#numConfirmEdit').onclick = () => { close(); form.phone.focus() }
+    ov.querySelector('#numConfirmYes').onclick = () => { close(); onConfirm() }
+  }
+
   form.addEventListener('submit', async (e) => {
     e.preventDefault()
     errEl.classList.add('hidden')
@@ -482,6 +517,13 @@
     payload.dropoff_address = drop
     if (pickupCoords) { payload.pickup_lat = pickupCoords.lat; payload.pickup_lng = pickupCoords.lng }
     if (dropCoords) { payload.dropoff_lat = dropCoords.lat; payload.dropoff_lng = dropCoords.lng }
+    // Last gate: confirm the mobile is correct before we send. Shows the typed number
+    // and makes the booker acknowledge it — a wrong number here reaches a stranger.
+    if (!numberConfirmed) {
+      btn.disabled = false; btn.textContent = 'Request my trip'
+      showNumberConfirm((payload.phone || '').trim(), () => { numberConfirmed = true; form.requestSubmit() })
+      return
+    }
     try {
       const res = await fetch(FN_URL, {
         method: 'POST',
