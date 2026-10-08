@@ -55,14 +55,25 @@
 
       <!-- Form -->
       <form id="form" class="space-y-5">
+        <!-- Netstar Companion — shown only when opened from the Companion app. -->
+        <div id="companionBadge" class="hidden items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold" style="border-color:rgba(14,30,58,.15);background:rgba(14,30,58,.04);color:var(--navy)">
+          <span>🛡️ Netstar Companion</span>
+          <span id="companionTierLbl" class="font-normal text-slate-500"></span>
+        </div>
+        <!-- Protect members: the accident ride is a Protect+ benefit. Padlock + upgrade note. -->
+        <div id="companionLocked" class="hidden rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-snug text-amber-800">
+          🔒 The <b>accident ride home</b> is a <b>Protect+</b> benefit. You're on Protect — upgrade to Protect+ to unlock it. You can still book any trip below as a pay-as-you-go private trip.
+        </div>
         <div>
           <span class="lbl">Service</span>
           <div class="grid grid-cols-2 gap-2 sm:grid-cols-3" id="service">
+            <!-- Companion-only: the covered accident ride (service_type trauma). Hidden until companion mode. -->
+            <button type="button" data-v="trauma" id="svcAccident" class="svc hidden rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium">Accident — now</button>
             <button type="button" data-v="airport" class="svc rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium">Airport</button>
             <button type="button" data-v="drive_home" class="svc rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium">Home Safe</button>
             <button type="button" data-v="convenient" class="svc rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium">Convenient</button>
-            <button type="button" data-v="manage_booking" class="svc rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium">Private / Card</button>
-            <button type="button" data-v="trauma" class="svc rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium">Other</button>
+            <button type="button" data-v="manage_booking" id="svcPrivate" class="svc rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium">Private / Card</button>
+            <button type="button" data-v="trauma" id="svcOther" class="svc rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium">Other</button>
           </div>
           <p id="svcDesc" class="mt-2 text-xs leading-snug text-slate-500"></p>
         </div>
@@ -335,6 +346,28 @@
       welcome.textContent = '🎁 You’ve been gifted a Milez Ahead trip — just add your trip details below.'
       welcome.classList.remove('hidden')
     }
+    // Netstar Companion mode — opened from the Companion app with a signed token:
+    // ?companion=<token>&tier=protect|protect_plus (name/phone prefilled above). The
+    // token is verified server-side by book-trip; here it only drives the UI.
+    const companionTok = q.get('companion')
+    if (companionTok) {
+      const tier = (q.get('tier') || '').toLowerCase()
+      window.__companionToken = companionTok
+      window.__companionTier = tier
+      const badge = document.getElementById('companionBadge')
+      if (badge) { badge.classList.remove('hidden'); badge.classList.add('flex') }
+      const tierLbl = document.getElementById('companionTierLbl')
+      if (tierLbl) tierLbl.textContent = tier === 'protect_plus' ? '· Protect+' : tier === 'protect' ? '· Protect' : ''
+      // Companion service set: hide the generic Private/Card + Other. The covered
+      // Accident ride shows only for Protect+; Protect sees the padlock note and can
+      // still book the pay-as-you-go services below.
+      document.getElementById('svcPrivate')?.classList.add('hidden')
+      document.getElementById('svcOther')?.classList.add('hidden')
+      if (tier === 'protect_plus') document.getElementById('svcAccident')?.classList.remove('hidden')
+      else if (tier === 'protect') document.getElementById('companionLocked')?.classList.remove('hidden')
+      welcome.textContent = '🛡️ Welcome, Netstar Companion member — book your trip below.'
+      welcome.classList.remove('hidden')
+    }
   })()
 
   // SECURITY: the returning-client phone lookup was REMOVED. It revealed a
@@ -471,6 +504,9 @@
     }
     payload.service_type = service
     payload.indemnity_accepted = true // captured at booking — see terms acknowledgment
+    // Netstar Companion — pass the signed token + tier so book-trip can verify the
+    // member, tag the trip, and route the covered accident ride (Protect+) vs pay-go.
+    if (window.__companionToken) { payload.companion_token = window.__companionToken; payload.companion_tier = window.__companionTier }
     // Structured trip preferences flow through the shared booking payload with the
     // same FlowBooking field names every other channel uses, so a web booking is
     // byte-identical to a WhatsApp one.
