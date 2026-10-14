@@ -346,26 +346,40 @@
       welcome.textContent = '🎁 You’ve been gifted a Milez Ahead trip — just add your trip details below.'
       welcome.classList.remove('hidden')
     }
-    // Netstar Companion mode — opened from the Companion app with a signed token:
-    // ?companion=<token>&tier=protect|protect_plus (name/phone prefilled above). The
-    // token is verified server-side by book-trip; here it only drives the UI.
-    const companionTok = q.get('companion')
-    if (companionTok) {
-      const tier = (q.get('tier') || '').toLowerCase()
-      window.__companionToken = companionTok
-      window.__companionTier = tier
+    // Netstar Companion mode — opened from the Companion app (finalized redirect
+    // scheme, JD 13 Oct):
+    //   ?mode=accident|private & ref=<member_ref> [& lat=<lat> & lng=<lng> — accident]
+    // The URL carries WHO arrived (ref) and WHICH view (mode) — never entitlement.
+    // book-trip resolves the member from ref and confirms cover server-side.
+    const companionMode = (q.get('mode') || '').toLowerCase()
+    const companionRef = (q.get('ref') || '').trim()
+    if (companionMode === 'accident' || companionMode === 'private' || companionRef) {
+      window.__companionRef = companionRef
+      window.__companionMode = companionMode
+      // The signature + expiry prove the link came from the Companion app (only it
+      // holds the secret). Carried verbatim to book-trip, which verifies them before
+      // covering an accident ride. We don't validate here — the form is untrusted.
+      window.__companionExp = (q.get('exp') || '').trim()
+      window.__companionSig = (q.get('sig') || '').trim()
       const badge = document.getElementById('companionBadge')
       if (badge) { badge.classList.remove('hidden'); badge.classList.add('flex') }
-      const tierLbl = document.getElementById('companionTierLbl')
-      if (tierLbl) tierLbl.textContent = tier === 'protect_plus' ? '· Protect+' : tier === 'protect' ? '· Protect' : ''
-      // Companion service set: hide the generic Private/Card + Other. The covered
-      // Accident ride shows only for Protect+; Protect sees the padlock note and can
-      // still book the pay-as-you-go services below.
-      document.getElementById('svcPrivate')?.classList.add('hidden')
+      // The companion has its own clear choices, so hide the generic "Other".
       document.getElementById('svcOther')?.classList.add('hidden')
-      if (tier === 'protect_plus') document.getElementById('svcAccident')?.classList.remove('hidden')
-      else if (tier === 'protect') document.getElementById('companionLocked')?.classList.remove('hidden')
-      welcome.textContent = '🛡️ Welcome, Netstar Companion member — book your trip below.'
+      if (companionMode === 'accident') {
+        // Open ON the covered accident ride, and pin the pickup to the member's live
+        // GPS so a shaken member doesn't have to type an address (reverse-geocoded in
+        // initMA once Maps loads).
+        const acc = document.getElementById('svcAccident')
+        acc?.classList.remove('hidden')
+        acc?.click()
+        const glat = parseFloat(q.get('lat')), glng = parseFloat(q.get('lng'))
+        if (Number.isFinite(glat) && Number.isFinite(glng)) window.__pickupFromGps = { lat: glat, lng: glng }
+        welcome.textContent = '🛡️ Netstar Companion — your accident ride home. We’ve got you.'
+      } else {
+        // Private pay-go — open on the Private / Card service.
+        document.getElementById('svcPrivate')?.click()
+        welcome.textContent = '🛡️ Welcome, Netstar Companion member — book your private trip below.'
+      }
       welcome.classList.remove('hidden')
     }
   })()
@@ -432,6 +446,21 @@
       dropCoords = l ? { lat: l.lat(), lng: l.lng() } : null
       if (p.formatted_address) { form.dropoff_address.value = p.formatted_address; dropText = p.formatted_address }
     })
+    // Accident mode: pin the pickup to the member's live GPS. Keep the exact coords for
+    // the driver; reverse-geocode to a readable address for the member (fallback to the
+    // raw coords if the lookup fails, so the pickup is never left blank).
+    if (window.__pickupFromGps) {
+      const { lat, lng } = window.__pickupFromGps
+      pickupCoords = { lat, lng }
+      try {
+        new google.maps.Geocoder().geocode({ location: { lat, lng } }, (results, status) => {
+          const addr = status === 'OK' && results && results[0] ? results[0].formatted_address : `Pinned location (${lat.toFixed(5)}, ${lng.toFixed(5)})`
+          form.pickup_address.value = addr; pickupText = addr
+        })
+      } catch (_) {
+        form.pickup_address.value = `Pinned location (${lat.toFixed(5)}, ${lng.toFixed(5)})`; pickupText = form.pickup_address.value
+      }
+    }
   }
 
   // Confirm-the-number gate (JD, 6 Oct — John McCormick's updates went to a stranger
@@ -504,9 +533,15 @@
     }
     payload.service_type = service
     payload.indemnity_accepted = true // captured at booking — see terms acknowledgment
-    // Netstar Companion — pass the signed token + tier so book-trip can verify the
-    // member, tag the trip, and route the covered accident ride (Protect+) vs pay-go.
-    if (window.__companionToken) { payload.companion_token = window.__companionToken; payload.companion_tier = window.__companionTier }
+    // Netstar Companion — pass the member ref + mode so book-trip resolves the member,
+    // tags the trip, and routes the covered accident ride vs a private pay-go booking.
+    // Entitlement (cover, 1-free-accident-ride/year) is decided server-side, not here.
+    if (window.__companionRef || window.__companionMode) {
+      payload.companion_ref = window.__companionRef
+      payload.companion_mode = window.__companionMode
+      if (window.__companionExp) payload.companion_exp = window.__companionExp
+      if (window.__companionSig) payload.companion_sig = window.__companionSig
+    }
     // Structured trip preferences flow through the shared booking payload with the
     // same FlowBooking field names every other channel uses, so a web booking is
     // byte-identical to a WhatsApp one.
