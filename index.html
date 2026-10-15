@@ -456,6 +456,8 @@
   const testLineSel = document.getElementById('testLine')
   const phoneEl = form.phone
   let testTimer
+  let testReq = 0 // monotonically rising; a stale lookup's result is ignored
+  function hideTest() { testerLines = []; testWrap.classList.add('hidden'); testToggle.checked = false; paintTestLinePicker() }
   function paintTestLinePicker() {
     // >1 permitted line → show the picker; exactly 1 → that line is implied (no picker).
     const show = testToggle.checked && testerLines.length > 1
@@ -467,22 +469,28 @@
   }
   async function checkTester() {
     const num = (phoneEl.value || '').trim()
+    const myReq = ++testReq
     // Don't even ask until there's a plausibly complete number — avoids a request per
     // keystroke and matches the server's own 27XXXXXXXXX gate.
-    if (num.replace(/\D/g, '').length < 9) { testerLines = []; testWrap.classList.add('hidden'); testToggle.checked = false; paintTestLinePicker(); return }
+    if (num.replace(/\D/g, '').length < 9) { hideTest(); return }
     try {
       const res = await fetch(FN_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'apikey': ANON, 'Authorization': 'Bearer ' + ANON },
         body: JSON.stringify({ check_tester: num }),
       })
+      if (myReq !== testReq) return // a newer lookup superseded this one — ignore the result
+      if (!res.ok) { hideTest(); return }
       const d = await res.json()
-      testerLines = (d && d.tester && Array.isArray(d.lines)) ? d.lines.filter(l => TEST_LINE_LABELS[l]) : []
+      if (myReq !== testReq) return
+      testerLines = (d && d.tester && Array.isArray(d.lines)) ? d.lines.filter((l) => Object.hasOwn(TEST_LINE_LABELS, l)) : []
       if (testerLines.length === 0) {
         testWrap.classList.add('hidden'); testToggle.checked = false
       } else {
         testWrap.classList.remove('hidden')
-        testLineSel.innerHTML = testerLines.map(l => `<option value="${l}">${TEST_LINE_LABELS[l]}</option>`).join('')
+        testLineSel.replaceChildren(...testerLines.map((l) => {
+          const o = document.createElement('option'); o.value = l; o.textContent = TEST_LINE_LABELS[l]; return o
+        }))
       }
       paintTestLinePicker()
     } catch { /* non-fatal — leave the test control hidden */ }
