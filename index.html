@@ -66,14 +66,18 @@
         </div>
         <div>
           <span class="lbl">Service</span>
+          <!-- Each service carries a short caption so the client knows what it is at a
+               glance — especially Home Safe (the two-driver team people don't expect).
+               The caption uses opacity so it flips to white with the label when the
+               button is selected (paint() sets the button's colour inline). -->
           <div class="grid grid-cols-2 gap-2 sm:grid-cols-3" id="service">
             <!-- Companion-only: the covered accident ride (service_type trauma). Hidden until companion mode. -->
-            <button type="button" data-v="trauma" id="svcAccident" class="svc hidden rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium">Accident — now</button>
-            <button type="button" data-v="airport" class="svc rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium">Airport</button>
-            <button type="button" data-v="drive_home" class="svc rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium">Home Safe</button>
-            <button type="button" data-v="convenient" class="svc rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium">Convenient</button>
-            <button type="button" data-v="manage_booking" id="svcPrivate" class="svc rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium">Private / Card</button>
-            <button type="button" data-v="trauma" id="svcOther" class="svc rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium">Other</button>
+            <button type="button" data-v="trauma" id="svcAccident" class="svc hidden flex flex-col items-start gap-0.5 rounded-lg border border-slate-300 px-3 py-2 text-left"><span class="text-sm font-semibold">Accident — now</span><span class="text-[11px] leading-tight opacity-70">Covered accident ride home</span></button>
+            <button type="button" data-v="airport" class="svc flex flex-col items-start gap-0.5 rounded-lg border border-slate-300 px-3 py-2 text-left"><span class="text-sm font-semibold">Airport</span><span class="text-[11px] leading-tight opacity-70">Flight-timed, door-to-door</span></button>
+            <button type="button" data-v="drive_home" class="svc flex flex-col items-start gap-0.5 rounded-lg border border-slate-300 px-3 py-2 text-left"><span class="text-sm font-semibold">Home Safe</span><span class="text-[11px] leading-tight opacity-70">Two drivers — one drives your car home</span></button>
+            <button type="button" data-v="convenient" class="svc flex flex-col items-start gap-0.5 rounded-lg border border-slate-300 px-3 py-2 text-left"><span class="text-sm font-semibold">Convenient</span><span class="text-[11px] leading-tight opacity-70">On-demand, any trip in town</span></button>
+            <button type="button" data-v="manage_booking" id="svcPrivate" class="svc flex flex-col items-start gap-0.5 rounded-lg border border-slate-300 px-3 py-2 text-left"><span class="text-sm font-semibold">Private / Card</span><span class="text-[11px] leading-tight opacity-70">Pay-as-you-go, by card</span></button>
+            <button type="button" data-v="trauma" id="svcOther" class="svc flex flex-col items-start gap-0.5 rounded-lg border border-slate-300 px-3 py-2 text-left"><span class="text-sm font-semibold">Other</span><span class="text-[11px] leading-tight opacity-70">Medical, treatment &amp; more</span></button>
           </div>
           <p id="svcDesc" class="mt-2 text-xs leading-snug text-slate-500"></p>
         </div>
@@ -81,6 +85,21 @@
         <div class="grid gap-4 sm:grid-cols-2">
           <label><span class="lbl">Full name <span class="req">*</span></span><input name="full_name" class="field" required placeholder="Jane Doe" /></label>
           <label><span class="lbl">Mobile <span class="req">*</span></span><input name="phone" class="field" required placeholder="082 123 4567" autocomplete="tel" /><span class="mt-1 block text-xs text-slate-400">Where we send trip updates. Booking for someone else? Enter the <span class="font-semibold text-slate-500">passenger’s own</span> mobile.</span></label>
+        </div>
+        <!-- Test lane — appears ONLY when the typed Mobile belongs to an allowlisted
+             tester (checked server-side via book-trip). A real client never sees this
+             and nothing in their payload changes. A ticked test booking goes to test
+             drivers only and never reaches a real client. -->
+        <div id="testLaneWrap" class="hidden rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3">
+          <label class="flex items-center gap-2 text-sm font-semibold text-amber-900">
+            <input type="checkbox" id="testToggle" class="size-4 accent-amber-600" />
+            🧪 Make this a TEST booking
+          </label>
+          <div id="testLineWrap" class="mt-2.5 hidden">
+            <span class="lbl" style="color:#92400e">Test line</span>
+            <select id="testLine" class="field"></select>
+          </div>
+          <p class="mt-2 text-xs leading-snug text-amber-700">Test bookings route to test drivers only and are never sent to a real client.</p>
         </div>
         <label class="block"><span class="lbl">Alternative contact number <span class="font-normal text-slate-400">— optional</span></span><input name="alt_phone" type="tel" class="field" placeholder="Another number we can reach" autocomplete="tel" /></label>
         <p id="welcome" class="hidden -mt-2 flex items-center gap-1.5 text-xs font-medium text-emerald-600"></p>
@@ -424,6 +443,55 @@
   codeEl.addEventListener('blur', checkCode)
   if (codeEl.value) checkCode()
 
+  // Test lane — reveal the 🧪 toggle ONLY for an allowlisted tester (checked
+  // server-side by book-trip via check_tester, keyed on the typed Mobile). A real
+  // client never sees any of this, and a non-tester's payload is unchanged. A ticked
+  // test booking sends test_line; book-trip re-validates it (tester + permitted line)
+  // before honouring it — the client flag is never trusted on its own.
+  const TEST_LINE_LABELS = { mua: 'MUA (insurer)', private: 'Private / Card', netstar_accident: 'NetStar Accident' }
+  let testerLines = []
+  const testWrap = document.getElementById('testLaneWrap')
+  const testToggle = document.getElementById('testToggle')
+  const testLineWrap = document.getElementById('testLineWrap')
+  const testLineSel = document.getElementById('testLine')
+  const phoneEl = form.phone
+  let testTimer
+  function paintTestLinePicker() {
+    // >1 permitted line → show the picker; exactly 1 → that line is implied (no picker).
+    const show = testToggle.checked && testerLines.length > 1
+    testLineWrap.classList.toggle('hidden', !show)
+  }
+  function selectedTestLine() {
+    if (!testToggle.checked || testerLines.length === 0) return null
+    return testerLines.length === 1 ? testerLines[0] : testLineSel.value
+  }
+  async function checkTester() {
+    const num = (phoneEl.value || '').trim()
+    // Don't even ask until there's a plausibly complete number — avoids a request per
+    // keystroke and matches the server's own 27XXXXXXXXX gate.
+    if (num.replace(/\D/g, '').length < 9) { testerLines = []; testWrap.classList.add('hidden'); testToggle.checked = false; paintTestLinePicker(); return }
+    try {
+      const res = await fetch(FN_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': ANON, 'Authorization': 'Bearer ' + ANON },
+        body: JSON.stringify({ check_tester: num }),
+      })
+      const d = await res.json()
+      testerLines = (d && d.tester && Array.isArray(d.lines)) ? d.lines.filter(l => TEST_LINE_LABELS[l]) : []
+      if (testerLines.length === 0) {
+        testWrap.classList.add('hidden'); testToggle.checked = false
+      } else {
+        testWrap.classList.remove('hidden')
+        testLineSel.innerHTML = testerLines.map(l => `<option value="${l}">${TEST_LINE_LABELS[l]}</option>`).join('')
+      }
+      paintTestLinePicker()
+    } catch { /* non-fatal — leave the test control hidden */ }
+  }
+  testToggle.addEventListener('change', paintTestLinePicker)
+  phoneEl.addEventListener('input', () => { clearTimeout(testTimer); testTimer = setTimeout(checkTester, 500) })
+  phoneEl.addEventListener('blur', checkTester)
+  if (phoneEl.value) checkTester()
+
   // Google Places autocomplete → capture coordinates so web bookings land on
   // the dispatch maps. initMA is the Maps JS callback (see script tag below).
   // pickupText / dropText mirror whatever the address fields hold. The deprecated
@@ -533,6 +601,11 @@
     }
     payload.service_type = service
     payload.indemnity_accepted = true // captured at booking — see terms acknowledgment
+    // Test lane — only when an allowlisted tester ticked the 🧪 toggle. book-trip
+    // re-validates (tester + permitted line) and flags is_test; a real client never
+    // reaches this (the toggle stays hidden) so their payload is unchanged.
+    const testLineVal = selectedTestLine()
+    if (testLineVal) payload.test_line = testLineVal
     // Netstar Companion — pass the member ref + mode so book-trip resolves the member,
     // tags the trip, and routes the covered accident ride vs a private pay-go booking.
     // Entitlement (cover, 1-free-accident-ride/year) is decided server-side, not here.
