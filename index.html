@@ -232,6 +232,8 @@
         body: JSON.stringify({ config: true }),
       })
       const cfg = await res.json()
+      if (cfg && cfg.call_centre_number) window.__ccNum = String(cfg.call_centre_number)
+      if (cfg && cfg.call_centre_backup_number) window.__ccBackup = String(cfg.call_centre_backup_number)
       if (cfg && cfg.escort_enabled === true) {
         const block = document.getElementById('escortBlock')
         if (block) block.style.display = ''
@@ -321,6 +323,24 @@
     el.addEventListener('input', () => { if (el.checkValidity()) el.style.borderColor = '' })
   })
   const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
+  // Call-centre number (set in the console, handed to this page by book-trip's config
+  // response). A tap-to-call button when we have it; plain text otherwise.
+  const _ccNum = () => (window.__ccNum || '').toString().trim()
+  const _ccOn = () => { const n = _ccNum(); return n ? (' on <b>' + esc(n) + '</b>') : '' }
+  // The number is already named in the sentence, so the button is a plain tap-to-call
+  // action (no repeated digits). Falls back to nothing when no number is configured.
+  const _callBtn = () => { const n = _ccNum() || (window.__ccBackup || '').toString().trim(); if (!n) return ''; const tel = n.replace(/[^0-9+]/g, ''); return `<div style="margin-top:10px"><a href="tel:${tel}" style="display:inline-flex;align-items:center;gap:6px;background:#059669;color:#fff;font-weight:600;text-decoration:none;border-radius:999px;padding:8px 16px;font-size:13px">📞 Call</a></div>` }
+  // Backup call-centre number (leaflet: "if you can't get through, call…"). Config-
+  // driven like the primary; appended to the block message when one is set.
+  const _ccBackupLine = () => { const b = (window.__ccBackup || '').toString().trim(); return b ? (' If you can’t get through, call <b>' + esc(b) + '</b>.') : '' }
+  // ONE place that turns a server/validation block into a visible message + Call
+  // button, so no form ever dead-ends with a raw "Something went wrong" again.
+  // `html` is trusted markup (our own copy); `text` is escaped server text.
+  const showBlock = (el, { html, text }) => {
+    el.innerHTML = (html != null ? html : esc(text).replace(/\n/g, '<br>')) + _callBtn()
+    el.classList.remove('hidden')
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
   const SVC_LABEL = { airport: 'Airport', drive_home: 'Home Safe', convenient: 'Convenient', manage_booking: 'Private / Card', trauma: 'Other' }
 
   // Luggage size — segmented picker mirroring book.html (small | medium | large).
@@ -676,6 +696,22 @@
       showNumberConfirm((payload.phone || '').trim(), () => { numberConfirmed = true; form.requestSubmit() })
       return
     }
+    // HARD lead-time floors (mirror of the server rule in _shared/leadTime.ts; the
+    // server stays the authority and re-blocks below). Home Safe needs 90 min, an
+    // airport transfer 12 h, every other trip 6 h. Inside the floor we show the
+    // call-centre message right here — no wasted round-trip, no raw error.
+    {
+      const _t = (form.pickup_time.value || '').slice(0, 5)
+      const _when = Date.parse(form.trip_date.value + 'T' + (/^\d{2}:\d{2}$/.test(_t) ? _t : '00:00') + ':00+02:00')
+      if (!isNaN(_when)) {
+        const _mins = (_when - Date.now()) / 60000
+        let _html = ''
+        if (service === 'drive_home' && _mins < 90) _html = 'Home Safe trips need at least <b>90 minutes</b> notice so we can arrange your two-driver team safely. For a trip this soon, please call our call centre' + _ccOn() + '.' + _ccBackupLine()
+        else if (service === 'airport' && _mins < 720) _html = 'Airport trips need at least <b>12 hours</b> notice — an early pickup means the driver is up before dawn, so we need time to arrange one. For a trip this soon, please call our call centre' + _ccOn() + ' and we will do our best.' + _ccBackupLine()
+        else if (service !== 'drive_home' && service !== 'airport' && _mins < 360) _html = 'Trips need at least <b>6 hours</b> notice. For a trip this soon, please call our call centre' + _ccOn() + ' and we will do our best to arrange a driver.' + _ccBackupLine()
+        if (_html) { showBlock(errEl, { html: _html }); btn.disabled = false; btn.textContent = 'Request my trip'; return }
+      }
+    }
     try {
       const res = await fetch(FN_URL, {
         method: 'POST',
@@ -683,7 +719,12 @@
         body: JSON.stringify(payload),
       })
       const data = await res.json()
-      if (!res.ok || data.error) throw new Error(data.error || 'Something went wrong. Please try again.')
+      if (!res.ok || data.error) {
+        // A lead-time / cover block comes back as HTTP 4xx with a friendly `message`
+        // (and no `error`). Show that message + a Call button — never a dead-end.
+        if (!data.error && data.message) { showBlock(errEl, { html: esc(data.message).replace(/\n/g, '<br>') + _ccBackupLine() }); return }
+        throw new Error(data.error || 'Something went wrong. Please try again.')
+      }
       document.getElementById('ref').textContent = data.ref
       const fl = document.getElementById('fareLine')
       if (data.free) {
