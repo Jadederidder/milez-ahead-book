@@ -329,7 +329,7 @@
   const _ccOn = () => { const n = _ccNum(); return n ? (' on <b>' + esc(n) + '</b>') : '' }
   // The number is already named in the sentence, so the button is a plain tap-to-call
   // action (no repeated digits). Falls back to nothing when no number is configured.
-  const _callBtn = () => { const n = _ccNum(); if (!n) return ''; const tel = n.replace(/[^0-9+]/g, ''); return `<div style="margin-top:10px"><a href="tel:${tel}" style="display:inline-flex;align-items:center;gap:6px;background:#059669;color:#fff;font-weight:600;text-decoration:none;border-radius:999px;padding:8px 16px;font-size:13px">📞 Call</a></div>` }
+  const _callBtn = () => { const n = _ccNum() || (window.__ccBackup || '').toString().trim(); if (!n) return ''; const tel = n.replace(/[^0-9+]/g, ''); return `<div style="margin-top:10px"><a href="tel:${tel}" style="display:inline-flex;align-items:center;gap:6px;background:#059669;color:#fff;font-weight:600;text-decoration:none;border-radius:999px;padding:8px 16px;font-size:13px">📞 Call</a></div>` }
   // Backup call-centre number (leaflet: "if you can't get through, call…"). Config-
   // driven like the primary; appended to the block message when one is set.
   const _ccBackupLine = () => { const b = (window.__ccBackup || '').toString().trim(); return b ? (' If you can’t get through, call <b>' + esc(b) + '</b>.') : '' }
