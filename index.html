@@ -414,7 +414,11 @@
       // A Companion member arrives already identified by their signed link (ref), and
       // entitlement is decided server-side — so the generic member fields are just
       // noise here. Hide Policy/membership, ID and Voucher for the Companion flow.
-      for (const id of ['fldPolicy', 'fldId', 'fldVoucher']) document.getElementById(id)?.classList.add('hidden')
+      for (const id of ['fldPolicy', 'fldId']) document.getElementById(id)?.classList.add('hidden')
+      // Hide Voucher too — UNLESS a code was prefilled in the link (?code=…), so the
+      // member can still see + correct an invalid prefilled code (its validation
+      // message lives in this field). The empty field submits as a no-op anyway.
+      if (!form.code?.value.trim()) document.getElementById('fldVoucher')?.classList.add('hidden')
       // Co-brand to feel like a continuation of the NetStar Companion app — purple
       // theme + a NetStar Companion lockup, with Milez Ahead named as the provider.
       document.body.setAttribute('data-companion', '1')
