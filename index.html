@@ -411,8 +411,6 @@
       window.__companionSig = (q.get('sig') || '').trim()
       const badge = document.getElementById('companionBadge')
       if (badge) { badge.classList.remove('hidden'); badge.classList.add('flex') }
-      // The companion has its own clear choices, so hide the generic "Other".
-      document.getElementById('svcOther')?.classList.add('hidden')
       // A Companion member arrives already identified by their signed link (ref), and
       // entitlement is decided server-side — so the generic member fields are just
       // noise here. Hide Policy/membership, ID and Voucher for the Companion flow.
@@ -424,19 +422,40 @@
       if (lock) lock.innerHTML = '<span class="ns-underline text-2xl font-extrabold tracking-widest">NETSTAR</span><span class="rounded-md bg-white/15 px-2 py-0.5 text-sm font-semibold">Companion</span>'
       const heroSub = document.getElementById('heroSub')
       if (heroSub) heroSub.innerHTML = 'Your executive ride — <span class="font-semibold text-white">powered by Milez Ahead</span>, monitored end-to-end.'
+      // Companion = exactly TWO journeys (per the integration spec): the COVERED
+      // accident ride, or a PAY-AS-YOU-GO private trip. Hide the generic service
+      // variants so the member isn't faced with a menu where everything is really just
+      // pay-as-you-go — that's the confusing part.
+      for (const v of ['airport', 'drive_home', 'convenient']) document.querySelector('#service [data-v="' + v + '"]')?.classList.add('hidden')
+      document.getElementById('svcOther')?.classList.add('hidden')
+      const acc = document.getElementById('svcAccident')
+      const priv = document.getElementById('svcPrivate')
+      // Clearer two-journey labels.
+      if (acc) acc.innerHTML = '<span class="text-sm font-semibold">Accident ride home</span><span class="text-[11px] leading-tight opacity-70">Covered — no charge</span>'
+      if (priv) priv.innerHTML = '<span class="text-sm font-semibold">Private trip</span><span class="text-[11px] leading-tight opacity-70">Pay-as-you-go, by card</span>'
+      // Keep companion_mode in sync with the journey actually picked, so book-trip
+      // covers an accident ride or bills a private trip correctly. The accident card
+      // shares the generic "trauma" service, so override its blurb to the covered-ride
+      // wording (not the generic "any other trip, medical/hospital" text).
+      const svcDescEl2 = document.getElementById('svcDesc')
+      const COMP_DESC_ACC = 'Your covered accident ride home — no charge. We’ll get you home safely.'
+      acc?.addEventListener('click', () => { window.__companionMode = 'accident'; if (svcDescEl2) svcDescEl2.textContent = COMP_DESC_ACC })
+      priv?.addEventListener('click', () => { window.__companionMode = 'private' })
       if (companionMode === 'accident') {
-        // Open ON the covered accident ride, and pin the pickup to the member's live
-        // GPS so a shaken member doesn't have to type an address (reverse-geocoded in
-        // initMA once Maps loads).
-        const acc = document.getElementById('svcAccident')
+        // Both journeys offered: default to the covered accident ride; the member can
+        // still switch to a pay-as-you-go private trip. Pin pickup to their live GPS so
+        // a shaken member doesn't have to type an address (reverse-geocoded later).
         acc?.classList.remove('hidden')
         acc?.click()
+        if (svcDescEl2) svcDescEl2.textContent = COMP_DESC_ACC
         const glat = parseFloat(q.get('lat')), glng = parseFloat(q.get('lng'))
         if (Number.isFinite(glat) && Number.isFinite(glng)) window.__pickupFromGps = { lat: glat, lng: glng }
-        welcome.textContent = '🛡️ Netstar Companion — your accident ride home. We’ve got you.'
+        welcome.textContent = '🛡️ Netstar Companion — your covered accident ride, or a private trip. We’ve got you.'
       } else {
-        // Private pay-go — open on the Private / Card service.
-        document.getElementById('svcPrivate')?.click()
+        // Private link: the covered accident ride isn't offered here (cover is tied to
+        // an accident link), so show the single clear pay-as-you-go option.
+        acc?.classList.add('hidden')
+        priv?.click()
         welcome.textContent = '🛡️ Welcome, Netstar Companion member — book your private trip below.'
       }
       welcome.classList.remove('hidden')
