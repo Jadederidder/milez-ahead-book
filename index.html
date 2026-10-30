@@ -22,19 +22,28 @@
   .agent-card .field { background:#fff; color:#0f172a; border-color:#33436b; }
   .agent-card .field:focus { border-color: var(--gold); box-shadow:0 0 0 3px rgba(192,176,112,.25); }
   .agent-card .field::placeholder { color:#94a3b8; }
+  /* NetStar Companion co-brand — activated in Companion mode so the member feels a
+     continuation of the NetStar app, with Milez Ahead as the named provider. */
+  :root { --ns-deep:#241063; --ns-purple:#3b1f8f; --ns-accent:#6d4ae0; --ns-gold:#d8b24e; }
+  body[data-companion] #hero { background:linear-gradient(140deg,var(--ns-deep) 0%,var(--ns-purple) 55%,#5a34c9 100%) !important; }
+  body[data-companion] .field:focus { border-color:var(--ns-accent); box-shadow:0 0 0 3px rgba(109,74,224,.18); }
+  body[data-companion] #submit { background:linear-gradient(135deg,var(--ns-purple),var(--ns-accent)) !important; }
+  body[data-companion] #companionBadge { border-color:rgba(109,74,224,.25) !important; background:rgba(109,74,224,.08) !important; color:var(--ns-purple) !important; }
+  .ns-underline { position:relative; }
+  .ns-underline::after { content:''; position:absolute; left:0; right:0; bottom:-4px; height:3px; border-radius:3px; background:#4aa3ff; }
 </style>
 </head>
 <body class="min-h-screen bg-slate-50 text-slate-800">
 
   <!-- Hero -->
-  <header class="relative overflow-hidden" style="background:linear-gradient(135deg,#0e1e3a 0%,#007880 100%);">
+  <header id="hero" class="relative overflow-hidden" style="background:linear-gradient(135deg,#0e1e3a 0%,#007880 100%);">
     <div class="mx-auto max-w-3xl px-6 py-12 text-center text-white">
-      <div class="inline-flex items-center gap-3">
+      <div id="brandLockup" class="inline-flex items-center gap-3">
         <span class="flex size-11 items-center justify-center rounded-xl bg-white/10 text-xl font-extrabold tracking-tight">M</span>
         <span class="text-2xl font-extrabold tracking-tight">MILEZ <span style="color:var(--gold)">AHEAD</span></span>
       </div>
-      <h1 class="mt-6 text-3xl font-bold sm:text-4xl">Book your trip</h1>
-      <p class="mt-2 text-sm text-white/80">Executive Travel Concierge · chauffeured, monitored end-to-end.</p>
+      <h1 id="heroTitle" class="mt-6 text-3xl font-bold sm:text-4xl">Book your trip</h1>
+      <p id="heroSub" class="mt-2 text-sm text-white/80">Executive Travel Concierge · chauffeured, monitored end-to-end.</p>
     </div>
   </header>
 
@@ -104,15 +113,15 @@
         <label class="block"><span class="lbl">Alternative contact number <span class="font-normal text-slate-400">— optional</span></span><input name="alt_phone" type="tel" class="field" placeholder="Another number we can reach" autocomplete="tel" /></label>
         <p id="welcome" class="hidden -mt-2 flex items-center gap-1.5 text-xs font-medium text-emerald-600"></p>
         <label class="block"><span class="lbl">Email</span><input name="email" type="email" class="field" placeholder="you@email.com" /></label>
-        <label class="block">
+        <label id="fldPolicy" class="block">
           <span class="lbl">Policy / membership number <span class="font-normal text-slate-400">— members only</span></span>
           <input name="policy_number" class="field" placeholder="e.g. MA-2026-48217" />
           <span class="mt-1 block text-xs text-slate-400">If your travel is covered by a programme, enter your policy number. Otherwise just leave it blank.</span>
         </label>
 
-        <label class="block"><span class="lbl">ID number <span class="font-normal text-slate-400">— optional</span></span><input name="id_number" class="field" placeholder="e.g. 8501015800089" autocomplete="off" inputmode="numeric" /></label>
+        <label id="fldId" class="block"><span class="lbl">ID number <span class="font-normal text-slate-400">— optional</span></span><input name="id_number" class="field" placeholder="e.g. 8501015800089" autocomplete="off" inputmode="numeric" /></label>
 
-        <label class="block">
+        <label id="fldVoucher" class="block">
           <span class="lbl">Voucher / gift code <span class="font-normal text-slate-400">— optional</span></span>
           <input name="code" id="code" class="field" placeholder="e.g. MA-XXXXXX" autocomplete="off" autocapitalize="characters" style="text-transform:uppercase" />
           <span id="codeMsg" class="mt-1 hidden text-xs font-medium"></span>
@@ -402,21 +411,55 @@
       window.__companionSig = (q.get('sig') || '').trim()
       const badge = document.getElementById('companionBadge')
       if (badge) { badge.classList.remove('hidden'); badge.classList.add('flex') }
-      // The companion has its own clear choices, so hide the generic "Other".
+      // A Companion member arrives already identified by their signed link (ref), and
+      // entitlement is decided server-side — so the generic member fields are just
+      // noise here. Hide Policy/membership, ID and Voucher for the Companion flow.
+      for (const id of ['fldPolicy', 'fldId']) document.getElementById(id)?.classList.add('hidden')
+      // Hide Voucher too — UNLESS a code was prefilled in the link (?code=…), so the
+      // member can still see + correct an invalid prefilled code (its validation
+      // message lives in this field). The empty field submits as a no-op anyway.
+      if (!form.code?.value.trim()) document.getElementById('fldVoucher')?.classList.add('hidden')
+      // Co-brand to feel like a continuation of the NetStar Companion app — purple
+      // theme + a NetStar Companion lockup, with Milez Ahead named as the provider.
+      document.body.setAttribute('data-companion', '1')
+      const lock = document.getElementById('brandLockup')
+      if (lock) lock.innerHTML = '<span class="ns-underline text-2xl font-extrabold tracking-widest">NETSTAR</span><span class="rounded-md bg-white/15 px-2 py-0.5 text-sm font-semibold">Companion</span>'
+      const heroSub = document.getElementById('heroSub')
+      if (heroSub) heroSub.innerHTML = 'Your executive ride — <span class="font-semibold text-white">powered by Milez Ahead</span>, monitored end-to-end.'
+      // Companion = exactly TWO journeys (per the integration spec): the COVERED
+      // accident ride, or a PAY-AS-YOU-GO private trip. Hide the generic service
+      // variants so the member isn't faced with a menu where everything is really just
+      // pay-as-you-go — that's the confusing part.
+      for (const v of ['airport', 'drive_home', 'convenient']) document.querySelector('#service [data-v="' + v + '"]')?.classList.add('hidden')
       document.getElementById('svcOther')?.classList.add('hidden')
+      const acc = document.getElementById('svcAccident')
+      const priv = document.getElementById('svcPrivate')
+      // Clearer two-journey labels.
+      if (acc) acc.innerHTML = '<span class="text-sm font-semibold">Accident ride home</span><span class="text-[11px] leading-tight opacity-70">Covered — no charge</span>'
+      if (priv) priv.innerHTML = '<span class="text-sm font-semibold">Private trip</span><span class="text-[11px] leading-tight opacity-70">Pay-as-you-go, by card</span>'
+      // Keep companion_mode in sync with the journey actually picked, so book-trip
+      // covers an accident ride or bills a private trip correctly. The accident card
+      // shares the generic "trauma" service, so override its blurb to the covered-ride
+      // wording (not the generic "any other trip, medical/hospital" text).
+      const svcDescEl2 = document.getElementById('svcDesc')
+      const COMP_DESC_ACC = 'Your covered accident ride home — no charge. We’ll get you home safely.'
+      acc?.addEventListener('click', () => { window.__companionMode = 'accident'; if (svcDescEl2) svcDescEl2.textContent = COMP_DESC_ACC })
+      priv?.addEventListener('click', () => { window.__companionMode = 'private' })
       if (companionMode === 'accident') {
-        // Open ON the covered accident ride, and pin the pickup to the member's live
-        // GPS so a shaken member doesn't have to type an address (reverse-geocoded in
-        // initMA once Maps loads).
-        const acc = document.getElementById('svcAccident')
+        // Both journeys offered: default to the covered accident ride; the member can
+        // still switch to a pay-as-you-go private trip. Pin pickup to their live GPS so
+        // a shaken member doesn't have to type an address (reverse-geocoded later).
         acc?.classList.remove('hidden')
         acc?.click()
+        if (svcDescEl2) svcDescEl2.textContent = COMP_DESC_ACC
         const glat = parseFloat(q.get('lat')), glng = parseFloat(q.get('lng'))
         if (Number.isFinite(glat) && Number.isFinite(glng)) window.__pickupFromGps = { lat: glat, lng: glng }
-        welcome.textContent = '🛡️ Netstar Companion — your accident ride home. We’ve got you.'
+        welcome.textContent = '🛡️ Netstar Companion — your covered accident ride, or a private trip. We’ve got you.'
       } else {
-        // Private pay-go — open on the Private / Card service.
-        document.getElementById('svcPrivate')?.click()
+        // Private link: the covered accident ride isn't offered here (cover is tied to
+        // an accident link), so show the single clear pay-as-you-go option.
+        acc?.classList.add('hidden')
+        priv?.click()
         welcome.textContent = '🛡️ Welcome, Netstar Companion member — book your private trip below.'
       }
       welcome.classList.remove('hidden')
