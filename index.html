@@ -133,7 +133,7 @@
         </div>
         <!-- Lead-time hint — surfaced the moment a too-soon slot is picked, so the client
              isn't told only at the very end (JD 30 Oct). The hard gate still runs at submit. -->
-        <p id="leadWarn" class="hidden mt-0.5 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-xs leading-snug text-amber-800"></p>
+        <p id="leadWarn" role="status" aria-live="polite" class="hidden mt-0.5 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-xs leading-snug text-amber-800"></p>
 
         <div id="airportPick" class="hidden rounded-xl border border-slate-200 bg-slate-50/60 p-3">
           <span class="lbl">Which end is the airport?</span>
@@ -246,6 +246,9 @@
       const cfg = await res.json()
       if (cfg && cfg.call_centre_number) window.__ccNum = String(cfg.call_centre_number)
       if (cfg && cfg.call_centre_backup_number) window.__ccBackup = String(cfg.call_centre_backup_number)
+      // If a short-notice slot was already chosen before this async config landed, the
+      // warning rendered with no number/Call button — repaint it now. (CodeRabbit)
+      if (typeof paintLeadWarn === 'function') paintLeadWarn()
       if (cfg && cfg.escort_enabled === true) {
         const block = document.getElementById('escortBlock')
         if (block) block.style.display = ''
@@ -374,6 +377,10 @@
   const leadWarnEl = document.getElementById('leadWarn')
   function paintLeadWarn() {
     if (!leadWarnEl) return
+    // GLOBAL (every booking form). A client should learn a slot is too soon WHILE
+    // booking, not be surprised at the submit button (JD, 30 Oct). This is purely a
+    // presentation of the SAME lead-time floors the submit gate already enforces — no
+    // new rule, so it's safe to run everywhere without changing how the forms behave.
     const h = leadTimeWarnHtml()
     if (h) { leadWarnEl.innerHTML = h + _callBtn(); leadWarnEl.classList.remove('hidden') }
     else leadWarnEl.classList.add('hidden')
