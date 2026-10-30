@@ -112,7 +112,7 @@
         </div>
         <label class="block"><span class="lbl">Alternative contact number <span class="font-normal text-slate-400">— optional</span></span><input name="alt_phone" type="tel" class="field" placeholder="Another number we can reach" autocomplete="tel" /></label>
         <p id="welcome" class="hidden -mt-2 flex items-center gap-1.5 text-xs font-medium text-emerald-600"></p>
-        <label class="block"><span class="lbl">Email</span><input name="email" type="email" class="field" placeholder="you@email.com" /></label>
+        <label id="fldEmail" class="block"><span class="lbl">Email</span><input name="email" type="email" class="field" placeholder="you@email.com" /></label>
         <label id="fldPolicy" class="block">
           <span class="lbl">Policy / membership number <span class="font-normal text-slate-400">— members only</span></span>
           <input name="policy_number" class="field" placeholder="e.g. MA-2026-48217" />
@@ -131,6 +131,9 @@
           <label><span class="lbl">Date <span class="req">*</span></span><input name="trip_date" type="date" class="field" required /></label>
           <label><span class="lbl">Pickup time <span class="req">*</span></span><input name="pickup_time" type="time" class="field" required /></label>
         </div>
+        <!-- Lead-time hint — surfaced the moment a too-soon slot is picked, so the client
+             isn't told only at the very end (JD 30 Oct). The hard gate still runs at submit. -->
+        <p id="leadWarn" class="hidden mt-0.5 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-xs leading-snug text-amber-800"></p>
 
         <div id="airportPick" class="hidden rounded-xl border border-slate-200 bg-slate-50/60 p-3">
           <span class="lbl">Which end is the airport?</span>
@@ -173,9 +176,9 @@
           <p class="mt-1.5 text-xs text-slate-400">Helps us send a vehicle that fits.</p>
         </div>
 
-        <label class="block"><span class="lbl">Preferred driver <span class="font-normal text-slate-400">— optional</span></span><input name="preferred_driver" class="field" placeholder="Any available driver — type a name" autocomplete="off" /></label>
+        <label id="fldPrefDriver" class="block"><span class="lbl">Preferred driver <span class="font-normal text-slate-400">— optional</span></span><input name="preferred_driver" class="field" placeholder="Any available driver — type a name" autocomplete="off" /></label>
 
-        <div class="grid gap-4 sm:grid-cols-2">
+        <div id="fldDriverVehPref" class="grid gap-4 sm:grid-cols-2">
           <label><span class="lbl">Driver preference</span>
             <select name="driver_sex_pref" class="field">
               <option value="">No preference</option>
@@ -307,7 +310,7 @@
       b.style.borderColor = on ? '#0e1e3a' : '#cbd5e1'
     })
   }
-  svcBtns.forEach(b => b.addEventListener('click', () => { service = b.dataset.v; paint() }))
+  svcBtns.forEach(b => b.addEventListener('click', () => { service = b.dataset.v; paint(); paintLeadWarn() }))
   legBtns.forEach(b => b.addEventListener('click', () => { airportLeg = b.dataset.leg; applyAirport(); paint() }))
   airportSel.addEventListener('change', applyAirport)
   function applyAirport() {
@@ -351,6 +354,32 @@
     el.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }
   const SVC_LABEL = { airport: 'Airport', drive_home: 'Home Safe', convenient: 'Convenient', manage_booking: 'Private / Card', trauma: 'Other' }
+
+  // Lead-time hint, surfaced as soon as a too-soon slot is chosen (not only at submit).
+  // Mirrors the floors in the submit gate below (which stays the authority); service
+  // name is kept neutral so it reads right whether the button says Home Safe or Drive
+  // me home. Returns warning HTML when inside the floor for the current service, else ''.
+  function leadTimeWarnHtml() {
+    const _t = (form.pickup_time.value || '').slice(0, 5)
+    const _d = form.trip_date.value
+    if (!_d || !/^\d{2}:\d{2}$/.test(_t)) return ''
+    const _when = Date.parse(_d + 'T' + _t + ':00+02:00')
+    if (isNaN(_when)) return ''
+    const _mins = (_when - Date.now()) / 60000
+    if (service === 'drive_home' && _mins < 90) return 'This trip needs at least <b>90 minutes</b> notice so we can arrange your two-driver team safely. For a trip this soon, please call our call centre' + _ccOn() + '.' + _ccBackupLine()
+    if (service === 'airport' && _mins < 720) return 'Airport trips need at least <b>12 hours</b> notice. For a trip this soon, please call our call centre' + _ccOn() + ' and we will do our best.' + _ccBackupLine()
+    if (service !== 'drive_home' && service !== 'airport' && _mins < 360) return 'Trips need at least <b>6 hours</b> notice. For a trip this soon, please call our call centre' + _ccOn() + ' and we will do our best to arrange a driver.' + _ccBackupLine()
+    return ''
+  }
+  const leadWarnEl = document.getElementById('leadWarn')
+  function paintLeadWarn() {
+    if (!leadWarnEl) return
+    const h = leadTimeWarnHtml()
+    if (h) { leadWarnEl.innerHTML = h + _callBtn(); leadWarnEl.classList.remove('hidden') }
+    else leadWarnEl.classList.add('hidden')
+  }
+  form.trip_date.addEventListener('change', paintLeadWarn)
+  form.pickup_time.addEventListener('change', paintLeadWarn)
 
   // Luggage size — segmented picker mirroring book.html (small | medium | large).
   let luggageSize = 'small'
@@ -419,6 +448,9 @@
       // member can still see + correct an invalid prefilled code (its validation
       // message lives in this field). The empty field submits as a no-op anyway.
       if (!form.code?.value.trim()) document.getElementById('fldVoucher')?.classList.add('hidden')
+      // The Companion ride is quick and identity-bound — email, preferred driver and the
+      // driver/vehicle preferences are noise here. Hide them (the general web form keeps them).
+      for (const id of ['fldEmail', 'fldPrefDriver', 'fldDriverVehPref']) document.getElementById(id)?.classList.add('hidden')
       // Co-brand to feel like a continuation of the NetStar Companion app — purple
       // theme + a NetStar Companion lockup, with Milez Ahead named as the provider.
       document.body.setAttribute('data-companion', '1')
@@ -430,13 +462,19 @@
       // accident ride, or a PAY-AS-YOU-GO private trip. Hide the generic service
       // variants so the member isn't faced with a menu where everything is really just
       // pay-as-you-go — that's the confusing part.
-      for (const v of ['airport', 'drive_home', 'convenient']) document.querySelector('#service [data-v="' + v + '"]')?.classList.add('hidden')
+      // Companion shows the journeys that make sense: Drive me home (two-driver) and
+      // Book a ride (any trip, by card) — plus the covered Accident ride in accident mode.
+      // Hide the generic airport/convenient/other buttons (Book a ride covers them).
+      for (const v of ['airport', 'convenient']) document.querySelector('#service [data-v="' + v + '"]')?.classList.add('hidden')
       document.getElementById('svcOther')?.classList.add('hidden')
       const acc = document.getElementById('svcAccident')
       const priv = document.getElementById('svcPrivate')
-      // Clearer two-journey labels.
+      const driveHome = document.querySelector('#service [data-v="drive_home"]')
+      // Clear, by-what-they-are labels. Both Drive me home and Book a ride are paid;
+      // Accident is the covered one. (Netstar Companion, JD 30 Oct.)
       if (acc) acc.innerHTML = '<span class="text-sm font-semibold">Accident ride home</span><span class="text-[11px] leading-tight opacity-70">Covered — no charge</span>'
-      if (priv) priv.innerHTML = '<span class="text-sm font-semibold">Private trip</span><span class="text-[11px] leading-tight opacity-70">Pay-as-you-go, by card</span>'
+      if (driveHome) driveHome.innerHTML = '<span class="text-sm font-semibold">Drive me home</span><span class="text-[11px] leading-tight opacity-70">Two drivers — one drives your car home</span>'
+      if (priv) priv.innerHTML = '<span class="text-sm font-semibold">Book a ride</span><span class="text-[11px] leading-tight opacity-70">Any trip — airport, errand, appointment · by card</span>'
       // Keep companion_mode in sync with the journey actually picked, so book-trip
       // covers an accident ride or bills a private trip correctly. The accident card
       // shares the generic "trauma" service, so override its blurb to the covered-ride
@@ -450,17 +488,21 @@
         // still switch to a pay-as-you-go private trip. Pin pickup to their live GPS so
         // a shaken member doesn't have to type an address (reverse-geocoded later).
         acc?.classList.remove('hidden')
+        // "Drive me home" is the had-a-few-drinks service — not relevant to an accident
+        // ride, so keep accident mode to the covered ride + a plain Book a ride fallback.
+        driveHome?.classList.add('hidden')
         acc?.click()
         if (svcDescEl2) svcDescEl2.textContent = COMP_DESC_ACC
         const glat = parseFloat(q.get('lat')), glng = parseFloat(q.get('lng'))
         if (Number.isFinite(glat) && Number.isFinite(glng)) window.__pickupFromGps = { lat: glat, lng: glng }
-        welcome.textContent = '🛡️ Netstar Companion — your covered accident ride, or a private trip. We’ve got you.'
+        welcome.textContent = '🛡️ Netstar Companion — your covered accident ride, or book a ride. We’ve got you.'
       } else {
         // Private link: the covered accident ride isn't offered here (cover is tied to
-        // an accident link), so show the single clear pay-as-you-go option.
+        // an accident link). Two paid journeys stay: Drive me home + Book a ride. Default
+        // to Book a ride; the member can switch to the two-driver Drive me home.
         acc?.classList.add('hidden')
         priv?.click()
-        welcome.textContent = '🛡️ Welcome, Netstar Companion member — book your private trip below.'
+        welcome.textContent = '🛡️ Welcome, Netstar Companion member — choose your ride below.'
       }
       welcome.classList.remove('hidden')
     }
@@ -546,7 +588,10 @@
       if (!res.ok) { hideTest(); return }
       const d = await res.json()
       if (myReq !== testReq) return
-      testerLines = (d && d.tester && Array.isArray(d.lines)) ? d.lines.filter((l) => Object.hasOwn(TEST_LINE_LABELS, l)) : []
+      // In the Netstar Companion flow the MUA (insurer) test route doesn't apply — a
+      // Companion tester only needs the private / NetStar lanes. (JD 30 Oct.)
+      const _isCompanion = !!(window.__companionMode || window.__companionRef)
+      testerLines = (d && d.tester && Array.isArray(d.lines)) ? d.lines.filter((l) => Object.hasOwn(TEST_LINE_LABELS, l) && !(_isCompanion && l === 'mua')) : []
       if (testerLines.length === 0) {
         testWrap.classList.add('hidden'); testToggle.checked = false
       } else {
