@@ -147,13 +147,27 @@
         <label class="block"><span class="lbl">Pickup address <span class="req">*</span></span><input name="pickup_address" class="field" required placeholder="Where should we collect you?" /></label>
         <label class="block"><span class="lbl">Drop-off address <span class="req">*</span></span><input name="dropoff_address" class="field" required placeholder="Where are you going?" /></label>
 
-        <div class="grid gap-4 sm:grid-cols-3">
-          <label><span class="lbl">Passengers <span class="req">*</span></span><input name="passengers" type="number" min="1" class="field" required placeholder="How many?" /></label>
-          <label><span class="lbl">Luggage <span class="req">*</span></span><input name="luggage" type="number" min="0" class="field" required placeholder="— (0 if none)" /></label>
-          <label><span class="lbl">Flight no.</span><input name="flight_number" class="field" placeholder="e.g. BA6321" /></label>
+        <!-- Home Safe / Drive me home: the two-driver team drives the client's OWN car
+             home, so we MUST capture it. Mirrors the canonical block in book.html
+             ("The car we're driving home" — make/model/colour required, reg optional).
+             Shown only for drive_home (toggled in paint()). -->
+        <div id="carFields" class="hidden">
+          <span class="lbl">The car we're driving home <span class="req">*</span></span>
+          <div class="mt-1 grid gap-2 sm:grid-cols-2">
+            <input name="client_vehicle_make" class="field" placeholder="Make *" aria-label="Car make" autocomplete="off" />
+            <input name="client_vehicle_model" class="field" placeholder="Model *" aria-label="Car model" autocomplete="off" />
+            <input name="client_vehicle_colour" class="field" placeholder="Colour *" aria-label="Car colour" autocomplete="off" />
+            <input name="client_vehicle_reg" class="field" placeholder="Registration (optional)" aria-label="Car registration" autocomplete="off" />
+          </div>
         </div>
 
-        <div>
+        <div class="grid gap-4 sm:grid-cols-3">
+          <label><span class="lbl">Passengers <span class="req">*</span></span><input name="passengers" type="number" min="1" class="field" required placeholder="How many?" /></label>
+          <label id="fldLuggage"><span class="lbl">Luggage <span class="req">*</span></span><input name="luggage" type="number" min="0" class="field" required placeholder="— (0 if none)" /></label>
+          <label id="fldFlight"><span class="lbl">Flight no.</span><input name="flight_number" class="field" placeholder="e.g. BA6321" /></label>
+        </div>
+
+        <div id="fldLuggageSize">
           <span class="lbl">Luggage size</span>
           <div class="mt-1 grid grid-cols-3 gap-2" id="luggageSize">
             <button type="button" data-sz="small" class="lsz rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium">Small</button>
@@ -162,7 +176,7 @@
           </div>
         </div>
 
-        <div>
+        <div id="fldSpecial">
           <span class="lbl">Travelling with <span class="font-normal text-slate-400">— optional</span></span>
           <div class="mt-1 flex flex-wrap gap-2" id="special">
             <button type="button" data-v="baby_seat" class="chip rounded-full border border-slate-300 px-3 py-1.5 text-sm font-medium">Baby seat</button>
@@ -178,21 +192,12 @@
 
         <label id="fldPrefDriver" class="block"><span class="lbl">Preferred driver <span class="font-normal text-slate-400">— optional</span></span><input name="preferred_driver" class="field" placeholder="Any available driver — type a name" autocomplete="off" /></label>
 
-        <div id="fldDriverVehPref" class="grid gap-4 sm:grid-cols-2">
-          <label><span class="lbl">Driver preference</span>
-            <select name="driver_sex_pref" class="field">
-              <option value="">No preference</option>
-              <option value="female">Female driver</option>
-              <option value="male">Male driver</option>
-            </select></label>
-          <label><span class="lbl">Vehicle</span>
-            <select name="vehicle_class_pref" class="field">
-              <option value="">No preference</option>
-              <option value="sedan">Sedan</option>
-              <option value="suv">SUV</option>
-              <option value="7seater">7-Seater / group</option>
-            </select></label>
-        </div>
+        <label id="fldDriverVehPref" class="block"><span class="lbl">Driver preference <span class="font-normal text-slate-400">— optional</span></span>
+          <select name="driver_sex_pref" class="field">
+            <option value="">No preference</option>
+            <option value="female">Female driver</option>
+            <option value="male">Male driver</option>
+          </select></label>
 
         <label id="escortBlock" class="flex items-start gap-2.5 rounded-xl border border-slate-200 bg-slate-50/60 p-3" style="display:none">
           <input id="escort" name="add_escort" type="checkbox" class="mt-0.5 h-4 w-4 shrink-0" style="accent-color:var(--teal)" />
@@ -306,6 +311,28 @@
     if (svcDescEl) svcDescEl.textContent = SVC_DESC[service] || ''
     if (indemTextEl) indemTextEl.textContent = service === 'drive_home' ? INDEM_HOME : INDEM_PLAIN
     airportPick.classList.toggle('hidden', service !== 'airport')
+    // Home Safe / Drive me home drives the client's OWN car home → show the car fields
+    // (make/model/colour required) and hide luggage / luggage-size / flight / travelling-
+    // with (their own car, so those don't apply). Every other service: the reverse.
+    const isHome = service === 'drive_home'
+    document.getElementById('carFields')?.classList.toggle('hidden', !isHome)
+    for (const id of ['fldLuggage', 'fldFlight', 'fldLuggageSize', 'fldSpecial']) document.getElementById(id)?.classList.toggle('hidden', isHome)
+    // Preferred driver + driver preference can't be honoured on a Home Safe trip (a
+    // two-driver team dispatched on short notice), so hide them for drive_home on every
+    // form. Companion mode hides them across all its services (set once at init) — keep
+    // that here so a companion user switching service never un-hides them.
+    const _companion = !!(window.__companionMode || window.__companionRef)
+    for (const id of ['fldPrefDriver', 'fldDriverVehPref']) document.getElementById(id)?.classList.toggle('hidden', isHome || _companion)
+    // Resolve the form locally — paint() runs during init before the `form` const is
+    // assigned (TDZ), so referencing it here would throw and abort the whole setup.
+    const _f = document.querySelector('form')
+    // Disable (not just un-require) the hidden luggage field so a stale invalid value
+    // (e.g. -1 entered before switching to Home Safe) can't block submit, and it drops
+    // out of FormData too. Re-enabled for every other service.
+    if (_f?.luggage) { _f.luggage.required = !isHome; _f.luggage.disabled = isHome }
+    // Drive me home collects people AT a venue — hint the pickup is a restaurant/club.
+    if (_f?.pickup_address) _f.pickup_address.placeholder = isHome ? 'Restaurant, bar or club' : 'Where should we collect you?'
+    for (const n of ['client_vehicle_make', 'client_vehicle_model', 'client_vehicle_colour']) if (_f?.[n]) _f[n].required = isHome
     legBtns.forEach(b => {
       const on = b.dataset.leg === airportLeg
       b.style.background = on ? '#0e1e3a' : ''
@@ -313,6 +340,9 @@
       b.style.borderColor = on ? '#0e1e3a' : '#cbd5e1'
     })
   }
+  // Declared up here (not below) so the init paint() — which now reads the form to
+  // toggle Home Safe's required fields — and any handler can never hit it in the TDZ.
+  const form = document.getElementById('form')
   svcBtns.forEach(b => b.addEventListener('click', () => { service = b.dataset.v; paint(); paintLeadWarn() }))
   legBtns.forEach(b => b.addEventListener('click', () => { airportLeg = b.dataset.leg; applyAirport(); paint() }))
   airportSel.addEventListener('change', applyAirport)
@@ -325,7 +355,6 @@
   }
   paint()
 
-  const form = document.getElementById('form')
   const errEl = document.getElementById('error')
   const btn = document.getElementById('submit')
   const welcome = document.getElementById('welcome')
@@ -506,9 +535,10 @@
       } else {
         // Private link: the covered accident ride isn't offered here (cover is tied to
         // an accident link). Two paid journeys stay: Drive me home + Book a ride. Default
-        // to Book a ride; the member can switch to the two-driver Drive me home.
+        // to DRIVE ME HOME (the signature Companion service); the member can switch to
+        // Book a ride. (JD, 31 Oct.)
         acc?.classList.add('hidden')
-        priv?.click()
+        ;(driveHome || priv)?.click()
         welcome.textContent = '🛡️ Welcome, Netstar Companion member — choose your ride below.'
       }
       welcome.classList.remove('hidden')
@@ -704,6 +734,21 @@
     btn.disabled = true; btn.textContent = 'Sending…'
     const fd = new FormData(form)
     const payload = Object.fromEntries(fd.entries())
+    // Client-car fields ride along via FormData (name=client_vehicle_*). They apply ONLY
+    // to Drive me home: drop them entirely for any other service (so stale values typed
+    // on Home Safe can't leak onto a Book-a-ride booking), and drop blank/whitespace-only
+    // ones. Trim the kept values. book-trip stores them (the team drives the car home).
+    for (const k of ['client_vehicle_make', 'client_vehicle_model', 'client_vehicle_colour', 'client_vehicle_reg']) {
+      if (service !== 'drive_home' || !payload[k] || !String(payload[k]).trim()) delete payload[k]
+      else payload[k] = String(payload[k]).trim()
+    }
+    // Home Safe REQUIRES a real car (native `required` passes on whitespace, and the
+    // loop above strips a whitespace-only value) — so confirm make/model/colour survived.
+    if (service === 'drive_home' && (!payload.client_vehicle_make || !payload.client_vehicle_model || !payload.client_vehicle_colour)) {
+      errEl.textContent = "Please give the car's make, model and colour — our team drives it home for you."
+      errEl.classList.remove('hidden'); errEl.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      btn.disabled = false; btn.textContent = 'Request my trip'; return
+    }
     // Reachability: the passenger's mobile must be valid, and on a broker booking it
     // must be DISTINCT from the broker's own cell — otherwise the passenger gets no
     // trip updates (17 Sep incident, via a broker booking). Mirrors the server
@@ -749,7 +794,17 @@
     payload.add_escort = escortShown && !!document.getElementById('escort')?.checked
     payload.special_items = chipBtns.filter(b => b.dataset.on === '1').map(b => b.dataset.v)
     if (!payload.driver_sex_pref) delete payload.driver_sex_pref
-    if (!payload.vehicle_class_pref) delete payload.vehicle_class_pref
+    // Home Safe is a drive home in the member's OWN car. Fields hidden for it must never
+    // ride into the payload — even a value typed on another service before switching:
+    //  • airport/convenient fields (flight no., luggage, luggage size, travelling-with) —
+    //    flight_number comes off FormData; luggage_size/special_items are assigned above
+    //  • driver preferences (driver_sex_pref, preferred_driver) — a short-notice two-driver
+    //    team can't honour them, and preferred_driver would otherwise fold into the notes
+    //    below. Stripping here (before the notes-folding) is more robust than relying on
+    //    the hidden controls' disabled state.
+    if (service === 'drive_home') {
+      for (const k of ['flight_number', 'luggage', 'luggage_size', 'special_items', 'driver_sex_pref', 'preferred_driver']) delete payload[k]
+    }
     // Fold the optional alternative contact, ID number and preferred-driver name into
     // the driver notes so the controller sees them (book-trip stores notes as
     // booking_notes). The public page has no authenticated driver directory, so the
