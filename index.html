@@ -192,21 +192,12 @@
 
         <label id="fldPrefDriver" class="block"><span class="lbl">Preferred driver <span class="font-normal text-slate-400">— optional</span></span><input name="preferred_driver" class="field" placeholder="Any available driver — type a name" autocomplete="off" /></label>
 
-        <div id="fldDriverVehPref" class="grid gap-4 sm:grid-cols-2">
-          <label><span class="lbl">Driver preference</span>
-            <select name="driver_sex_pref" class="field">
-              <option value="">No preference</option>
-              <option value="female">Female driver</option>
-              <option value="male">Male driver</option>
-            </select></label>
-          <label><span class="lbl">Vehicle</span>
-            <select name="vehicle_class_pref" class="field">
-              <option value="">No preference</option>
-              <option value="sedan">Sedan</option>
-              <option value="suv">SUV</option>
-              <option value="7seater">7-Seater / group</option>
-            </select></label>
-        </div>
+        <label id="fldDriverVehPref" class="block"><span class="lbl">Driver preference <span class="font-normal text-slate-400">— optional</span></span>
+          <select name="driver_sex_pref" class="field">
+            <option value="">No preference</option>
+            <option value="female">Female driver</option>
+            <option value="male">Male driver</option>
+          </select></label>
 
         <label id="escortBlock" class="flex items-start gap-2.5 rounded-xl border border-slate-200 bg-slate-50/60 p-3" style="display:none">
           <input id="escort" name="add_escort" type="checkbox" class="mt-0.5 h-4 w-4 shrink-0" style="accent-color:var(--teal)" />
@@ -326,6 +317,12 @@
     const isHome = service === 'drive_home'
     document.getElementById('carFields')?.classList.toggle('hidden', !isHome)
     for (const id of ['fldLuggage', 'fldFlight', 'fldLuggageSize', 'fldSpecial']) document.getElementById(id)?.classList.toggle('hidden', isHome)
+    // Preferred driver + driver preference can't be honoured on a Home Safe trip (a
+    // two-driver team dispatched on short notice), so hide them for drive_home on every
+    // form. Companion mode hides them across all its services (set once at init) — keep
+    // that here so a companion user switching service never un-hides them.
+    const _companion = !!(window.__companionMode || window.__companionRef)
+    for (const id of ['fldPrefDriver', 'fldDriverVehPref']) document.getElementById(id)?.classList.toggle('hidden', isHome || _companion)
     // Resolve the form locally — paint() runs during init before the `form` const is
     // assigned (TDZ), so referencing it here would throw and abort the whole setup.
     const _f = document.querySelector('form')
@@ -797,7 +794,6 @@
     payload.add_escort = escortShown && !!document.getElementById('escort')?.checked
     payload.special_items = chipBtns.filter(b => b.dataset.on === '1').map(b => b.dataset.v)
     if (!payload.driver_sex_pref) delete payload.driver_sex_pref
-    if (!payload.vehicle_class_pref) delete payload.vehicle_class_pref
     // Home Safe is a drive home in the member's OWN car. The airport/convenient-trip
     // fields (flight no., luggage, luggage size, travelling-with) are hidden for it and
     // must never ride into the payload — even a value typed on another service before
