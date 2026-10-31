@@ -794,13 +794,16 @@
     payload.add_escort = escortShown && !!document.getElementById('escort')?.checked
     payload.special_items = chipBtns.filter(b => b.dataset.on === '1').map(b => b.dataset.v)
     if (!payload.driver_sex_pref) delete payload.driver_sex_pref
-    // Home Safe is a drive home in the member's OWN car. The airport/convenient-trip
-    // fields (flight no., luggage, luggage size, travelling-with) are hidden for it and
-    // must never ride into the payload — even a value typed on another service before
-    // switching to Home Safe (flight_number comes straight off FormData, luggage_size
-    // and special_items are assigned above regardless of service).
+    // Home Safe is a drive home in the member's OWN car. Fields hidden for it must never
+    // ride into the payload — even a value typed on another service before switching:
+    //  • airport/convenient fields (flight no., luggage, luggage size, travelling-with) —
+    //    flight_number comes off FormData; luggage_size/special_items are assigned above
+    //  • driver preferences (driver_sex_pref, preferred_driver) — a short-notice two-driver
+    //    team can't honour them, and preferred_driver would otherwise fold into the notes
+    //    below. Stripping here (before the notes-folding) is more robust than relying on
+    //    the hidden controls' disabled state.
     if (service === 'drive_home') {
-      for (const k of ['flight_number', 'luggage', 'luggage_size', 'special_items']) delete payload[k]
+      for (const k of ['flight_number', 'luggage', 'luggage_size', 'special_items', 'driver_sex_pref', 'preferred_driver']) delete payload[k]
     }
     // Fold the optional alternative contact, ID number and preferred-driver name into
     // the driver notes so the controller sees them (book-trip stores notes as
