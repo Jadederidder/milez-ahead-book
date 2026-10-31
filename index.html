@@ -334,7 +334,7 @@
     // out of FormData too. Re-enabled for every other service.
     if (_f?.luggage) { _f.luggage.required = !isHome; _f.luggage.disabled = isHome }
     // Drive me home collects people AT a venue — hint the pickup is a restaurant/club.
-    if (_f?.pickup_address) _f.pickup_address.placeholder = isHome ? 'Restaurant, bar or club — or an address' : 'Where should we collect you?'
+    if (_f?.pickup_address) _f.pickup_address.placeholder = isHome ? 'Restaurant, bar or club' : 'Where should we collect you?'
     for (const n of ['client_vehicle_make', 'client_vehicle_model', 'client_vehicle_colour']) if (_f?.[n]) _f[n].required = isHome
     legBtns.forEach(b => {
       const on = b.dataset.leg === airportLeg
@@ -798,6 +798,14 @@
     payload.special_items = chipBtns.filter(b => b.dataset.on === '1').map(b => b.dataset.v)
     if (!payload.driver_sex_pref) delete payload.driver_sex_pref
     if (!payload.vehicle_class_pref) delete payload.vehicle_class_pref
+    // Home Safe is a drive home in the member's OWN car. The airport/convenient-trip
+    // fields (flight no., luggage, luggage size, travelling-with) are hidden for it and
+    // must never ride into the payload — even a value typed on another service before
+    // switching to Home Safe (flight_number comes straight off FormData, luggage_size
+    // and special_items are assigned above regardless of service).
+    if (service === 'drive_home') {
+      for (const k of ['flight_number', 'luggage', 'luggage_size', 'special_items']) delete payload[k]
+    }
     // Fold the optional alternative contact, ID number and preferred-driver name into
     // the driver notes so the controller sees them (book-trip stores notes as
     // booking_notes). The public page has no authenticated driver directory, so the
